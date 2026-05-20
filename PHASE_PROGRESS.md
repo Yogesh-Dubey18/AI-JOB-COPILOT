@@ -172,3 +172,43 @@ Blockers:
 
 Next phase to start:
 - Phase 5: Final QA + deployment + launch readiness.
+
+## Phase 5: Final QA + Deployment + Launch Readiness
+
+Status: Complete
+
+Completed work:
+- Polished README for recruiter/demo positioning and honest scope.
+- Added launch smoke test checklist.
+- Added launch checklist.
+- Added demo script.
+- Added v1/v2 roadmap.
+- Documented env, backend health, frontend API URL, and manual launch flow in README/docs.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+
+Build/test result:
+- Passed.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings.
+- `check:security`, root `lint`, root `typecheck`, frontend E2E, and extension checks were skipped because those scripts/folders do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- No real live URLs or deployment provider access are available in this local session.
+
+Next phase to start:
+- Phase 6: Real deployment execution + live URL testing docs.

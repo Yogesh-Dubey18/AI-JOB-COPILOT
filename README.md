@@ -4,6 +4,17 @@ Upload your resume once. Get matching jobs, tailored resumes, application help, 
 
 AI Job Copilot is a job-seeker focused AI SaaS platform. It is not an employer job-posting board and it does not auto-apply. It helps candidates analyze resumes, match jobs, create reviewable application content, track applications, prepare for interviews, learn missing skills, detect scams, and improve after rejection.
 
+## Demo Positioning
+
+This repository is a portfolio-ready full-stack SaaS demo for job seekers. It shows production-oriented architecture, typed frontend/backend code, MongoDB-ready persistence, JWT auth, AI provider fallbacks, SaaS plan foundations, admin operations, analytics, and deployment runbooks.
+
+Honest scope:
+
+- Provider-ready AI works with safe mock fallback when API keys are missing.
+- Billing is mock/Stripe-ready and does not charge users.
+- Job data is seeded/manual-source ready; it does not scrape protected job sites.
+- Resume/application content is user-reviewed; the app does not auto-apply or auto-send messages.
+
 ## Monorepo
 
 - `frontend`: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui-compatible components, TanStack Query, React Hook Form, Zod, Recharts, Framer Motion, Lucide, dark mode, PWA-ready public manifest.
@@ -37,6 +48,25 @@ npm test --prefix frontend
 npm test --prefix backend
 npm run seed --prefix backend
 ~~~
+
+## Verification Snapshot
+
+Current local verification loop:
+
+~~~bash
+npm run check:git-safety
+npm run build
+npm test
+npm run build --prefix backend
+npm test --prefix backend
+npm run build --prefix frontend
+npm test --prefix frontend
+~~~
+
+Known non-fatal local warnings:
+
+- Frontend tests print a Recharts zero-size warning under jsdom for responsive charts.
+- On Node 24, Next.js may print an experimental type-stripping warning while compiling.
 
 ## Environment
 
@@ -77,3 +107,18 @@ NEXT_PUBLIC_API_URL=https://your-backend-host.example.com/api
 ~~~
 
 No live URLs are committed until they are provided and verified.
+
+## Demo Flow
+
+1. Register and log in.
+2. Complete onboarding.
+3. Upload a resume.
+4. Analyze ATS score.
+5. Review matching jobs.
+6. Open a job detail page.
+7. Tailor a resume.
+8. Generate an application kit.
+9. Track the application.
+10. Generate interview prep and view analytics.
+
+See [Demo Script](docs/demo-script.md) and [Launch Checklist](docs/launch-checklist.md).
