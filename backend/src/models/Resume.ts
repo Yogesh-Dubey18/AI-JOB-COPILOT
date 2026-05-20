@@ -17,7 +17,13 @@ const ResumeSchema = new Schema(
       projects: [Schema.Types.Mixed],
       education: [Schema.Types.Mixed],
       certifications: [String],
-      links: [String]
+      links: [String],
+      detectedSections: [String],
+      parser: String,
+      parserQuality: String,
+      parserWarnings: [String],
+      parserWordCount: Number,
+      wordCount: Number
     },
     isBaseResume: { type: Boolean, default: false }
   },

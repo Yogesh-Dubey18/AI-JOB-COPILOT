@@ -6,6 +6,7 @@ import LoginPage from "@/app/auth/login/page";
 import RegisterPage from "@/app/auth/register/page";
 import DashboardPage from "@/app/dashboard/page";
 import ResumeUploadPage from "@/app/resume/upload/page";
+import ResumeAnalyzerPage from "@/app/resume/analyzer/page";
 import JobsPage from "@/app/jobs/page";
 import JobDetailPage from "@/app/jobs/[jobId]/page";
 import ApplicationsPage from "@/app/applications/page";
@@ -35,6 +36,11 @@ describe("frontend pages", () => {
   it("resume upload page renders", () => {
     renderWithProviders(<ResumeUploadPage />);
     expect(screen.getByText(/Resume upload/i)).toBeInTheDocument();
+  });
+
+  it("resume analyzer page renders", () => {
+    renderWithProviders(<ResumeAnalyzerPage />);
+    expect(screen.getByText(/AI resume ATS analyzer/i)).toBeInTheDocument();
   });
 
   it("job listing page renders", () => {

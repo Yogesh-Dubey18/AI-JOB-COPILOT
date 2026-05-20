@@ -40,6 +40,7 @@
 - [Public Demo Notes](public-demo-notes.md)
 - [Production Troubleshooting](production-troubleshooting.md)
 - [Known Limitations](known-limitations.md)
+- [Resume Intelligence v2](resume-intelligence-v2.md)
 
 ## Product And QA
 

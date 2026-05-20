@@ -12,6 +12,7 @@
 
 - TXT resumes parse best locally.
 - PDF and DOCX use safe fallback extraction until dedicated parser packages are added.
+- Resume Intelligence v2 adds deterministic ATS heuristics and role keyword coverage, but it is not a guarantee of recruiter screening results.
 - PDF export is a foundation placeholder and does not generate production PDFs yet.
 
 ## Deployment

@@ -7,6 +7,7 @@ Move AI Job Copilot from portfolio-ready demo to a stronger production architect
 ## v2 Themes
 
 - Better resume parsing and ATS intelligence.
+- Resume Intelligence v2 now includes deterministic role keyword banks, ATS factor breakdown, parser metadata, and analyzer UI improvements. Future work should add reviewed PDF/DOCX parser packages and calibration from real feedback.
 - Safer job-source normalization.
 - Smarter application CRM.
 - Stronger notifications and reminders.

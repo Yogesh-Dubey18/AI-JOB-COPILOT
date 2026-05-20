@@ -39,9 +39,12 @@ describe("AI Job Copilot API", () => {
 
   it("uploads resume and analyzes fallback", async () => {
     const agent = await authAgent();
-    const upload = await agent.post("/api/resumes/upload").field("isBaseResume", "true").attach("resume", Buffer.from("Test User\ntest@example.com\nReact Node.js MongoDB\nAI Job Copilot project"), "resume.txt").expect(201);
+    const upload = await agent.post("/api/resumes/upload").field("isBaseResume", "true").attach("resume", Buffer.from("Test User\ntest@example.com\n9876543210\nSkills React Node.js MongoDB\nProjects built AI Job Copilot project with REST API authentication"), "resume.txt").expect(201);
+    expect(upload.body.data.parsedData.parserQuality).toBe("high");
     const analysis = await agent.post("/api/resumes/" + upload.body.data._id + "/analyze").send({ targetRole: "MERN Stack Developer" }).expect(201);
     expect(analysis.body.data.atsScore).toBeGreaterThan(0);
+    expect(analysis.body.data.keywordCoverage.coveragePercent).toBeGreaterThan(0);
+    expect(analysis.body.data.atsBreakdown.total).toBeGreaterThan(0);
   });
 
   it("lists jobs and matches fallback", async () => {

@@ -19,7 +19,27 @@ const ResumeAnalysisSchema = new Schema(
     weaknesses: [String],
     missingKeywords: [String],
     improvementSuggestions: [String],
-    recruiterView: String
+    recruiterView: String,
+    roleKeywordBank: {
+      name: String,
+      keywords: [String]
+    },
+    keywordCoverage: {
+      targetRole: String,
+      detectedKeywords: [String],
+      missingKeywords: [String],
+      coveragePercent: Number
+    },
+    atsBreakdown: {
+      contactInformation: Number,
+      skillsMatch: Number,
+      experienceProjectQuality: Number,
+      keywords: Number,
+      formatting: Number,
+      actionVerbs: Number,
+      total: Number
+    },
+    parserWarnings: [String]
   },
   { timestamps: true }
 );

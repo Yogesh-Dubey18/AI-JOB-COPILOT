@@ -13,7 +13,7 @@ export async function uploadResume(userId: string, file: Express.Multer.File, is
     fileUrl: "/uploads/" + path.basename(file.path),
     fileType: file.mimetype,
     rawText: parsed.text,
-    parsedData: { ...parsedData, parser: parsed.parser, parserWarnings: parsed.warnings },
+    parsedData: { ...parsedData, parser: parsed.parser, parserQuality: parsed.quality, parserWarnings: parsed.warnings, parserWordCount: parsed.wordCount },
     isBaseResume
   });
 }

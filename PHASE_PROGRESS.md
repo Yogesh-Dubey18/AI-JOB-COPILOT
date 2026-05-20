@@ -1042,3 +1042,47 @@ Blockers:
 
 Next phase to start:
 - Phase 26: v2 resume parsing + ATS upgrade.
+
+## Phase 26: v2 Resume Parsing + ATS Upgrade
+
+Status: Complete
+
+Completed work:
+- Added deterministic ATS scoring service with role keyword banks for React, MERN, Node, Frontend, and Full Stack roles.
+- Improved resume parser metadata, fallback behavior, resume analysis persistence, and analyzer UI keyword/breakdown display.
+- Added backend/frontend tests and resume intelligence v2 documentation.
+- Updated limitations and v2 roadmap with the honest parser status.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build --prefix backend`
+- `npm run build`
+- `npm test`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed after fixing a TypeScript literal-array issue in `ats-scoring.service.ts`.
+- Documentation link check passed for 230 markdown files.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 10 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 10 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Dedicated PDF/DOCX parser packages are not installed; PDF/DOCX support remains fallback-only until dependency review.
+
+Next phase to start:
+- Phase 27: v2 job source system + normalization.
