@@ -36,7 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/90 px-4 backdrop-blur lg:px-8">
           <div className="font-semibold">Career operating system</div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Bell className="h-4 w-4" />
+            <Link href="/notifications" className="flex items-center gap-2"><Bell className="h-4 w-4" /> Notifications</Link>
             <Link href="/profile" className="flex items-center gap-2"><UserRound className="h-4 w-4" /> Profile</Link>
           </div>
         </header>

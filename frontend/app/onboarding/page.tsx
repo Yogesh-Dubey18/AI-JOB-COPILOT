@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { api } from "@/lib/api";
 import { splitList } from "@/lib/utils";
 
@@ -45,7 +46,7 @@ export default function OnboardingPage() {
 
   return (
     <AppShell>
-      <div className="mb-6"><h1 className="text-2xl font-bold">Onboarding</h1><p className="text-muted-foreground">Step {step + 1} of {steps.length}: {steps[step]}</p></div>
+      <div className="mb-6 space-y-3"><h1 className="text-2xl font-bold">Onboarding</h1><p className="text-muted-foreground">Step {step + 1} of {steps.length}: {steps[step]}</p><Progress value={Math.round(((step + 1) / steps.length) * 100)} /></div>
       <Card className="max-w-3xl">
         <CardHeader><CardTitle>{steps[step]}</CardTitle></CardHeader>
         <CardContent className="space-y-4">

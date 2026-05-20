@@ -11,6 +11,7 @@
   "include": [
     "types/**/*.ts",
     "schemas/**/*.ts",
+    "plans.ts",
     "index.ts"
   ]
 }

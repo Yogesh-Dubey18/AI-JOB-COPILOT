@@ -12,6 +12,7 @@ import aiRoutes from "./routes/ai.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import billingRoutes from "./routes/billing.routes.js";
 import interviewRoutes from "./routes/interview.routes.js";
 import jobRoutes from "./routes/job.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
@@ -41,6 +42,7 @@ app.use(auditLogger);
 
 app.get("/health", (_req, res) => res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API" } }));
 app.use("/api/auth", authRoutes);
+app.use("/api/billing", billingRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/resumes", resumeRoutes);
 app.use("/api/jobs", jobRoutes);

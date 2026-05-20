@@ -16,6 +16,11 @@ export default function AnalyticsPage() {
       <div className="mb-5 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
         {["totalSavedJobs", "totalApplied", "totalShortlisted", "totalInterviews", "totalRejected", "totalOffers"].map((key) => <MetricCard key={key} label={key} value={data[key] || 0} />)}
       </div>
+      <div className="mb-5 grid gap-4 md:grid-cols-3">
+        <MetricCard label="Response rate" value={(data.responseRate || 0) + "%"} />
+        <MetricCard label="Interview rate" value={(data.interviewRate || 0) + "%"} />
+        <MetricCard label="Offer rate" value={(data.offerRate || 0) + "%"} />
+      </div>
       <AnalyticsCharts data={data} />
     </AppShell>
   );
