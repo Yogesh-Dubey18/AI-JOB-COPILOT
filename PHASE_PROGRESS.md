@@ -873,3 +873,45 @@ Blockers:
 
 Next phase to start:
 - Phase 22: Offer negotiation + joining preparation.
+
+## Phase 22: Offer Negotiation + Joining Preparation
+
+Status: Complete
+
+Completed work:
+- Added offer negotiation guide, salary answer templates, offer comparison tracker, offer acceptance checklist, joining documents checklist, joining preparation plan, first 30 days success plan, workplace communication guide, codebase onboarding checklist, first PR checklist, workplace learning tracker, probation success tracker, common fresher workplace mistakes, professional workplace message templates, and first year career growth plan docs.
+- Updated docs index with the offer, joining, and workplace success package.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 203 markdown files.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Offer/legal/financial decisions require owner review and professional advice where appropriate.
+
+Next phase to start:
+- Phase 23: Long-term career roadmap.
