@@ -41,3 +41,39 @@ npm run seed --prefix backend
 ## Environment
 
 Copy `.env.example`, `frontend/.env.example`, and `backend/.env.example`. Add MongoDB Atlas URI and JWT secrets for production. AI keys are optional because the app has structured mock fallback responses.
+
+## Deployment Readiness
+
+AI Job Copilot is structured for split deployment:
+
+- Frontend: Vercel, root directory `frontend`, build command `npm run build`.
+- Backend: Render, Railway, or Fly.io, root directory `backend`, build command `npm install && npm run build`, start command `npm start`.
+- Database: MongoDB Atlas via `MONGO_URI`.
+
+Production environment variables are documented in [Deployment Guide](docs/deployment-guide.md), [Production Checklist](docs/production-checklist.md), and [Security Checklist](docs/security-checklist.md). Do not add real keys to the repo. Use provider dashboards for secrets.
+
+Backend health check:
+
+~~~bash
+GET https://your-backend-host.example.com/health
+~~~
+
+Expected safe response:
+
+~~~json
+{
+  "success": true,
+  "data": {
+    "status": "ok",
+    "service": "AI Job Copilot API"
+  }
+}
+~~~
+
+Frontend API configuration:
+
+~~~bash
+NEXT_PUBLIC_API_URL=https://your-backend-host.example.com/api
+~~~
+
+No live URLs are committed until they are provided and verified.
