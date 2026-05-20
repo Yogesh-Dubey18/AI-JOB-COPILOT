@@ -71,6 +71,24 @@
 - [Assignment Submission Template](assignment-submission-template.md)
 - [Rejection Handling System](rejection-handling-system.md)
 
+## Interview Mastery
+
+- [Interview Master Plan](interview-master-plan.md)
+- [Full-Stack Interview Question Bank](full-stack-interview-question-bank.md)
+- [AI Job Copilot Project Explanation](ai-job-copilot-project-explanation.md)
+- [AI Job Copilot Project Interview Q&A](ai-job-copilot-project-interview-qa.md)
+- [HR Interview Answer Bank](hr-interview-answer-bank.md)
+- [DSA Revision Plan](dsa-revision-plan.md)
+- [JavaScript Coding Practice](javascript-coding-practice.md)
+- [React Coding Practice](react-coding-practice.md)
+- [Node Express API Practice](node-express-api-practice.md)
+- [Database Revision Guide](database-revision-guide.md)
+- [System Design Basics For Freshers](system-design-basics-freshers.md)
+- [Mock Interview Scripts](mock-interview-scripts.md)
+- [Interview Answer Checklist](interview-answer-checklist.md)
+- [Questions To Ask Interviewer](questions-to-ask-interviewer.md)
+- [Interview Day Checklist](interview-day-checklist.md)
+
 ## Architecture
 
 - [API Contract](api-contract.md)
