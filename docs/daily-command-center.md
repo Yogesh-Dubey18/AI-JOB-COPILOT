@@ -20,6 +20,8 @@ Use this as the first and last page of each job-search day.
 - Review top recommended jobs.
 - Run scam check for suspicious posts.
 - Prepare one role-specific resume version.
+- Open the follow-up due tracker before searching for new jobs.
+- Check yesterday's unfinished applications and recruiter replies.
 
 ## Application Batch
 
@@ -43,3 +45,12 @@ Use this as the first and last page of each job-search day.
 - Best opportunity today:
 - Biggest blocker:
 - Tomorrow's first action:
+
+## Links To Use Daily
+
+- [Today Job Execution](today-job-execution.md)
+- [Daily Application Log](daily-application-log.md)
+- [Recruiter Outreach Log](recruiter-outreach-log.md)
+- [Referral Request Log](referral-request-log.md)
+- [Follow-Up Due Tracker](follow-up-due-tracker.md)
+- [Copy-Paste Message Bank](copy-paste-message-bank.md)
