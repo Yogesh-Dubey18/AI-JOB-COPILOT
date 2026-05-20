@@ -41,6 +41,24 @@
 - [Roadmap](roadmap.md)
 - [User Guide](user-guide.md)
 
+## Job Search Operating System
+
+- [Job Search System](job-search-system.md)
+- [Daily Command Center](daily-command-center.md)
+- [Job Application Tracker Template](job-application-tracker-template.md)
+- [Weekly Job Sprint Plan](weekly-job-sprint-plan.md)
+- [Job Board Strategy](job-board-strategy.md)
+- [Recruiter Message Templates](recruiter-message-templates.md)
+- [Role-Specific Application Messages](role-specific-application-messages.md)
+- [Follow-Up System](follow-up-system.md)
+- [Application Quality Checklist](application-quality-checklist.md)
+- [Resume Customization Guide](resume-customization-guide.md)
+- [Interview Prep Tracker](interview-prep-tracker.md)
+- [Job Search Analytics Template](job-search-analytics-template.md)
+- [Company Research Template](company-research-template.md)
+- [Assignment Submission Template](assignment-submission-template.md)
+- [Rejection Handling System](rejection-handling-system.md)
+
 ## Architecture
 
 - [API Contract](api-contract.md)
