@@ -701,3 +701,49 @@ Blockers:
 
 Next phase to start:
 - Phase 18: Live URL verification + public launch package.
+
+## Phase 18: Live URL Verification + Public Launch Package
+
+Status: Complete
+
+Completed work:
+- Checked for `FRONTEND_LIVE_URL`, `BACKEND_LIVE_URL`, and `BACKEND_HEALTH_URL`; none were present.
+- Added live deployment verification report with placeholders and pending status.
+- Updated final production smoke report with pending live URL status.
+- Added public launch post package, GitHub release notes v1, final portfolio update guide, and recruiter-ready final summary.
+- Updated changelog and docs index.
+
+Commands run:
+- `Get-ChildItem Env:FRONTEND_LIVE_URL,Env:BACKEND_LIVE_URL,Env:BACKEND_HEALTH_URL -ErrorAction SilentlyContinue`
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 147 markdown files.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Real live URL verification requires `FRONTEND_LIVE_URL`, `BACKEND_LIVE_URL`, and `BACKEND_HEALTH_URL`.
+
+Next phase to start:
+- Phase 19: Final resume + job application launch.
