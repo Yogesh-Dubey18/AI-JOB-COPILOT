@@ -1,5 +1,15 @@
 # AI Job Copilot Documentation
 
+## Start Here
+
+- [Final Master Index](final-master-index.md)
+- [Project Operating Manual](project-operating-manual.md)
+- [Project Command Center](project-command-center.md)
+- [Documentation Quality Audit](documentation-quality-audit.md)
+- [Final Project Readiness Dashboard](final-project-readiness-dashboard.md)
+- [Final Next Actions](final-next-actions.md)
+- [Agent Guide](../AGENTS.md)
+
 ## Setup And Deployment
 
 - [Setup Guide](setup-guide.md)

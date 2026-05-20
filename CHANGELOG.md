@@ -10,6 +10,7 @@ All notable changes to AI Job Copilot will be documented here.
 - Added SaaS, billing, admin, analytics, recruiter, portfolio, resume, job search, outreach, and interview mastery documentation packages.
 - Added repository polish, docs link checks, v2 roadmap, and final handover package.
 - Added final deployment execution docs, live URL verification placeholders, and public launch package.
+- Added final master index, project operating manual, command center, readiness dashboard, and agent guide.
 
 ## Notes
 
