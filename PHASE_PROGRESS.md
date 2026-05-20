@@ -831,3 +831,45 @@ Blockers:
 
 Next phase to start:
 - Phase 21: First interview sprint + company-specific prep.
+
+## Phase 21: First Interview Sprint + Company-Specific Prep
+
+Status: Complete
+
+Completed work:
+- Added first interview sprint plan, company research template, role-wise prep guide, company-wise prep tracker, round-wise strategy, AI Job Copilot deep dive answer book, live demo failure handling guide, technical revision cheat sheet, coding practice sprint, final HR/salary answers, post-interview follow-up system, interview mistakes checklist, interview questions by difficulty, and readiness scorecard docs.
+- Updated docs index with the interview sprint package.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 188 markdown files.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Real company-specific notes must be filled manually per interview.
+
+Next phase to start:
+- Phase 22: Offer negotiation + joining preparation.
