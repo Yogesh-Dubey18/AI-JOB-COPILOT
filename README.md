@@ -142,3 +142,7 @@ No live URLs are committed until they are provided and verified.
 10. Generate interview prep and view analytics.
 
 See [Demo Script](docs/demo-script.md) and [Launch Checklist](docs/launch-checklist.md).
+
+## Handover
+
+Future maintainers should start with [Final Handover](docs/final-handover.md), [Developer Onboarding](docs/developer-onboarding.md), and [Final Manual Actions](docs/final-manual-actions.md). Current phase status is tracked in [PHASE_PROGRESS.md](PHASE_PROGRESS.md).
