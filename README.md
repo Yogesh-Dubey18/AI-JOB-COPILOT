@@ -102,6 +102,15 @@ AI Job Copilot is structured for split deployment:
 
 Production environment variables are documented in [Deployment Guide](docs/deployment-guide.md), [Production Checklist](docs/production-checklist.md), and [Security Checklist](docs/security-checklist.md). Do not add real keys to the repo. Use provider dashboards for secrets.
 
+Final deployment execution docs:
+
+- [Final Deployment Values](docs/final-deployment-values.md)
+- [Final MongoDB Atlas Setup](docs/final-mongodb-atlas-setup.md)
+- [Final Backend Deployment](docs/final-backend-deployment.md)
+- [Final Frontend Deployment](docs/final-frontend-deployment.md)
+- [Final Production Launch Checklist](docs/final-production-launch-checklist.md)
+- [Final Live URL Update](docs/final-live-url-update.md)
+
 Backend health check:
 
 ~~~bash

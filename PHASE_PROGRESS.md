@@ -656,3 +656,48 @@ Blockers:
 
 Next phase to start:
 - Phase 17: Final live deployment + production launch execution.
+
+## Phase 17: Final Live Deployment + Production Launch Execution
+
+Status: Complete
+
+Completed work:
+- Added final deployment values, MongoDB Atlas setup, backend deployment, frontend deployment, production launch checklist, live URL update, and production smoke report docs.
+- Verified backend CORS config reads comma-separated `CLIENT_URL` and rejects disallowed origins.
+- Verified frontend API client uses `NEXT_PUBLIC_API_URL` with local fallback.
+- Updated README and docs index with final deployment execution docs.
+
+Commands run:
+- `rg "CLIENT_URL|CORS|cors|NEXT_PUBLIC_API_URL|API_URL" backend frontend -n`
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 142 markdown files.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Real deployment requires hosting dashboard access and live URLs.
+
+Next phase to start:
+- Phase 18: Live URL verification + public launch package.

@@ -4,6 +4,13 @@
 
 - [Setup Guide](setup-guide.md)
 - [Deployment Guide](deployment-guide.md)
+- [Final Deployment Values](final-deployment-values.md)
+- [Final MongoDB Atlas Setup](final-mongodb-atlas-setup.md)
+- [Final Backend Deployment](final-backend-deployment.md)
+- [Final Frontend Deployment](final-frontend-deployment.md)
+- [Final Production Launch Checklist](final-production-launch-checklist.md)
+- [Final Live URL Update](final-live-url-update.md)
+- [Final Production Smoke Report](final-production-smoke-report.md)
 - [Backend Env Checklist](backend-env-checklist.md)
 - [Frontend Env Checklist](frontend-env-checklist.md)
 - [MongoDB Atlas Setup](mongodb-atlas-setup.md)
