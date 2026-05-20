@@ -1,0 +1,28 @@
+import { aiService } from "../ai/ai.service.js";
+import { ApiError } from "../utils/ApiError.js";
+import { createRecord, findRecordById, findRecords } from "../utils/repository.js";
+import { getJob } from "./job.service.js";
+
+export async function tailorResumeForJob(userId: string, jobId: string, baseResumeId?: string) {
+  const job = await getJob(jobId);
+  const resume = baseResumeId ? await findRecordById("resumes", baseResumeId) : (await findRecords("resumes", { userId }, { limit: 1, sort: { createdAt: -1 } }))[0];
+  if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Base resume not found");
+  const result = await aiService.tailorResume(userId, { job, resume, rules: ["Do not fake experience", "Do not add unknown skills", "Use job keywords naturally", "Keep ATS-friendly"] });
+  const version = await createRecord("resumeVersions", {
+    userId,
+    baseResumeId: resume._id,
+    title: job.title + " at " + job.company,
+    targetRole: job.title,
+    targetJobId: jobId,
+    content: {
+      summary: result.updatedSummary,
+      skills: result.updatedSkills,
+      projects: result.improvedProjects,
+      education: resume.parsedData?.education || [],
+      certifications: resume.parsedData?.certifications || []
+    },
+    atsScore: result.afterAtsScore,
+    pdfUrl: result.pdfUrl
+  });
+  return createRecord("tailoredResumes", { userId, jobId, baseResumeId: resume._id, resumeVersionId: version._id, ...result });
+}

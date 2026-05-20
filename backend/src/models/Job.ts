@@ -1,0 +1,31 @@
+import mongoose, { InferSchemaType, Schema, model } from "mongoose";
+
+const JobSchema = new Schema(
+  {
+    title: { type: String, required: true, index: "text" },
+    company: { type: String, required: true, index: "text" },
+    location: { type: String, required: true },
+    remoteType: { type: String, default: "Hybrid" },
+    jobType: { type: String, default: "Full-time" },
+    experienceRequired: String,
+    salaryMin: Number,
+    salaryMax: Number,
+    currency: { type: String, default: "INR" },
+    description: String,
+    responsibilities: [String],
+    requirements: [String],
+    skillsRequired: [String],
+    applyUrl: String,
+    source: String,
+    trustScore: { type: Number, default: 80 },
+    scamRiskScore: { type: Number, default: 15 },
+    postedAt: Date,
+    expiresAt: Date
+  },
+  { timestamps: true }
+);
+
+JobSchema.index({ title: "text", company: "text", description: "text", skillsRequired: "text" });
+JobSchema.index({ postedAt: -1, expiresAt: 1 });
+export type JobDocument = InferSchemaType<typeof JobSchema>;
+export const JobModel = mongoose.models.Job || model("Job", JobSchema);

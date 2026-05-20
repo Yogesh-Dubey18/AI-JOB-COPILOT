@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Environment files - keep examples tracked, never real local secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Build output and framework caches
+.next/
+out/
+dist/
+build/
+coverage/
+.nyc_output/
+.cache/
+.turbo/
+.vercel/
+
+# Test artifacts
+playwright-report/
+test-results/
+blob-report/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local uploads, generated exports, and binary output
+backend/uploads/*
+!backend/uploads/.gitkeep
+uploads/
+exports/
+generated/
+*.pdf
+
+# Extension build artifacts
+extension/dist/
+extension/build/
+
+# Credentials and private key material
+*.pem
+*.key
+*credential*
+*credentials*
+*secret*
+service-account*
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json

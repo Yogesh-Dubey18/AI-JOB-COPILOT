@@ -1,0 +1,13 @@
+import { aiService } from "../ai/ai.service.js";
+import { ApiError } from "../utils/ApiError.js";
+import { createRecord, findRecordById, findRecords } from "../utils/repository.js";
+import { getJob } from "./job.service.js";
+
+export async function matchJob(userId: string, jobId: string, resumeId?: string) {
+  const job = await getJob(jobId);
+  const resumes = resumeId ? [await findRecordById("resumes", resumeId)] : await findRecords("resumes", { userId }, { limit: 1, sort: { createdAt: -1 } });
+  const resume = resumes[0];
+  if (!resume) throw new ApiError(400, "Upload a resume before matching jobs");
+  const result = await aiService.matchJob(userId, { job, resume, formula: { skill: 40, project: 20, experience: 15, location: 10, salary: 5, keyword: 10 } });
+  return createRecord("jobMatches", { userId, jobId, resumeId: resume._id, ...result });
+}

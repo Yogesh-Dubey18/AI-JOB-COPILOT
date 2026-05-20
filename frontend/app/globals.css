@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 42 33% 98%;
+  --foreground: 220 28% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 28% 11%;
+  --border: 220 14% 88%;
+  --muted: 210 22% 94%;
+  --muted-foreground: 218 10% 42%;
+  --primary: 174 64% 28%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 32 86% 55%;
+  --accent-foreground: 220 28% 11%;
+}
+
+.dark {
+  --background: 224 24% 10%;
+  --foreground: 40 30% 96%;
+  --card: 222 22% 14%;
+  --card-foreground: 40 30% 96%;
+  --border: 220 18% 25%;
+  --muted: 222 18% 20%;
+  --muted-foreground: 220 12% 70%;
+  --primary: 174 58% 45%;
+  --primary-foreground: 224 24% 10%;
+  --accent: 36 90% 60%;
+  --accent-foreground: 224 24% 10%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  letter-spacing: 0;
+}
+
+button, input, textarea, select {
+  font: inherit;
+}
+
+.product-scene {
+  background:
+    linear-gradient(120deg, rgba(10, 82, 86, 0.84), rgba(16, 34, 48, 0.72)),
+    url("/hero-career-cockpit.png");
+  background-size: cover;
+  background-position: center;
+}
