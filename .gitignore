@@ -47,6 +47,11 @@ extension/build/
 # Credentials and private key material
 *.pem
 *.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
 *credential*
 *credentials*
 *secret*

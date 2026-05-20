@@ -39,6 +39,8 @@ Portfolio package docs:
 - `shared`: Shared TypeScript types and Zod schemas.
 - `docs`: API, database, setup, roadmap, and deployment documentation.
 
+Start with [docs/README.md](docs/README.md) for the complete documentation index.
+
 ## Local Setup
 
 ~~~bash
@@ -58,6 +60,7 @@ npm run dev
 npm run dev:frontend
 npm run dev:backend
 npm run build
+npm run check:docs
 npm run build --prefix frontend
 npm run build --prefix backend
 npm test

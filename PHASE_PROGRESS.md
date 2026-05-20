@@ -526,3 +526,49 @@ Blockers:
 
 Next phase to start:
 - Phase 14: Final cleanup + code quality + repo polish.
+
+## Phase 14: Final Cleanup + Code Quality + Repo Polish
+
+Status: Complete
+
+Completed work:
+- Added documentation link checker and root `check:docs` script.
+- Added contributing guide, license note, GitHub issue templates, PR template, repository quality checklist, and final project audit.
+- Strengthened `.gitignore` for additional certificate/key formats.
+- Updated README and docs index for repository quality and docs navigation.
+- Verified documentation links before full phase verification.
+
+Commands run:
+- `npm run check:docs`
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Documentation link check passed for 112 markdown files.
+- Passed.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- No license has been selected by the repository owner.
+
+Next phase to start:
+- Phase 15: v2 production roadmap + advanced upgrade planning.

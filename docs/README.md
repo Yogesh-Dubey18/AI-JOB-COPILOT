@@ -101,6 +101,8 @@
 
 - [Production Checklist](production-checklist.md)
 - [Security Checklist](security-checklist.md)
+- [Repository Quality Checklist](repository-quality-checklist.md)
+- [Final Project Audit](final-project-audit.md)
 - [Monitoring Strategy](monitoring-strategy.md)
 - [Error Tracking Plan](error-tracking-plan.md)
 - [User Feedback System](user-feedback-system.md)
