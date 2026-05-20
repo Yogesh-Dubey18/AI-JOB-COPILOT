@@ -158,6 +158,8 @@ See [Demo Script](docs/demo-script.md) and [Launch Checklist](docs/launch-checkl
 - [Project Operating Manual](docs/project-operating-manual.md)
 - [Project Command Center](docs/project-command-center.md)
 - [Final Project Readiness Dashboard](docs/final-project-readiness-dashboard.md)
+- [Release Notes v1.0.0](docs/release-notes-v1.0.0.md)
+- [Final Freeze Checklist](docs/final-freeze-checklist.md)
 - [Documentation Quality Audit](docs/documentation-quality-audit.md)
 - [Final Next Actions](docs/final-next-actions.md)
 - [Agent Guide](AGENTS.md)

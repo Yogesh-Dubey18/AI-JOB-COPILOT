@@ -8,6 +8,11 @@
 - [Documentation Quality Audit](documentation-quality-audit.md)
 - [Final Project Readiness Dashboard](final-project-readiness-dashboard.md)
 - [Final Next Actions](final-next-actions.md)
+- [Final Freeze Checklist](final-freeze-checklist.md)
+- [Release Notes v1.0.0](release-notes-v1.0.0.md)
+- [Public Launch Closure](public-launch-closure.md)
+- [Final Recruiter Handoff Summary](final-recruiter-handoff-summary.md)
+- [v1 Release Validation Report](v1-release-validation-report.md)
 - [Agent Guide](../AGENTS.md)
 
 ## Setup And Deployment
