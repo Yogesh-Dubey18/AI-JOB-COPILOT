@@ -16,6 +16,15 @@
 
 ## Product And QA
 
+- [Project Case Study](project-case-study.md)
+- [GitHub Repo Profile](github-repo-profile.md)
+- [LinkedIn Post](linkedin-post.md)
+- [Resume Project Bullets](resume-project-bullets.md)
+- [Interview Q&A](interview-qa-ai-job-copilot.md)
+- [Interview Demo Script](interview-demo-script.md)
+- [Job Application Messages](job-application-messages.md)
+- [Portfolio Project Content](portfolio-project-content.md)
+- [Screenshots Guide](screenshots-guide.md)
 - [Smoke Test Checklist](smoke-test-checklist.md)
 - [Launch Checklist](launch-checklist.md)
 - [Demo Script](demo-script.md)

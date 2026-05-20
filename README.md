@@ -15,6 +15,23 @@ Honest scope:
 - Job data is seeded/manual-source ready; it does not scrape protected job sites.
 - Resume/application content is user-reviewed; the app does not auto-apply or auto-send messages.
 
+## Recruiter-Friendly Highlights
+
+- Built a complete monorepo with Next.js App Router frontend, Express TypeScript backend, shared types, and deployment docs.
+- Implemented auth, onboarding, resume upload, ATS analysis, job matching, tailored resumes, application kits, tracker, interviews, analytics, notifications, admin, and SaaS plan foundations.
+- Added safe AI architecture with mock fallback plus OpenAI/Gemini provider readiness.
+- Added MongoDB/Mongoose models, in-memory local fallback, repository abstraction, and seed data.
+- Added verification workflow with builds, tests, and Git safety checks.
+- Documented deployment, security, limitations, demo flow, and handoff requirements.
+
+Portfolio package docs:
+
+- [Project Case Study](docs/project-case-study.md)
+- [GitHub Repo Profile](docs/github-repo-profile.md)
+- [LinkedIn Post](docs/linkedin-post.md)
+- [Resume Project Bullets](docs/resume-project-bullets.md)
+- [Interview Q&A](docs/interview-qa-ai-job-copilot.md)
+
 ## Monorepo
 
 - `frontend`: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui-compatible components, TanStack Query, React Hook Form, Zod, Recharts, Framer Motion, Lucide, dark mode, PWA-ready public manifest.
