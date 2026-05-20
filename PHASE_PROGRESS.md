@@ -572,3 +572,45 @@ Blockers:
 
 Next phase to start:
 - Phase 15: v2 production roadmap + advanced upgrade planning.
+
+## Phase 15: v2 Production Roadmap + Advanced Upgrade Planning
+
+Status: Complete
+
+Completed work:
+- Added v2 production roadmap, priority matrix, technical architecture, database design, API roadmap, testing strategy, deployment strategy, security checklist, monetization plan, feedback analytics plan, UI/UX improvement plan, GitHub issues backlog, and sprint plan docs.
+- Updated the docs index with the v2 planning section.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 125 markdown files.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- v2 execution requires future issue-based implementation work after the planned phase set.
+
+Next phase to start:
+- Phase 16: Final master prompt + handover package.

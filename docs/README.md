@@ -97,6 +97,22 @@
 - [Security Hardening](security-hardening.md)
 - [Observability](observability.md)
 
+## v2 Planning
+
+- [v2 Production Roadmap](v2-production-roadmap.md)
+- [v2 Priority Matrix](v2-priority-matrix.md)
+- [v2 Technical Architecture](v2-technical-architecture.md)
+- [v2 Database Design](v2-database-design.md)
+- [v2 API Roadmap](v2-api-roadmap.md)
+- [v2 Testing Strategy](v2-testing-strategy.md)
+- [v2 Deployment Strategy](v2-deployment-strategy.md)
+- [v2 Security Checklist](v2-security-checklist.md)
+- [v2 Monetization Plan](v2-monetization-plan.md)
+- [v2 Feedback Analytics Plan](v2-feedback-analytics-plan.md)
+- [v2 UI UX Improvement Plan](v2-ui-ux-improvement-plan.md)
+- [v2 GitHub Issues Backlog](v2-github-issues-backlog.md)
+- [v2 Sprint Plan](v2-sprint-plan.md)
+
 ## Operations
 
 - [Production Checklist](production-checklist.md)
