@@ -133,6 +133,9 @@ Only expose values with the `NEXT_PUBLIC_` prefix when they are safe for browser
 - Frontend `NEXT_PUBLIC_API_URL` must point to the deployed backend `/api` base URL.
 - Do not use `*` for credentialed production CORS.
 - Confirm auth cookies are sent only over HTTPS in production.
+- If the frontend has preview deployments, add only the preview origins you explicitly trust.
+- If a browser shows a CORS error, compare the request `Origin` header with backend `CLIENT_URL`.
+- Keep local `CLIENT_URL=http://localhost:3000` only for local development.
 
 ## Verification Commands
 

@@ -212,3 +212,46 @@ Blockers:
 
 Next phase to start:
 - Phase 6: Real deployment execution + live URL testing docs.
+
+## Phase 6: Real Deployment Execution + Live URL Testing Docs
+
+Status: Complete
+
+Completed work:
+- Added backend environment checklist.
+- Added frontend environment checklist.
+- Added MongoDB Atlas setup guide.
+- Added deployment runbook.
+- Added production smoke test.
+- Added live URL update procedure.
+- Improved CORS notes in deployment guide.
+- Added docs index.
+- Verified the backend health endpoint response shape remains documented as safe status-only output.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+
+Build/test result:
+- Passed.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings.
+- `check:security`, root `lint`, root `typecheck`, frontend E2E, and extension checks were skipped because those scripts/folders do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Live URL verification is pending real `FRONTEND_LIVE_URL`, `BACKEND_LIVE_URL`, and `BACKEND_HEALTH_URL`.
+
+Next phase to start:
+- Phase 7: Production errors fix + live URLs update docs.
