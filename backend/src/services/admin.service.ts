@@ -1,5 +1,6 @@
-import { createRecord, deleteRecord, findRecords, updateRecord } from "../utils/repository.js";
+import { createRecord, deleteRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { ensureSampleJobs } from "./job.service.js";
+import { normalizeJobSourceJob } from "./job-source.service.js";
 
 export async function listUsers() {
   return findRecords("users", {}, { sort: { createdAt: -1 } });
@@ -11,11 +12,12 @@ export async function listAdminJobs() {
 }
 
 export async function createAdminJob(input: any) {
-  return createRecord("jobs", input);
+  return createRecord("jobs", normalizeJobSourceJob({ ...input, source: input.source || "Admin manual import" }));
 }
 
 export async function updateAdminJob(id: string, input: any) {
-  return updateRecord("jobs", id, input);
+  const existing = await findRecordById("jobs", id);
+  return updateRecord("jobs", id, normalizeJobSourceJob({ ...(existing || {}), ...input }));
 }
 
 export async function deleteAdminJob(id: string) {

@@ -16,11 +16,24 @@ const JobSchema = new Schema(
     requirements: [String],
     skillsRequired: [String],
     applyUrl: String,
+    sourceUrl: String,
+    companyWebsite: String,
+    recruiterEmail: String,
+    externalId: String,
     source: String,
+    sourceType: { type: String, default: "curated" },
+    normalizedTitle: String,
+    normalizedCompany: String,
+    duplicateKey: String,
+    reviewStatus: { type: String, default: "approved" },
+    riskFlags: [String],
+    tags: [String],
     trustScore: { type: Number, default: 80 },
     scamRiskScore: { type: Number, default: 15 },
     postedAt: Date,
-    expiresAt: Date
+    expiresAt: Date,
+    importedAt: Date,
+    lastSeenAt: Date
   },
   { timestamps: true }
 );
@@ -29,6 +42,8 @@ JobSchema.index({ title: "text", company: "text", description: "text", skillsReq
 JobSchema.index({ postedAt: -1, expiresAt: 1 });
 JobSchema.index({ remoteType: 1, jobType: 1, postedAt: -1 });
 JobSchema.index({ source: 1, applyUrl: 1 });
+JobSchema.index({ duplicateKey: 1 }, { unique: false });
+JobSchema.index({ sourceType: 1, reviewStatus: 1, postedAt: -1 });
 JobSchema.index({ trustScore: -1, scamRiskScore: 1 });
 export type JobDocument = InferSchemaType<typeof JobSchema>;
 export const JobModel = mongoose.models.Job || model("Job", JobSchema);

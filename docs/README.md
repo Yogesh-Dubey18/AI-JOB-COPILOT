@@ -192,6 +192,8 @@
 - [API Contract](api-contract.md)
 - [Database Schema](database-schema.md)
 - [Job Source Strategy](job-source-strategy.md)
+- [Job Source System v2](job-source-system-v2.md)
+- [Job CSV Import Template](job-csv-import-template.md)
 - [Security Hardening](security-hardening.md)
 - [Observability](observability.md)
 

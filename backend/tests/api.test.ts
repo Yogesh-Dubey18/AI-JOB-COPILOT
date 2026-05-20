@@ -55,6 +55,31 @@ describe("AI Job Copilot API", () => {
     expect(match.body.data.matchScore).toBeGreaterThan(0);
   });
 
+  it("normalizes manual jobs and previews csv imports", async () => {
+    const agent = await authAgent();
+    const manual = await agent.post("/api/jobs/manual-import").send({
+      title: "React Developer",
+      company: "Manual Co",
+      location: "Remote",
+      skillsRequired: "React, TypeScript",
+      applyUrl: "https://manual.example/jobs/react",
+      description: "Build React features without any registration fee.",
+      source: "Manual import"
+    }).expect(201);
+    expect(manual.body.data.duplicate).toBe(false);
+    expect(manual.body.data.job.duplicateKey).toBeTruthy();
+    expect(manual.body.data.job.riskFlags.length).toBeGreaterThan(0);
+    const duplicate = await agent.post("/api/jobs/manual-import").send({
+      title: "React Developer",
+      company: "Manual Co",
+      location: "Remote",
+      applyUrl: "https://manual.example/jobs/react"
+    }).expect(201);
+    expect(duplicate.body.data.duplicate).toBe(true);
+    const preview = await agent.post("/api/jobs/import/csv-preview").send({ csv: "title,company,location,applyUrl,skillsRequired\nNode Developer,CSV Co,Remote,https://csv.example/node,Node.js" }).expect(200);
+    expect(preview.body.data[0].duplicateKey).toBeTruthy();
+  });
+
   it("creates tailored resume fallback", async () => {
     const agent = await authAgent();
     const upload = await agent.post("/api/resumes/upload").attach("resume", Buffer.from("React Node.js MongoDB"), "resume.txt");

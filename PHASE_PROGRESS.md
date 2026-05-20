@@ -1086,3 +1086,48 @@ Blockers:
 
 Next phase to start:
 - Phase 27: v2 job source system + normalization.
+
+## Phase 27: v2 Job Source System + Normalization
+
+Status: Complete
+
+Completed work:
+- Improved job model fields for source metadata, duplicate keys, normalized title/company, review status, risk flags, and import timestamps.
+- Added job normalization, duplicate detection, trust/scam scoring heuristics, manual import, and CSV preview architecture.
+- Improved job routes and filters plus the frontend jobs UI with filter controls and trust/risk/source indicators.
+- Added backend tests and job source v2 documentation with CSV import template.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build --prefix backend`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed after removing a duplicate Mongoose index declaration warning on `duplicateKey`.
+- Documentation link check passed for 232 markdown files.
+- Root build passed.
+- Root tests passed: backend 10 tests and frontend 10 tests.
+- Backend build passed.
+- Backend tests passed: 10 tests.
+- Frontend build passed.
+- Frontend tests passed: 10 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- CSV import remains preview-only until an admin approval/write flow is implemented.
+
+Next phase to start:
+- Phase 28: v2 application tracker intelligence.

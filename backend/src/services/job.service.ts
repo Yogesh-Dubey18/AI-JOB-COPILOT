@@ -1,6 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { countRecords, createRecord, findRecordById, findRecords } from "../utils/repository.js";
 import { createApplication } from "./application.service.js";
+import { normalizeJobSourceJob, parseCsvPreview } from "./job-source.service.js";
 
 export const sampleJobs = [
   ["React Developer", "PixelCraft Labs", "Bengaluru", "Hybrid", "Full-time", "0-2 years", ["React", "TypeScript", "Tailwind", "REST API"]],
@@ -19,7 +20,7 @@ export async function ensureSampleJobs() {
   const now = Date.now();
   for (const [index, item] of sampleJobs.entries()) {
     const [title, company, location, remoteType, jobType, experienceRequired, skillsRequired] = item as any;
-    await createRecord("jobs", {
+    await createRecord("jobs", normalizeJobSourceJob({
       title,
       company,
       location,
@@ -39,7 +40,7 @@ export async function ensureSampleJobs() {
       scamRiskScore: 8 + index,
       postedAt: new Date(now - index * 86400000),
       expiresAt: new Date(now + (20 + index) * 86400000)
-    });
+    }));
   }
 }
 
@@ -55,6 +56,13 @@ export async function listJobs(query: any = {}) {
   }
   if (query.remoteType) jobs = jobs.filter((job: any) => job.remoteType === query.remoteType);
   if (query.jobType) jobs = jobs.filter((job: any) => job.jobType === query.jobType);
+  if (query.location) jobs = jobs.filter((job: any) => String(job.location || "").toLowerCase().includes(String(query.location).toLowerCase()));
+  if (query.skill) jobs = jobs.filter((job: any) => (job.skillsRequired || []).some((skill: string) => skill.toLowerCase().includes(String(query.skill).toLowerCase())));
+  if (query.company) jobs = jobs.filter((job: any) => String(job.company || "").toLowerCase().includes(String(query.company).toLowerCase()));
+  if (query.sourceType) jobs = jobs.filter((job: any) => job.sourceType === query.sourceType);
+  if (query.freshersOnly === "true") jobs = jobs.filter((job: any) => /fresh|0-1|0-2/i.test(job.experienceRequired));
+  if (query.internshipOnly === "true") jobs = jobs.filter((job: any) => job.jobType === "Internship");
+  if (query.trustMin) jobs = jobs.filter((job: any) => Number(job.trustScore || 0) >= Number(query.trustMin));
   const start = (page - 1) * limit;
   return { items: jobs.slice(start, start + limit), page, limit, total: jobs.length };
 }
@@ -85,4 +93,23 @@ export async function saveJob(userId: string, jobId: string) {
     applicationSource: job.source,
     status: "Saved"
   });
+}
+
+export async function createManualJob(input: any) {
+  const normalized = normalizeJobSourceJob({ ...input, source: input.source || "Manual import" });
+  const jobs = await findRecords("jobs", {});
+  const duplicate = jobs.find((job: any) => job.duplicateKey === normalized.duplicateKey);
+  if (duplicate) return { job: duplicate, duplicate: true, duplicateKey: normalized.duplicateKey };
+  const job = await createRecord("jobs", normalized);
+  return { job, duplicate: false, duplicateKey: normalized.duplicateKey };
+}
+
+export async function previewCsvJobs(csv: string) {
+  if (!csv || csv.length > 20000) throw new ApiError(400, "CSV preview requires content under 20KB");
+  const rows = parseCsvPreview(csv);
+  const jobs = await findRecords("jobs", {});
+  return rows.map((row) => ({
+    ...row,
+    duplicate: jobs.some((job: any) => job.duplicateKey === row.duplicateKey)
+  }));
 }
