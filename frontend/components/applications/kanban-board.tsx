@@ -17,6 +17,11 @@ export function KanbanBoard({ applications }: { applications: any[] }) {
                 <div key={app._id} className="rounded-md border bg-background p-3">
                   <p className="text-sm font-semibold">{app.role}</p>
                   <p className="text-xs text-muted-foreground">{app.company}</p>
+                  <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
+                    {app.followUpStatus ? <Badge className="bg-background">{app.followUpStatus}</Badge> : null}
+                    {app.priorityScore ? <Badge className="bg-background">Priority {app.priorityScore}</Badge> : null}
+                    {app.currentRound ? <Badge className="bg-background">{app.currentRound}</Badge> : null}
+                  </div>
                 </div>
               ))}
             </CardContent>

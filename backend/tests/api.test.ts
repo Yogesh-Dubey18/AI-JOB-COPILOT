@@ -92,6 +92,13 @@ describe("AI Job Copilot API", () => {
     const agent = await authAgent();
     const res = await agent.post("/api/applications").send({ company: "Test Co", role: "React Developer", status: "Applied" }).expect(201);
     expect(res.body.data.status).toBe("Applied");
+    expect(res.body.data.nextFollowUpDate).toBeTruthy();
+    expect(res.body.data.priorityScore).toBeGreaterThan(0);
+    const updated = await agent.patch("/api/applications/" + res.body.data._id + "/status").send({ status: "HR Call" }).expect(200);
+    expect(updated.body.data.currentRound).toBe("HR Call");
+    expect(updated.body.data.timeline.length).toBeGreaterThan(1);
+    const insights = await agent.get("/api/applications/insights").expect(200);
+    expect(insights.body.data.active).toBe(1);
   });
 
   it("generates interview prep fallback", async () => {

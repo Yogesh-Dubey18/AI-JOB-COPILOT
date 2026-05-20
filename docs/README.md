@@ -148,6 +148,8 @@
 - [Role-Specific Application Messages](role-specific-application-messages.md)
 - [Follow-Up System](follow-up-system.md)
 - [Application Quality Checklist](application-quality-checklist.md)
+- [Application Tracker v2](application-tracker-v2.md)
+- [Application Follow-Up Templates](application-follow-up-templates.md)
 - [Resume Customization Guide](resume-customization-guide.md)
 - [Interview Prep Tracker](interview-prep-tracker.md)
 - [Job Search Analytics Template](job-search-analytics-template.md)

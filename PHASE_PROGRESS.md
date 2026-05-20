@@ -1131,3 +1131,46 @@ Blockers:
 
 Next phase to start:
 - Phase 28: v2 application tracker intelligence.
+
+## Phase 28: v2 Application Tracker Intelligence
+
+Status: Complete
+
+Completed work:
+- Added application intelligence service for timeline events, follow-up scheduling, interview stage metadata, follow-up status, and priority scoring.
+- Improved application model, routes, service logic, frontend tracker insights, and Kanban cards.
+- Added application insights endpoint, timeline endpoint, follow-up scheduling endpoint, backend tests, and v2 tracker documentation.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 234 markdown files.
+- Root build passed.
+- Root tests passed: backend 10 tests and frontend 10 tests.
+- Backend build passed.
+- Backend tests passed: 10 tests.
+- Frontend build passed.
+- Frontend tests passed: 10 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Reminder delivery remains local/provider-ready until Phase 29 notification/email/calendar foundations.
+
+Next phase to start:
+- Phase 29: v2 notification center + email/calendar foundation.
