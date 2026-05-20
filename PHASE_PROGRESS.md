@@ -255,3 +255,40 @@ Blockers:
 
 Next phase to start:
 - Phase 7: Production errors fix + live URLs update docs.
+
+## Phase 7: Production Errors Fix + Live URLs Update Docs
+
+Status: Complete
+
+Completed work:
+- Confirmed no live URL values were provided in this session.
+- Kept README and deployment docs on placeholders.
+- Added public demo notes, known limitations, and production troubleshooting docs.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+
+Build/test result:
+- Passed.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings.
+- `check:security`, root `lint`, root `typecheck`, frontend E2E, and extension checks were skipped because those scripts/folders do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Live URL verification requires `FRONTEND_LIVE_URL`, `BACKEND_LIVE_URL`, and `BACKEND_HEALTH_URL`.
+
+Next phase to start:
+- Phase 8: Portfolio + GitHub + LinkedIn + job package.

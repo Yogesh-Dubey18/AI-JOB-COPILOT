@@ -10,6 +10,9 @@
 - [Deployment Runbook](deployment-runbook.md)
 - [Production Smoke Test](production-smoke-test.md)
 - [Update Live URLs](update-live-urls.md)
+- [Public Demo Notes](public-demo-notes.md)
+- [Production Troubleshooting](production-troubleshooting.md)
+- [Known Limitations](known-limitations.md)
 
 ## Product And QA
 
