@@ -16,5 +16,5 @@ router.get("/", asyncHandler(async (req, res) => res.json({ success: true, data:
 router.get("/:id", asyncHandler(async (req, res) => res.json({ success: true, data: await getResume(req.user!.id, param(req.params.id)) })));
 router.post("/:id/analyze", asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await analyzeResume(req.user!.id, param(req.params.id), req.body.targetRole) })));
 router.post("/:id/improve", asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await improveResume(req.user!.id, param(req.params.id), req.body.targetRole) })));
-router.post("/:id/export-pdf", asyncHandler(async (req, res) => res.json({ success: true, data: await exportResumePdfPlaceholder(param(req.params.id)) })));
+router.post("/:id/export-pdf", asyncHandler(async (req, res) => res.json({ success: true, data: await exportResumePdfPlaceholder(param(req.params.id), req.user!.id) })));
 export default router;

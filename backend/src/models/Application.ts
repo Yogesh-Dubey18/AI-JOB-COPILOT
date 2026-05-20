@@ -29,6 +29,13 @@ const ApplicationSchema = new Schema(
     status: { type: String, enum: applicationStatuses, default: "Saved", index: true },
     currentRound: String,
     notes: String,
+    statusHistory: [
+      {
+        status: String,
+        note: String,
+        changedAt: Date
+      }
+    ],
     rejectionReason: String,
     offerDetails: Schema.Types.Mixed,
     nextFollowUpDate: Date
@@ -37,5 +44,7 @@ const ApplicationSchema = new Schema(
 );
 
 ApplicationSchema.index({ userId: 1, status: 1 });
+ApplicationSchema.index({ userId: 1, nextFollowUpDate: 1 });
+ApplicationSchema.index({ userId: 1, company: 1, role: 1 });
 export type ApplicationDocument = InferSchemaType<typeof ApplicationSchema>;
 export const ApplicationModel = mongoose.models.Application || model("Application", ApplicationSchema);

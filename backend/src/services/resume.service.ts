@@ -1,19 +1,19 @@
 import path from "node:path";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findRecordById, findRecords } from "../utils/repository.js";
-import { extractResumeText, parseResumeText } from "./resume-parser.service.js";
+import { extractResumeTextDetailed, parseResumeText } from "./resume-parser.service.js";
 
 export async function uploadResume(userId: string, file: Express.Multer.File, isBaseResume = true) {
   if (!file) throw new ApiError(400, "Resume file is required");
-  const rawText = await extractResumeText(file.path, file.mimetype);
-  const parsedData = parseResumeText(rawText);
+  const parsed = await extractResumeTextDetailed(file.path, file.mimetype);
+  const parsedData = parseResumeText(parsed.text);
   return createRecord("resumes", {
     userId,
     fileName: file.originalname,
     fileUrl: "/uploads/" + path.basename(file.path),
     fileType: file.mimetype,
-    rawText,
-    parsedData,
+    rawText: parsed.text,
+    parsedData: { ...parsedData, parser: parsed.parser, parserWarnings: parsed.warnings },
     isBaseResume
   });
 }

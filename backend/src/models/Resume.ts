@@ -25,5 +25,7 @@ const ResumeSchema = new Schema(
 );
 
 ResumeSchema.index({ userId: 1, isBaseResume: 1 });
+ResumeSchema.index({ userId: 1, createdAt: -1 });
+ResumeSchema.index({ userId: 1, fileName: 1 });
 export type ResumeDocument = InferSchemaType<typeof ResumeSchema>;
 export const ResumeModel = mongoose.models.Resume || model("Resume", ResumeSchema);

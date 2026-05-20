@@ -84,3 +84,50 @@ Blockers:
 
 Next phase to start:
 - Phase 3: Real integrations + production hardening.
+
+## Phase 3: Real Integrations + Production Hardening
+
+Status: Complete
+
+Completed work:
+- Hardened MongoDB connection options and added disconnect support.
+- Added additional indexes for users, jobs, resumes, applications, and notifications.
+- Improved backend CORS, proxy trust, rate limit test behavior, powered-by hiding, and safe production errors.
+- Added AI provider resolution for mock/OpenAI/Gemini with timeout, retry, and schema validation.
+- Added AI env placeholders for provider, model, timeout, and retry attempts.
+- Improved resume parser architecture for TXT plus safe PDF/DOCX fallback extraction.
+- Added PDF export foundation without generating committed PDF artifacts.
+- Improved application tracker persistence with status history.
+- Added safe job source architecture.
+- Added mock/SMTP-ready email service architecture.
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+
+Build/test result:
+- Passed.
+- Root build passed.
+- Root tests passed: backend 9 tests and frontend 9 tests.
+- Backend build passed.
+- Backend tests passed: 9 tests.
+- Frontend build passed.
+- Frontend tests passed: 9 tests, with non-fatal Recharts jsdom zero-size warnings.
+- `check:security`, root `lint`, root `typecheck`, frontend E2E, and extension checks were skipped because those scripts/folders do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- No real AI/email/provider credentials are configured; mock/fallback behavior remains active.
+- Playwright E2E package is not installed, so E2E setup remains deferred until dependency installation is approved/available.
+
+Next phase to start:
+- Phase 4: SaaS polish + billing + admin + analytics.

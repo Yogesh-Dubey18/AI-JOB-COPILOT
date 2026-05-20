@@ -15,5 +15,6 @@ const UserSchema = new Schema(
   { timestamps: true }
 );
 
+UserSchema.index({ role: 1, createdAt: -1 });
 export type UserDocument = InferSchemaType<typeof UserSchema>;
 export const UserModel = mongoose.models.User || model("User", UserSchema);

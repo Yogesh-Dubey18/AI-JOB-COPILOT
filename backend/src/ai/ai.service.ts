@@ -1,4 +1,5 @@
-import { callJsonModel } from "./aiClient.js";
+import type { ZodSchema } from "zod";
+import { callJsonModel, getAiRuntime } from "./aiClient.js";
 import { createRecord } from "../utils/repository.js";
 import { buildresumeAnalysisPrompt } from "./prompts/resumeAnalysis.prompt.js";
 import { buildjobMatchPrompt } from "./prompts/jobMatch.prompt.js";
@@ -13,6 +14,18 @@ import { buildrejectionAnalysisPrompt } from "./prompts/rejectionAnalysis.prompt
 import { buildportfolioGeneratorPrompt } from "./prompts/portfolioGenerator.prompt.js";
 import { buildlinkedinOptimizerPrompt } from "./prompts/linkedinOptimizer.prompt.js";
 import { buildfollowUpPrompt } from "./prompts/followUp.prompt.js";
+import {
+  applicationKitOutputSchema,
+  interviewPrepOutputSchema,
+  jobMatchOutputSchema,
+  looseObjectOutputSchema,
+  mockInterviewOutputSchema,
+  rejectionAnalysisOutputSchema,
+  resumeAnalysisOutputSchema,
+  scamDetectorOutputSchema,
+  skillGapOutputSchema,
+  tailoredResumeOutputSchema
+} from "./schemas/outputs.js";
 
 const resumeAnalysisFallback = {
   atsScore: 82,
@@ -108,10 +121,11 @@ const rejectionFallback = {
 };
 
 async function track(userId: string | undefined, feature: string, status = "success", error = "") {
+  const runtime = getAiRuntime();
   await createRecord("aiRequests", {
     userId,
     feature,
-    model: "mock-or-configured-ai",
+    model: `${runtime.provider}:${runtime.model}`,
     inputTokens: 0,
     outputTokens: 0,
     status,
@@ -119,9 +133,9 @@ async function track(userId: string | undefined, feature: string, status = "succ
   });
 }
 
-async function run(userId: string | undefined, feature: string, prompt: string, fallback: any) {
+async function run<T>(userId: string | undefined, feature: string, prompt: string, fallback: T, schema?: ZodSchema<T>) {
   try {
-    const data = await callJsonModel(prompt, fallback);
+    const data = await callJsonModel(prompt, fallback, schema);
     await track(userId, feature);
     return data;
   } catch (error) {
@@ -131,18 +145,18 @@ async function run(userId: string | undefined, feature: string, prompt: string, 
 }
 
 export const aiService = {
-  analyzeResume: (userId: string | undefined, context: any) => run(userId, "resume-analysis", buildresumeAnalysisPrompt(context), resumeAnalysisFallback),
-  matchJob: (userId: string | undefined, context: any) => run(userId, "job-match", buildjobMatchPrompt(context), jobMatchFallback),
-  tailorResume: (userId: string | undefined, context: any) => run(userId, "tailor-resume", buildtailorResumePrompt(context), tailoredResumeFallback),
-  generateApplicationKit: (userId: string | undefined, context: any) => run(userId, "application-kit", buildapplicationKitPrompt(context), applicationKitFallback),
-  coverLetter: (userId: string | undefined, context: any) => run(userId, "cover-letter", buildapplicationKitPrompt(context), { coverLetter: applicationKitFallback.coverLetter }),
-  interviewPrep: (userId: string | undefined, context: any) => run(userId, "interview-prep", buildinterviewPrepPrompt(context), interviewPrepFallback),
-  mockInterview: (userId: string | undefined, context: any) => run(userId, "mock-interview", buildmockInterviewPrompt(context), mockInterviewFallback),
-  skillGap: (userId: string | undefined, context: any) => run(userId, "skill-gap", buildskillGapPrompt(context), skillGapFallback),
-  scamCheck: (userId: string | undefined, context: any) => run(userId, "scam-check", buildscamDetectorPrompt(context), scamFallback),
-  chat: (userId: string | undefined, context: any) => run(userId, "career-chat", buildcareerChatPrompt(context), { answer: "Based on your profile, focus on tailored applications, one strong resume version per role, and interview practice around your projects.", suggestedActions: ["Analyze resume", "Match jobs", "Practice interview"] }),
-  rejectionAnalysis: (userId: string | undefined, context: any) => run(userId, "rejection-analysis", buildrejectionAnalysisPrompt(context), rejectionFallback),
-  portfolioGenerator: (userId: string | undefined, context: any) => run(userId, "portfolio-generator", buildportfolioGeneratorPrompt(context), { hero: "Full-stack developer building practical web products", about: "I build responsive, API-driven applications with React, Node.js, Express, and MongoDB.", skills: ["React", "Node.js", "MongoDB"], projects: ["AI Job Copilot", "Airbnb clone", "Spotify clone"] }),
-  linkedinOptimizer: (userId: string | undefined, context: any) => run(userId, "linkedin-optimizer", buildlinkedinOptimizerPrompt(context), { headline: "Full-stack Developer | React | Node.js | MongoDB", about: "Project-focused developer seeking entry-level software roles." }),
-  followUpMessage: (userId: string | undefined, context: any) => run(userId, "follow-up-message", buildfollowUpPrompt(context), { message: "Hi, I wanted to politely follow up on my application. I remain interested in the role and would be happy to share any additional details." })
+  analyzeResume: (userId: string | undefined, context: any) => run(userId, "resume-analysis", buildresumeAnalysisPrompt(context), resumeAnalysisFallback, resumeAnalysisOutputSchema),
+  matchJob: (userId: string | undefined, context: any) => run(userId, "job-match", buildjobMatchPrompt(context), jobMatchFallback, jobMatchOutputSchema),
+  tailorResume: (userId: string | undefined, context: any) => run(userId, "tailor-resume", buildtailorResumePrompt(context), tailoredResumeFallback, tailoredResumeOutputSchema),
+  generateApplicationKit: (userId: string | undefined, context: any) => run(userId, "application-kit", buildapplicationKitPrompt(context), applicationKitFallback, applicationKitOutputSchema),
+  coverLetter: (userId: string | undefined, context: any) => run(userId, "cover-letter", buildapplicationKitPrompt(context), { coverLetter: applicationKitFallback.coverLetter }, looseObjectOutputSchema),
+  interviewPrep: (userId: string | undefined, context: any) => run(userId, "interview-prep", buildinterviewPrepPrompt(context), interviewPrepFallback, interviewPrepOutputSchema),
+  mockInterview: (userId: string | undefined, context: any) => run(userId, "mock-interview", buildmockInterviewPrompt(context), mockInterviewFallback, mockInterviewOutputSchema),
+  skillGap: (userId: string | undefined, context: any) => run(userId, "skill-gap", buildskillGapPrompt(context), skillGapFallback, skillGapOutputSchema),
+  scamCheck: (userId: string | undefined, context: any) => run(userId, "scam-check", buildscamDetectorPrompt(context), scamFallback, scamDetectorOutputSchema),
+  chat: (userId: string | undefined, context: any) => run(userId, "career-chat", buildcareerChatPrompt(context), { answer: "Based on your profile, focus on tailored applications, one strong resume version per role, and interview practice around your projects.", suggestedActions: ["Analyze resume", "Match jobs", "Practice interview"] }, looseObjectOutputSchema),
+  rejectionAnalysis: (userId: string | undefined, context: any) => run(userId, "rejection-analysis", buildrejectionAnalysisPrompt(context), rejectionFallback, rejectionAnalysisOutputSchema),
+  portfolioGenerator: (userId: string | undefined, context: any) => run(userId, "portfolio-generator", buildportfolioGeneratorPrompt(context), { hero: "Full-stack developer building practical web products", about: "I build responsive, API-driven applications with React, Node.js, Express, and MongoDB.", skills: ["React", "Node.js", "MongoDB"], projects: ["AI Job Copilot", "Airbnb clone", "Spotify clone"] }, looseObjectOutputSchema),
+  linkedinOptimizer: (userId: string | undefined, context: any) => run(userId, "linkedin-optimizer", buildlinkedinOptimizerPrompt(context), { headline: "Full-stack Developer | React | Node.js | MongoDB", about: "Project-focused developer seeking entry-level software roles." }, looseObjectOutputSchema),
+  followUpMessage: (userId: string | undefined, context: any) => run(userId, "follow-up-message", buildfollowUpPrompt(context), { message: "Hi, I wanted to politely follow up on my application. I remain interested in the role and would be happy to share any additional details." }, looseObjectOutputSchema)
 };

@@ -12,5 +12,7 @@ const NotificationSchema = new Schema(
   { timestamps: true }
 );
 
+NotificationSchema.index({ userId: 1, isRead: 1, createdAt: -1 });
+NotificationSchema.index({ userId: 1, type: 1, createdAt: -1 });
 export type NotificationDocument = InferSchemaType<typeof NotificationSchema>;
 export const NotificationModel = mongoose.models.Notification || model("Notification", NotificationSchema);

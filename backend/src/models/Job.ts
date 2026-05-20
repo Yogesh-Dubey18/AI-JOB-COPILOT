@@ -27,5 +27,8 @@ const JobSchema = new Schema(
 
 JobSchema.index({ title: "text", company: "text", description: "text", skillsRequired: "text" });
 JobSchema.index({ postedAt: -1, expiresAt: 1 });
+JobSchema.index({ remoteType: 1, jobType: 1, postedAt: -1 });
+JobSchema.index({ source: 1, applyUrl: 1 });
+JobSchema.index({ trustScore: -1, scamRiskScore: 1 });
 export type JobDocument = InferSchemaType<typeof JobSchema>;
 export const JobModel = mongoose.models.Job || model("Job", JobSchema);

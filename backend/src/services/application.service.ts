@@ -2,18 +2,20 @@ import { ApiError } from "../utils/ApiError.js";
 import { createRecord, deleteRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 
 export async function createApplication(userId: string, input: any) {
+  const status = input.status || "Saved";
   return createRecord("applications", {
     userId,
     jobId: input.jobId,
     company: input.company,
     role: input.role,
-    appliedDate: input.appliedDate || (input.status === "Applied" ? new Date() : undefined),
+    appliedDate: input.appliedDate || (status === "Applied" ? new Date() : undefined),
     applicationSource: input.applicationSource,
     resumeVersionId: input.resumeVersionId,
     applicationKitId: input.applicationKitId,
-    status: input.status || "Saved",
+    status,
     currentRound: input.currentRound,
     notes: input.notes || "",
+    statusHistory: [{ status, note: "Application created", changedAt: new Date() }],
     rejectionReason: input.rejectionReason,
     offerDetails: input.offerDetails,
     nextFollowUpDate: input.nextFollowUpDate
@@ -36,8 +38,10 @@ export async function updateApplication(userId: string, id: string, input: any) 
 }
 
 export async function updateApplicationStatus(userId: string, id: string, status: string) {
+  const app = await getApplication(userId, id);
   const updates: any = { status };
   if (status === "Applied") updates.appliedDate = new Date();
+  updates.statusHistory = [...(app.statusHistory || []), { status, note: "Status updated", changedAt: new Date() }];
   return updateApplication(userId, id, updates);
 }
 
