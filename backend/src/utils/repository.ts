@@ -22,6 +22,7 @@ import { AnalyticsSnapshotModel } from "../models/AnalyticsSnapshot.js";
 import { AIRequestModel } from "../models/AIRequest.js";
 import { SubscriptionModel } from "../models/Subscription.js";
 import { UsageEventModel } from "../models/UsageEvent.js";
+import { AuditLogModel } from "../models/AuditLog.js";
 import { FeedbackModel } from "../models/Feedback.js";
 import { CollectionName, StoredRecord, makeId, memory } from "./memoryStore.js";
 
@@ -48,6 +49,7 @@ const modelMap: Record<CollectionName, Model<any>> = {
   aiRequests: AIRequestModel,
   subscriptions: SubscriptionModel,
   usageEvents: UsageEventModel,
+  auditLogs: AuditLogModel,
   feedback: FeedbackModel
 };
 

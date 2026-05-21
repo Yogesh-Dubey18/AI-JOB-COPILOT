@@ -1362,3 +1362,74 @@ Blockers:
 
 Next phase to start:
 - Phase 32: v2 admin operations + audit logs.
+
+## Phase 32: v2 Admin Operations + Audit Logs
+
+Status: Complete
+
+Completed work:
+- Added persisted audit log model and repository/memory fallback support.
+- Upgraded audit middleware to persist sensitive API actions across auth, resume, jobs, applications, interviews, AI, billing, notifications, and admin categories without storing request bodies or secrets.
+- Added admin access denial audit logging.
+- Added system health service with safe database, AI provider, billing provider, and record-count status.
+- Added admin risk signals for high-risk jobs, AI fallback rate, admin denials, and scam report counts.
+- Added admin usage analytics for AI requests, usage events, and subscriptions.
+- Added admin routes for audit logs, system health, risk signals, and usage analytics.
+- Added admin dashboard links and frontend pages for audit logs, system health, risk signals, and usage analytics.
+- Added admin operations and audit logging documentation.
+- Added backend API coverage for admin guard enforcement and new admin operations endpoints.
+
+Files changed:
+- `backend/src/middlewares/audit.middleware.ts`
+- `backend/src/middlewares/auth.middleware.ts`
+- `backend/src/models/AuditLog.ts`
+- `backend/src/routes/admin.routes.ts`
+- `backend/src/services/admin.service.ts`
+- `backend/src/services/audit-log.service.ts`
+- `backend/src/services/system-health.service.ts`
+- `backend/src/utils/memoryStore.ts`
+- `backend/src/utils/repository.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/admin-operations-v2.md`
+- `docs/audit-logging-guide.md`
+- `frontend/app/admin/audit-logs/page.tsx`
+- `frontend/app/admin/dashboard/page.tsx`
+- `frontend/app/admin/risk-signals/page.tsx`
+- `frontend/app/admin/system-health/page.tsx`
+- `frontend/app/admin/usage-analytics/page.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 242 markdown files.
+- Root build passed.
+- Root tests passed: backend 16 tests and frontend 11 tests.
+- Backend build passed.
+- Backend tests passed: 16 tests.
+- Frontend build passed and now includes 47 app routes.
+- Frontend tests passed: 11 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Admin users are still created by manually setting a user role to `admin`; a safer invite/approval flow belongs in a later production issue.
+
+Next phase to start:
+- Phase 33: v2 security hardening + auth upgrade.

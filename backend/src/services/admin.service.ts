@@ -1,6 +1,8 @@
 import { createRecord, deleteRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { ensureSampleJobs } from "./job.service.js";
 import { normalizeJobSourceJob } from "./job-source.service.js";
+import { listAuditLogs } from "./audit-log.service.js";
+import { getRiskSignals, getSystemHealth } from "./system-health.service.js";
 
 export async function listUsers() {
   return findRecords("users", {}, { sort: { createdAt: -1 } });
@@ -26,6 +28,36 @@ export async function deleteAdminJob(id: string) {
 
 export async function aiUsage() {
   return findRecords("aiRequests", {}, { sort: { createdAt: -1 }, limit: 100 });
+}
+
+export async function auditLogs() {
+  return listAuditLogs(100);
+}
+
+export async function systemHealth() {
+  return getSystemHealth();
+}
+
+export async function riskSignals() {
+  return getRiskSignals();
+}
+
+export async function usageAnalytics() {
+  const [aiRequests, usageEvents, subscriptions] = await Promise.all([
+    findRecords("aiRequests", {}, { sort: { createdAt: -1 }, limit: 100 }),
+    findRecords("usageEvents", {}, { sort: { createdAt: -1 }, limit: 100 }),
+    findRecords("subscriptions", {}, { sort: { createdAt: -1 }, limit: 100 })
+  ]);
+  return {
+    aiRequests,
+    usageEvents,
+    subscriptions,
+    totals: {
+      aiRequests: aiRequests.length,
+      usageEvents: usageEvents.length,
+      activeSubscriptions: subscriptions.filter((subscription: any) => subscription.status === "active").length
+    }
+  };
 }
 
 export async function reports() {

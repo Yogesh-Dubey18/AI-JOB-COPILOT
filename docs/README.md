@@ -202,6 +202,8 @@
 - [AI Prompt Template Guide](ai-prompt-template-guide.md)
 - [SaaS Billing v2](saas-billing-v2.md)
 - [Stripe Integration Plan](stripe-integration-plan.md)
+- [Admin Operations v2](admin-operations-v2.md)
+- [Audit Logging Guide](audit-logging-guide.md)
 - [Security Hardening](security-hardening.md)
 - [Observability](observability.md)
 

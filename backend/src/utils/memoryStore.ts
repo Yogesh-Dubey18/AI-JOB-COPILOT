@@ -23,6 +23,7 @@ export type CollectionName =
   | "aiRequests"
   | "subscriptions"
   | "usageEvents"
+  | "auditLogs"
   | "feedback";
 
 export type StoredRecord = Record<string, any> & {
@@ -54,6 +55,7 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   aiRequests: [],
   subscriptions: [],
   usageEvents: [],
+  auditLogs: [],
   feedback: []
 };
 

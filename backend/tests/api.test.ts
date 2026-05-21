@@ -2,12 +2,20 @@ import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { resetMemoryStore } from "../src/utils/memoryStore.js";
+import { updateRecord } from "../src/utils/repository.js";
 import { ensureSampleJobs } from "../src/services/job.service.js";
 import { recordUsageEvent } from "../src/services/usage.service.js";
 
 async function authAgent() {
   const agent = request.agent(app);
   await agent.post("/api/auth/register").send({ fullName: "Test User", email: "test@example.com", password: "Password123!" }).expect(201);
+  return agent;
+}
+
+async function adminAgent() {
+  const agent = request.agent(app);
+  const register = await agent.post("/api/auth/register").send({ fullName: "Admin User", email: "admin@example.com", password: "Password123!" }).expect(201);
+  await updateRecord("users", register.body.data.user.id, { role: "admin" });
   return agent;
 }
 
@@ -149,6 +157,20 @@ describe("AI Job Copilot API", () => {
     expect(activated.body.data.currentPlan.id).toBe("pro");
     const summary = await agent.get("/api/billing/summary").expect(200);
     expect(summary.body.data.currentPlan.id).toBe("pro");
+  });
+
+  it("protects and exposes admin operations endpoints", async () => {
+    const user = await authAgent();
+    await user.get("/api/admin/system-health").expect(403);
+    const admin = await adminAgent();
+    const health = await admin.get("/api/admin/system-health").expect(200);
+    expect(health.body.data.status).toBe("ok");
+    const risks = await admin.get("/api/admin/risk-signals").expect(200);
+    expect(Array.isArray(risks.body.data.signals)).toBe(true);
+    const usage = await admin.get("/api/admin/usage-analytics").expect(200);
+    expect(usage.body.data.totals).toBeTruthy();
+    const logs = await admin.get("/api/admin/audit-logs").expect(200);
+    expect(Array.isArray(logs.body.data)).toBe(true);
   });
 
   it("enforces ai usage limits", async () => {

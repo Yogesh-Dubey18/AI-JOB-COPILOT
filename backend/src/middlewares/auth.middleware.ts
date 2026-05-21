@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { env } from "../config/env.js";
 import { findRecordById } from "../utils/repository.js";
 import { ApiError } from "../utils/ApiError.js";
+import { writeAuditLog } from "../services/audit-log.service.js";
 
 declare global {
   namespace Express {
@@ -34,6 +35,18 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
 }
 
 export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
-  if (req.user?.role !== "admin") throw new ApiError(403, "Admin access required");
+  if (req.user?.role !== "admin") {
+    void writeAuditLog({
+      actorUserId: req.user?.id,
+      actorRole: req.user?.role,
+      action: "admin.denied",
+      category: "admin",
+      method: req.method,
+      path: req.path,
+      statusCode: 403,
+      riskLevel: "medium"
+    }).catch((error) => console.error("Admin denial audit failed", error));
+    throw new ApiError(403, "Admin access required");
+  }
   next();
 }
