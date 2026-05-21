@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { resetMemoryStore } from "../src/utils/memoryStore.js";
 import { ensureSampleJobs } from "../src/services/job.service.js";
+import { recordUsageEvent } from "../src/services/usage.service.js";
 
 async function authAgent() {
   const agent = request.agent(app);
@@ -136,6 +137,28 @@ describe("AI Job Copilot API", () => {
     const usage = await agent.get("/api/ai/usage").expect(200);
     expect(usage.body.data.totalEvents).toBeGreaterThan(0);
     expect(usage.body.data.events[0].safetyFlags).toContain("openai_key_redacted");
+  });
+
+  it("returns billing plans and activates mock subscriptions", async () => {
+    const agent = await authAgent();
+    const plans = await agent.get("/api/billing/plans").expect(200);
+    expect(plans.body.data.plans.length).toBeGreaterThan(0);
+    const checkout = await agent.post("/api/billing/checkout").send({ planId: "pro" }).expect(200);
+    expect(checkout.body.data.provider).toBe("mock");
+    const activated = await agent.post("/api/billing/mock/activate").send({ planId: "pro" }).expect(200);
+    expect(activated.body.data.currentPlan.id).toBe("pro");
+    const summary = await agent.get("/api/billing/summary").expect(200);
+    expect(summary.body.data.currentPlan.id).toBe("pro");
+  });
+
+  it("enforces ai usage limits", async () => {
+    const agent = await authAgent();
+    const me = await agent.get("/api/auth/me").expect(200);
+    for (let i = 0; i < 50; i += 1) {
+      await recordUsageEvent(me.body.data.id, "test-fill", 1, "test");
+    }
+    const limited = await agent.post("/api/ai/chat").send({ message: "Will this run?" }).expect(402);
+    expect(limited.body.message).toMatch(/credit limit/i);
   });
 
   it("rejects oversized ai payloads", async () => {

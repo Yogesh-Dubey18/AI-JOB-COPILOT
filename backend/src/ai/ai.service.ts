@@ -1,6 +1,8 @@
 import type { ZodSchema } from "zod";
 import { callJsonModelWithMeta, getAiRuntime, type AiCallMeta } from "./aiClient.js";
-import { getUsageSummary } from "../services/usage.service.js";
+import { ApiError } from "../utils/ApiError.js";
+import { checkAiCreditLimit } from "../services/usage-limit.service.js";
+import { getUsageSummary, recordUsageEvent } from "../services/usage.service.js";
 import { createRecord } from "../utils/repository.js";
 import { buildresumeAnalysisPrompt } from "./prompts/resumeAnalysis.prompt.js";
 import { buildjobMatchPrompt } from "./prompts/jobMatch.prompt.js";
@@ -142,9 +144,18 @@ async function track(userId: string | undefined, feature: string, meta: AiCallMe
 }
 
 async function run<T>(userId: string | undefined, feature: string, prompt: string, fallback: T, schema?: ZodSchema<T>) {
+  if (userId) {
+    const limit = await checkAiCreditLimit(userId, feature);
+    if (!limit.allowed) throw new ApiError(402, "AI credit limit reached", limit);
+  }
   const guardedPrompt = buildGuardedPrompt(feature, prompt);
   const result = await callJsonModelWithMeta(guardedPrompt.prompt, fallback, schema);
   await track(userId, feature, result.meta, guardedPrompt);
+  await recordUsageEvent(userId, feature, Math.max(1, Math.ceil((result.meta.inputTokens + result.meta.outputTokens) / 1000)), "ai", {
+    provider: result.meta.provider,
+    status: result.meta.status,
+    fallbackUsed: result.meta.fallbackUsed
+  });
   return result.data;
 }
 

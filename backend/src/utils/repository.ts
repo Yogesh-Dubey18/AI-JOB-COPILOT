@@ -20,6 +20,8 @@ import { NotificationModel } from "../models/Notification.js";
 import { NotificationPreferenceModel } from "../models/NotificationPreference.js";
 import { AnalyticsSnapshotModel } from "../models/AnalyticsSnapshot.js";
 import { AIRequestModel } from "../models/AIRequest.js";
+import { SubscriptionModel } from "../models/Subscription.js";
+import { UsageEventModel } from "../models/UsageEvent.js";
 import { FeedbackModel } from "../models/Feedback.js";
 import { CollectionName, StoredRecord, makeId, memory } from "./memoryStore.js";
 
@@ -44,6 +46,8 @@ const modelMap: Record<CollectionName, Model<any>> = {
   notificationPreferences: NotificationPreferenceModel,
   analyticsSnapshots: AnalyticsSnapshotModel,
   aiRequests: AIRequestModel,
+  subscriptions: SubscriptionModel,
+  usageEvents: UsageEventModel,
   feedback: FeedbackModel
 };
 

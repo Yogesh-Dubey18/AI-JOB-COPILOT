@@ -1285,3 +1285,80 @@ Blockers:
 
 Next phase to start:
 - Phase 31: v2 SaaS billing + usage limits.
+
+## Phase 31: v2 SaaS Billing + Usage Limits
+
+Status: Complete
+
+Completed work:
+- Added subscription persistence and mock subscription activation.
+- Added usage event persistence for AI credits with monthly period tracking.
+- Added AI credit limit enforcement middleware and service-level enforcement so direct AI service callers are protected too.
+- Added mock/Stripe-ready billing provider boundary without enabling real charges.
+- Expanded billing routes for plans, summary, subscription, usage, checkout, and mock activation.
+- Updated shared plan catalog with upgrade prompts and Stripe price environment keys.
+- Updated billing UI with usage progress, provider status, plan limits, mock checkout, and demo activation controls.
+- Updated pricing UI with AI credits and job-match limits.
+- Added Stripe/billing env placeholders and billing v2 documentation.
+- Added backend tests for billing plans, mock subscription activation, and AI usage limit enforcement.
+
+Files changed:
+- `.env.example`
+- `backend/.env.example`
+- `backend/src/ai/ai.service.ts`
+- `backend/src/config/env.ts`
+- `backend/src/middlewares/usage-limit.middleware.ts`
+- `backend/src/models/Subscription.ts`
+- `backend/src/models/UsageEvent.ts`
+- `backend/src/routes/ai.routes.ts`
+- `backend/src/routes/billing.routes.ts`
+- `backend/src/services/billing-provider.service.ts`
+- `backend/src/services/billing.service.ts`
+- `backend/src/services/subscription.service.ts`
+- `backend/src/services/usage-limit.service.ts`
+- `backend/src/services/usage.service.ts`
+- `backend/src/utils/memoryStore.ts`
+- `backend/src/utils/repository.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/saas-billing-v2.md`
+- `docs/stripe-integration-plan.md`
+- `frontend/app/pricing/page.tsx`
+- `frontend/app/settings/billing/page.tsx`
+- `frontend/lib/plans.ts`
+- `shared/plans.ts`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 240 markdown files.
+- Root build passed.
+- Root tests passed: backend 15 tests and frontend 11 tests.
+- Backend build passed.
+- Backend tests passed: 15 tests.
+- Frontend build passed.
+- Frontend tests passed: 11 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Real Stripe charging remains intentionally disabled until Stripe SDK, price IDs, webhook signature verification, policy review, and production smoke tests are configured.
+
+Next phase to start:
+- Phase 32: v2 admin operations + audit logs.

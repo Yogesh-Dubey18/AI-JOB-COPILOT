@@ -21,6 +21,8 @@ export type CollectionName =
   | "notificationPreferences"
   | "analyticsSnapshots"
   | "aiRequests"
+  | "subscriptions"
+  | "usageEvents"
   | "feedback";
 
 export type StoredRecord = Record<string, any> & {
@@ -50,6 +52,8 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   notificationPreferences: [],
   analyticsSnapshots: [],
   aiRequests: [],
+  subscriptions: [],
+  usageEvents: [],
   feedback: []
 };
 

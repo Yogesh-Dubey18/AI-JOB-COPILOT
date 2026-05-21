@@ -200,6 +200,8 @@
 - [Job CSV Import Template](job-csv-import-template.md)
 - [AI Copilot v2](ai-copilot-v2.md)
 - [AI Prompt Template Guide](ai-prompt-template-guide.md)
+- [SaaS Billing v2](saas-billing-v2.md)
+- [Stripe Integration Plan](stripe-integration-plan.md)
 - [Security Hardening](security-hardening.md)
 - [Observability](observability.md)
 

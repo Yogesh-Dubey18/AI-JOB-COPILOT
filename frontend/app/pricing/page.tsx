@@ -19,6 +19,7 @@ export default function PricingPage() {
                 <Badge className={plan.id === "pro" ? "w-fit border-primary bg-primary text-primary-foreground" : "w-fit"}>{plan.badge}</Badge>
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
                 <div className="text-3xl font-bold">INR {plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
+                <p className="text-sm text-muted-foreground">{plan.aiCredits} AI credits/month · {plan.dailyMatches} job matches</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ul className="space-y-2 text-sm">
