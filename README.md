@@ -94,6 +94,22 @@ Known non-fatal local warnings:
 - Frontend tests print a Recharts zero-size warning under jsdom for responsive charts.
 - On Node 24, Next.js may print an experimental type-stripping warning while compiling.
 
+## v2 Beta Status
+
+Current beta release: `v2.0.0-beta`
+
+This beta is suitable for local portfolio review and controlled demo testing. It includes v2 resume intelligence, job source normalization, application follow-up intelligence, notifications, AI guardrails, SaaS usage limits, admin operations, audit logs, privacy export/delete, public portfolio, advanced analytics, interview coach, local PDF exports, Chrome extension foundation, and PWA/mobile offline polish.
+
+Beta docs:
+
+- [Release Notes v2 Beta](docs/release-notes-v2-beta.md)
+- [v2 Beta Readiness Checklist](docs/v2-beta-readiness-checklist.md)
+- [v2 Beta Testing Plan](docs/v2-beta-testing-plan.md)
+- [v2 Beta Manual Actions](docs/v2-beta-manual-actions.md)
+- [v2 Stabilization Bug Tracker](docs/v2-stabilization-bug-tracker.md)
+
+Still pending for real production use: live deployment verification, provider credentials, object storage, active Playwright E2E, Chrome Web Store packaging, and professional legal/commercial review.
+
 ## Environment
 
 Copy `.env.example`, `frontend/.env.example`, and `backend/.env.example`. Add MongoDB Atlas URI and JWT secrets for production. AI keys are optional because the app has structured mock fallback responses.

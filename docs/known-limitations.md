@@ -13,13 +13,14 @@
 - TXT resumes parse best locally.
 - PDF and DOCX use safe fallback extraction until dedicated parser packages are added.
 - Resume Intelligence v2 adds deterministic ATS heuristics and role keyword coverage, but it is not a guarantee of recruiter screening results.
-- PDF export is a foundation placeholder and does not generate production PDFs yet.
+- PDF export generates local PDFs with a basic renderer, but branded templates, object storage, signed URLs, and retention jobs are still future production work.
 
 ## Deployment
 
 - No live URLs are currently verified.
 - MongoDB Atlas must be configured for persistent deployed data.
 - CORS must be updated with the real frontend origin.
+- PWA behavior is a navigation fallback only; private app data is not cached offline.
 
 ## Product Scope
 
@@ -27,3 +28,5 @@
 - The app does not auto-send recruiter messages.
 - The app does not guarantee interviews, offers, or selection.
 - Legal pages are templates requiring professional review.
+- The Chrome extension is an unpacked manual-capture foundation, not a published browser-store package.
+- Playwright E2E is skip-safe unless Playwright is installed.
