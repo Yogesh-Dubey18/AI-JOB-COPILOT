@@ -4,7 +4,7 @@
 
 - Frontend URL: `https://ai-job-copilot-frontend.vercel.app/`
 - Backend URL: `https://ai-job-copilot-backend-l6ut.onrender.com`
-- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/api/health`
+- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/health`
 - Live URL environment variables: provided after the archive handoff.
 
 ## Health

@@ -8,7 +8,7 @@ Provided values:
 
 - Frontend URL: `https://ai-job-copilot-frontend.vercel.app/`
 - Backend URL: `https://ai-job-copilot-backend-l6ut.onrender.com`
-- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/api/health`
+- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/health`
 
 ## Verification Results
 
@@ -16,7 +16,7 @@ Provided values:
 | --- | --- | --- |
 | Frontend URL opens | Pending manual verification | Use `https://ai-job-copilot-frontend.vercel.app/` |
 | Backend URL opens | Pending manual verification | Use `https://ai-job-copilot-backend-l6ut.onrender.com` |
-| Backend health passes | Pending manual verification | Use `https://ai-job-copilot-backend-l6ut.onrender.com/api/health` |
+| Backend health passes | Pending manual verification | Use `https://ai-job-copilot-backend-l6ut.onrender.com/health` |
 | Frontend API config | Pending | Requires deployed frontend env |
 | CORS allows frontend | Pending | Requires deployed backend env |
 

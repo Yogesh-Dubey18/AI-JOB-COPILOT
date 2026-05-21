@@ -4,7 +4,7 @@ These live URLs have been provided by the project owner:
 
 - `FRONTEND_LIVE_URL=https://ai-job-copilot-frontend.vercel.app/`
 - `BACKEND_LIVE_URL=https://ai-job-copilot-backend-l6ut.onrender.com`
-- `BACKEND_HEALTH_URL=https://ai-job-copilot-backend-l6ut.onrender.com/api/health`
+- `BACKEND_HEALTH_URL=https://ai-job-copilot-backend-l6ut.onrender.com/health`
 
 Before marking the deployment as fully verified, run the smoke checks below and record actual results.
 

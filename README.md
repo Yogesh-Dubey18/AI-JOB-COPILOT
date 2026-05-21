@@ -25,7 +25,7 @@ Owner-provided deployment URLs:
 
 - Frontend: https://ai-job-copilot-frontend.vercel.app/
 - Backend: https://ai-job-copilot-backend-l6ut.onrender.com
-- Backend health: https://ai-job-copilot-backend-l6ut.onrender.com/api/health
+- Backend health: https://ai-job-copilot-backend-l6ut.onrender.com/health
 
 Live smoke testing should still be completed before presenting the deployment as production-ready. Keep provider secrets, MongoDB URI, JWT secrets, billing keys, email keys, and AI keys in hosting dashboards only.
 
@@ -169,7 +169,7 @@ Final deployment execution docs:
 Backend health check:
 
 ~~~bash
-GET https://ai-job-copilot-backend-l6ut.onrender.com/api/health
+GET https://ai-job-copilot-backend-l6ut.onrender.com/health
 ~~~
 
 Expected safe response:

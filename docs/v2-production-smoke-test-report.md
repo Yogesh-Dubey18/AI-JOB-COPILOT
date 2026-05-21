@@ -6,7 +6,7 @@ This report is a template for the first real deployment smoke test. Live URLs ha
 
 - Frontend URL: `https://ai-job-copilot-frontend.vercel.app/`
 - Backend URL: `https://ai-job-copilot-backend-l6ut.onrender.com`
-- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/api/health`
+- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/health`
 - Database: MongoDB Atlas project pending
 - AI provider: mock unless configured
 - Email provider: mock unless configured
