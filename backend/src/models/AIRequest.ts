@@ -14,7 +14,8 @@ const AIRequestSchema = new Schema(
     fallbackUsed: { type: Boolean, default: false },
     validationPassed: { type: Boolean, default: true },
     safetyFlags: [String],
-    promptChars: Number
+    promptChars: Number,
+    privacyMode: { type: String, default: "no_raw_prompt_storage" }
   },
   { timestamps: true }
 );

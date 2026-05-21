@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 const sections = [
-  ["Account security", Lock, "Change password foundation, session review, and account safety checks."],
-  ["Notifications", Bell, "Job digest, interview reminders, follow-up reminders, and product updates."],
-  ["Billing", CreditCard, "Current plan, mock Stripe-ready checkout, invoices, and usage limits."],
-  ["Data export", Download, "Export data placeholder for future privacy workflows."],
-  ["Delete account", Trash2, "Manual confirmation placeholder before destructive account deletion exists."]
+  ["Account security", Lock, "Change password foundation, session review, and account safety checks.", ""],
+  ["Notifications", Bell, "Job digest, interview reminders, follow-up reminders, and product updates.", "/notifications"],
+  ["Billing", CreditCard, "Current plan, mock Stripe-ready checkout, invoices, and usage limits.", "/settings/billing"],
+  ["Data export", Download, "Download your account, profile, resume, application, AI usage, and privacy data.", "/settings/privacy"],
+  ["Delete account", Trash2, "Delete account workflow with explicit confirmation and data-removal notes.", "/settings/privacy"]
 ] as const;
 
 export default function SettingsPage() {
@@ -18,12 +18,12 @@ export default function SettingsPage() {
     <AppShell>
       <PageHeading title="Settings" description="Manage account safety, notifications, billing, privacy, and AI usage." />
       <div className="grid gap-4 md:grid-cols-2">
-        {sections.map(([title, Icon, text]) => (
+        {sections.map(([title, Icon, text, href]) => (
           <Card key={title}>
             <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Icon className="h-4 w-4" />{title}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">{text}</p>
-              {title === "Billing" ? <Link href="/settings/billing" className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90">Open billing</Link> : <Button variant="outline">Review</Button>}
+              {href ? <Link href={href} className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90">Open</Link> : <Button variant="outline">Review</Button>}
             </CardContent>
           </Card>
         ))}

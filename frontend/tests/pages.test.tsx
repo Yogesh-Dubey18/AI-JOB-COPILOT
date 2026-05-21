@@ -14,6 +14,8 @@ import InterviewsPage from "@/app/interviews/page";
 import AnalyticsPage from "@/app/analytics/page";
 import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
+import PrivacySettingsPage from "@/app/settings/privacy/page";
+import PrivacyPage from "@/app/privacy/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
 import AdminMonitoringPage from "@/app/admin/monitoring/page";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
@@ -81,6 +83,17 @@ describe("frontend pages", () => {
   it("billing settings page renders", () => {
     renderWithProviders(<BillingSettingsPage />);
     expect(screen.getByText(/Billing and usage/i)).toBeInTheDocument();
+  });
+
+  it("privacy settings page renders", () => {
+    renderWithProviders(<PrivacySettingsPage />);
+    expect(screen.getByText(/Privacy and data/i)).toBeInTheDocument();
+  });
+
+  it("public privacy page renders", () => {
+    renderWithProviders(<PrivacyPage />);
+    expect(screen.getByRole("heading", { name: "Privacy" })).toBeInTheDocument();
+    expect(screen.getByText(/Data export/i)).toBeInTheDocument();
   });
 
   it("admin dashboard renders", () => {

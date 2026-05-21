@@ -1796,3 +1796,88 @@ Blockers:
 
 Next phase to start:
 - Phase 38: v2 data privacy + export/delete account.
+
+## Phase 38: v2 Data Privacy + Export/Delete Account
+
+Status: Complete
+
+Completed work:
+- Added MongoDB/memory-backed `PrivacyPreference` model and repository bulk deletion support.
+- Added authenticated privacy APIs for data export, privacy preference read/update, and guarded account deletion.
+- Added user data export service that excludes password hashes, refresh token hashes, provider secrets, and raw AI prompts.
+- Added account deletion service for user-owned records with exact `DELETE MY ACCOUNT` confirmation.
+- Improved admin user listing sanitization so password/token/lock fields are not returned.
+- Improved structured logger redaction for common sensitive keys and email addresses.
+- Improved AI usage privacy metadata with explicit no-raw-prompt-storage mode.
+- Escaped notification email HTML content before provider handoff.
+- Added `/settings/privacy` frontend page for preferences, export preview, and guarded delete account.
+- Updated settings and public privacy pages with honest privacy/export/deletion language.
+- Added data inventory, retention, and privacy system v2 documentation.
+- Added backend and frontend tests for privacy export/preferences/delete and privacy pages.
+
+Files changed:
+- `backend/src/ai/ai.service.ts`
+- `backend/src/app.ts`
+- `backend/src/models/AIRequest.ts`
+- `backend/src/models/PrivacyPreference.ts`
+- `backend/src/routes/privacy.routes.ts`
+- `backend/src/services/admin.service.ts`
+- `backend/src/services/notification.service.ts`
+- `backend/src/services/privacy.service.ts`
+- `backend/src/utils/logger.ts`
+- `backend/src/utils/memoryStore.ts`
+- `backend/src/utils/repository.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/data-inventory.md`
+- `docs/data-retention-policy.md`
+- `docs/privacy-system-v2.md`
+- `frontend/app/privacy/page.tsx`
+- `frontend/app/settings/page.tsx`
+- `frontend/app/settings/privacy/page.tsx`
+- `frontend/lib/api.ts`
+- `frontend/tests/pages.test.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix backend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+
+Build/test result:
+- Passed after adding a visible public privacy "Data export and deletion" section to match the new frontend test.
+- Documentation link check passed for 261 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 20 tests and frontend 17 tests.
+- Backend build passed.
+- Backend tests passed: 20 tests.
+- Frontend build passed.
+- Frontend tests passed: 17 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- External provider deletion still requires manual runbooks and real provider credentials.
+- MongoDB Atlas backup retention, object storage deletion, email provider records, AI provider retention, monitoring retention, and payment-provider customer records are documented as manual production actions.
+
+Next phase to start:
+- Phase 39: v2 portfolio/public profile generator.

@@ -18,6 +18,7 @@ import { JobScamReportModel } from "../models/JobScamReport.js";
 import { ChatSessionModel } from "../models/ChatSession.js";
 import { NotificationModel } from "../models/Notification.js";
 import { NotificationPreferenceModel } from "../models/NotificationPreference.js";
+import { PrivacyPreferenceModel } from "../models/PrivacyPreference.js";
 import { AnalyticsSnapshotModel } from "../models/AnalyticsSnapshot.js";
 import { AIRequestModel } from "../models/AIRequest.js";
 import { SubscriptionModel } from "../models/Subscription.js";
@@ -45,6 +46,7 @@ const modelMap: Record<CollectionName, Model<any>> = {
   chatSessions: ChatSessionModel,
   notifications: NotificationModel,
   notificationPreferences: NotificationPreferenceModel,
+  privacyPreferences: PrivacyPreferenceModel,
   analyticsSnapshots: AnalyticsSnapshotModel,
   aiRequests: AIRequestModel,
   subscriptions: SubscriptionModel,
@@ -139,6 +141,16 @@ export async function deleteRecord(collection: CollectionName, id: string): Prom
   const before = memory[collection].length;
   memory[collection] = memory[collection].filter((doc) => String(doc._id) !== String(id));
   return { deleted: before !== memory[collection].length };
+}
+
+export async function deleteRecords(collection: CollectionName, filter: Record<string, any> = {}): Promise<{ deletedCount: number }> {
+  if (isDbReady()) {
+    const result = await modelMap[collection].deleteMany(filter as FilterQuery<any>);
+    return { deletedCount: result.deletedCount || 0 };
+  }
+  const before = memory[collection].length;
+  memory[collection] = memory[collection].filter((doc) => !matches(doc, filter));
+  return { deletedCount: before - memory[collection].length };
 }
 
 export async function countRecords(collection: CollectionName, filter: Record<string, any> = {}): Promise<number> {

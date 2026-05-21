@@ -19,6 +19,7 @@ export type CollectionName =
   | "chatSessions"
   | "notifications"
   | "notificationPreferences"
+  | "privacyPreferences"
   | "analyticsSnapshots"
   | "aiRequests"
   | "subscriptions"
@@ -51,6 +52,7 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   chatSessions: [],
   notifications: [],
   notificationPreferences: [],
+  privacyPreferences: [],
   analyticsSnapshots: [],
   aiRequests: [],
   subscriptions: [],

@@ -139,7 +139,8 @@ async function track(userId: string | undefined, feature: string, meta: AiCallMe
     fallbackUsed: meta.fallbackUsed,
     validationPassed: meta.validationPassed,
     safetyFlags: guardrails.safetyFlags,
-    promptChars: guardrails.finalChars
+    promptChars: guardrails.finalChars,
+    privacyMode: "no_raw_prompt_storage"
   });
 }
 
@@ -171,6 +172,7 @@ export const aiService = {
       providerConfigured: runtime.provider !== "mock",
       schemaValidation: "enabled",
       usageTracking: "enabled",
+      privacyMode: "no raw prompt or provider secret storage",
       safety: getAiSafetyStatus()
     };
   },

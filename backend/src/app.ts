@@ -18,6 +18,7 @@ import billingRoutes from "./routes/billing.routes.js";
 import interviewRoutes from "./routes/interview.routes.js";
 import jobRoutes from "./routes/job.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import privacyRoutes from "./routes/privacy.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import resumeRoutes from "./routes/resume.routes.js";
 import { getProviderStatus } from "./services/provider-status.service.js";
@@ -74,6 +75,7 @@ app.use("/api/interviews", interviewRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/privacy", privacyRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use(notFoundHandler);

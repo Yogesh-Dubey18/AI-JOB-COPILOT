@@ -152,6 +152,24 @@ describe("AI Job Copilot API", () => {
     expect(notifications.body.data.length).toBeGreaterThan(0);
   });
 
+  it("exports privacy data, updates preferences, sanitizes admin users, and requires confirmed deletion", async () => {
+    const agent = await authAgent();
+    await agent.put("/api/profile").send({ headline: "Privacy-aware developer", skills: ["React"], targetRoles: ["Frontend Developer"] }).expect(200);
+    const preferences = await agent.patch("/api/privacy/preferences").send({ shareProductAnalytics: true, personalizationEnabled: false }).expect(200);
+    expect(preferences.body.data.shareProductAnalytics).toBe(true);
+    expect(preferences.body.data.allowAiTraining).toBe(false);
+    const exported = await agent.get("/api/privacy/export").expect(200);
+    expect(exported.body.data.user.email).toBe("test@example.com");
+    expect(exported.body.data.user.passwordHash).toBeUndefined();
+    expect(exported.body.data.data.profiles.length).toBe(1);
+    await agent.delete("/api/privacy/account").send({ confirmation: "delete" }).expect(422);
+    const admin = await adminAgent();
+    const users = await admin.get("/api/admin/users").expect(200);
+    expect(users.body.data[0].passwordHash).toBeUndefined();
+    await agent.delete("/api/privacy/account").send({ confirmation: "DELETE MY ACCOUNT" }).expect(200);
+    await agent.get("/api/auth/me").expect(401);
+  });
+
   it("generates interview prep fallback", async () => {
     const agent = await authAgent();
     const res = await agent.post("/api/ai/interview-prep").send({ role: "Full Stack Developer" }).expect(200);

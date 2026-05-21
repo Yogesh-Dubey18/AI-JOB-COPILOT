@@ -6,7 +6,8 @@ import { getRiskSignals, getSystemHealth } from "./system-health.service.js";
 import { getProviderStatus } from "./provider-status.service.js";
 
 export async function listUsers() {
-  return findRecords("users", {}, { sort: { createdAt: -1 } });
+  const users = await findRecords("users", {}, { sort: { createdAt: -1 } });
+  return users.map(({ passwordHash, refreshTokenHash, failedLoginAttempts, lockedUntil, ...user }: any) => user);
 }
 
 export async function listAdminJobs() {

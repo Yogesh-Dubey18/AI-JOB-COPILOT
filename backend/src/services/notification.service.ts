@@ -45,12 +45,22 @@ export async function updateNotificationPreferences(userId: string, input: any) 
   return updateRecord("notificationPreferences", String(existing._id), { ...defaultPreferences, ...existing, ...input, userId });
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function deliverNotificationEmail(userEmail: string, notification: any) {
   if (!userEmail) return { sent: false, provider: "mock", note: "User email missing." };
+  const message = String(notification.message || "");
   return sendEmail({
     to: userEmail,
     subject: notification.title || "AI Job Copilot reminder",
-    text: notification.message || "",
-    html: notification.message ? `<p>${notification.message}</p>` : undefined
+    text: message,
+    html: message ? `<p>${escapeHtml(message)}</p>` : undefined
   });
 }
