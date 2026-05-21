@@ -30,11 +30,24 @@ describe("AI Job Copilot API", () => {
     expect(res.body.data.user.email).toBe("asha@example.com");
   });
 
+  it("rejects weak passwords", async () => {
+    await request(app).post("/api/auth/register").send({ fullName: "Weak User", email: "weak@example.com", password: "password" }).expect(422);
+  });
+
   it("logs in a user", async () => {
     await request(app).post("/api/auth/register").send({ fullName: "Asha Dev", email: "login@example.com", password: "Password123!" });
     const res = await request(app).post("/api/auth/login").send({ email: "login@example.com", password: "Password123!" }).expect(200);
     expect(res.body.data.accessToken).toBeTruthy();
   });
+
+  it("temporarily locks accounts after repeated failed logins", async () => {
+    await request(app).post("/api/auth/register").send({ fullName: "Lock User", email: "lock@example.com", password: "Password123!" }).expect(201);
+    for (let i = 0; i < 5; i += 1) {
+      await request(app).post("/api/auth/login").send({ email: "lock@example.com", password: "WrongPass123!" }).expect(401);
+    }
+    await request(app).post("/api/auth/login").send({ email: "lock@example.com", password: "Password123!" }).expect(423);
+  });
+
 
   it("protects auth middleware", async () => {
     await request(app).get("/api/auth/me").expect(401);

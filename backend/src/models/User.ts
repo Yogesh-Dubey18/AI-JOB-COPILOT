@@ -10,6 +10,9 @@ const UserSchema = new Schema(
     role: { type: String, enum: ["job_seeker", "admin"], default: "job_seeker", index: true },
     isEmailVerified: { type: Boolean, default: false },
     refreshTokenHash: String,
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockedUntil: Date,
+    passwordChangedAt: Date,
     lastLoginAt: Date
   },
   { timestamps: true }

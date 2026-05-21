@@ -1433,3 +1433,70 @@ Blockers:
 
 Next phase to start:
 - Phase 33: v2 security hardening + auth upgrade.
+
+## Phase 33: v2 Security Hardening + Auth Upgrade
+
+Status: Complete
+
+Completed work:
+- Strengthened auth validation with uppercase, lowercase, number, length, and max-length password policy.
+- Added account lock fields and temporary lockout after repeated failed logins.
+- Added JWT token type checks for access and refresh tokens.
+- Added auth route rate limiting outside tests.
+- Added runtime environment validation for production MongoDB and JWT secret readiness.
+- Added frontend security headers through Next.js middleware.
+- Added `scripts/check-security-safety.mjs` and root `check:security` script.
+- Added auth security and security audit checklist documentation.
+- Added backend tests for weak password rejection and repeated failed-login lockout.
+
+Files changed:
+- `backend/src/config/env.ts`
+- `backend/src/middlewares/auth.middleware.ts`
+- `backend/src/models/User.ts`
+- `backend/src/routes/auth.routes.ts`
+- `backend/src/server.ts`
+- `backend/src/services/auth.service.ts`
+- `backend/src/validators/auth.validator.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/auth-security-v2.md`
+- `docs/security-audit-checklist-v2.md`
+- `frontend/middleware.ts`
+- `package.json`
+- `scripts/check-security-safety.mjs`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed after removing a Git subprocess dependency from `scripts/check-security-safety.mjs` to avoid Windows sandbox EPERM.
+- Documentation link check passed for 244 markdown files.
+- Security safety check passed.
+- Root build passed.
+- Root tests passed: backend 18 tests and frontend 11 tests.
+- Backend build passed.
+- Backend tests passed: 18 tests.
+- Frontend build passed.
+- Frontend tests passed: 11 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Production-ready password reset still needs persistent reset tokens and email verification wiring with a real email provider.
+
+Next phase to start:
+- Phase 34: v2 testing coverage + Playwright E2E.

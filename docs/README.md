@@ -204,6 +204,8 @@
 - [Stripe Integration Plan](stripe-integration-plan.md)
 - [Admin Operations v2](admin-operations-v2.md)
 - [Audit Logging Guide](audit-logging-guide.md)
+- [Auth Security v2](auth-security-v2.md)
+- [Security Audit Checklist v2](security-audit-checklist-v2.md)
 - [Security Hardening](security-hardening.md)
 - [Observability](observability.md)
 

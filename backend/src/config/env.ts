@@ -42,3 +42,18 @@ export const env = {
 
 export const isProduction = env.NODE_ENV === "production";
 export const isTest = env.NODE_ENV === "test";
+
+export function validateRuntimeEnv() {
+  const warnings: string[] = [];
+  const failures: string[] = [];
+  if (isProduction) {
+    if (!env.MONGO_URI) failures.push("MONGO_URI is required in production.");
+    if (env.JWT_ACCESS_SECRET.length < 32 || env.JWT_ACCESS_SECRET.includes("change-me")) failures.push("JWT_ACCESS_SECRET must be a strong production secret.");
+    if (env.JWT_REFRESH_SECRET.length < 32 || env.JWT_REFRESH_SECRET.includes("change-me")) failures.push("JWT_REFRESH_SECRET must be a strong production secret.");
+    if (!env.CLIENT_URL.startsWith("https://")) warnings.push("CLIENT_URL should use HTTPS in production.");
+  } else {
+    if (env.JWT_ACCESS_SECRET.includes("change-me")) warnings.push("Using development JWT access secret.");
+    if (env.JWT_REFRESH_SECRET.includes("change-me")) warnings.push("Using development JWT refresh secret.");
+  }
+  return { ok: failures.length === 0, failures, warnings };
+}
