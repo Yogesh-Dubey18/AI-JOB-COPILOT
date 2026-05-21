@@ -2023,3 +2023,75 @@ Blockers:
 
 Next phase to start:
 - Phase 41: v2 interview coach + mock scoring.
+
+## Phase 41: v2 Interview Coach + Mock Scoring
+
+Status: Complete
+
+Completed work:
+- Added `InterviewSession` persistence with memory-store fallback and privacy export/delete coverage.
+- Added interview coach AI prompt/schema/fallback support.
+- Added role-specific question banks, readiness scoring, project coach, HR coach, DSA tracker, interview session start/answer flow, and interview history service.
+- Added interview coach API routes for readiness, history, question banks, focused coaching, DSA tracking, and session scoring.
+- Improved mock interview UI with readiness dashboard, focused session controls, scoring display, project coaching, HR coaching, DSA tracker, and history access.
+- Added interview history page for coach sessions, mock practice, and scheduled interview rounds.
+- Added backend and frontend test coverage for the new interview coach flow.
+- Added interview coach and mock scoring documentation.
+
+Files changed:
+- `backend/src/ai/ai.service.ts`
+- `backend/src/ai/prompts/interviewCoach.prompt.ts`
+- `backend/src/ai/schemas/outputs.ts`
+- `backend/src/models/InterviewSession.ts`
+- `backend/src/routes/interview.routes.ts`
+- `backend/src/services/interview-coach.service.ts`
+- `backend/src/services/privacy.service.ts`
+- `backend/src/utils/memoryStore.ts`
+- `backend/src/utils/repository.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/interview-coach-v2.md`
+- `docs/mock-interview-scoring-guide.md`
+- `frontend/app/interviews/history/page.tsx`
+- `frontend/app/interviews/mock/page.tsx`
+- `frontend/tests/pages.test.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix backend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 267 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 23 tests and frontend 20 tests.
+- Backend build passed.
+- Backend tests passed: 23 tests.
+- Frontend build passed.
+- Frontend tests passed: 20 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Mock interview scoring remains provider-fallback friendly until Gemini/OpenAI credentials are configured.
+- Voice/video interview capture is intentionally out of scope for this phase.
+
+Next phase to start:
+- Phase 42: v2 real resume/portfolio PDF export.

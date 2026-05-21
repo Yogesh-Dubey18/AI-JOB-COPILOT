@@ -71,6 +71,15 @@ export const mockInterviewOutputSchema = z.object({
   nextQuestion: z.string()
 });
 
+export const interviewCoachOutputSchema = z.object({
+  readinessScore: z.number(),
+  focusAreas: z.array(z.string()),
+  practicePlan: z.array(z.string()),
+  projectQuestions: z.array(z.string()),
+  hrQuestions: z.array(z.string()),
+  dsaQuestions: z.array(z.string())
+});
+
 export const skillGapOutputSchema = z.object({
   targetRole: z.string(),
   missingSkills: z.array(z.string()),

@@ -11,6 +11,7 @@ import JobsPage from "@/app/jobs/page";
 import JobDetailPage from "@/app/jobs/[jobId]/page";
 import ApplicationsPage from "@/app/applications/page";
 import InterviewsPage from "@/app/interviews/page";
+import InterviewHistoryPage from "@/app/interviews/history/page";
 import AnalyticsPage from "@/app/analytics/page";
 import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
@@ -70,6 +71,11 @@ describe("frontend pages", () => {
   it("interview prep page renders", () => {
     renderWithProviders(<InterviewsPage />);
     expect(screen.getByText(/Interview tracker/i)).toBeInTheDocument();
+  });
+
+  it("interview history page renders", () => {
+    renderWithProviders(<InterviewHistoryPage />);
+    expect(screen.getByText(/Interview history/i)).toBeInTheDocument();
   });
 
   it("analytics page renders", () => {

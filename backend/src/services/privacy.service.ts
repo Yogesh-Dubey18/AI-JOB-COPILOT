@@ -19,6 +19,7 @@ const userOwnedCollections: CollectionName[] = [
   "applicationKits",
   "applications",
   "interviews",
+  "interviewSessions",
   "mockInterviews",
   "learningPlans",
   "portfolios",

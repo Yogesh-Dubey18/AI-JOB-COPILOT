@@ -11,6 +11,7 @@ import { TailoredResumeModel } from "../models/TailoredResume.js";
 import { ApplicationKitModel } from "../models/ApplicationKit.js";
 import { ApplicationModel } from "../models/Application.js";
 import { InterviewModel } from "../models/Interview.js";
+import { InterviewSessionModel } from "../models/InterviewSession.js";
 import { MockInterviewModel } from "../models/MockInterview.js";
 import { LearningPlanModel } from "../models/LearningPlan.js";
 import { PortfolioModel } from "../models/Portfolio.js";
@@ -40,6 +41,7 @@ const modelMap: Record<CollectionName, Model<any>> = {
   applicationKits: ApplicationKitModel,
   applications: ApplicationModel,
   interviews: InterviewModel,
+  interviewSessions: InterviewSessionModel,
   mockInterviews: MockInterviewModel,
   learningPlans: LearningPlanModel,
   portfolios: PortfolioModel,

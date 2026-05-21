@@ -12,6 +12,7 @@ export type CollectionName =
   | "applicationKits"
   | "applications"
   | "interviews"
+  | "interviewSessions"
   | "mockInterviews"
   | "learningPlans"
   | "portfolios"
@@ -46,6 +47,7 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   applicationKits: [],
   applications: [],
   interviews: [],
+  interviewSessions: [],
   mockInterviews: [],
   learningPlans: [],
   portfolios: [],

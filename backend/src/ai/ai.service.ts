@@ -11,6 +11,7 @@ import { buildapplicationKitPrompt } from "./prompts/applicationKit.prompt.js";
 import { buildcoverLetterPrompt } from "./prompts/coverLetter.prompt.js";
 import { buildinterviewPrepPrompt } from "./prompts/interviewPrep.prompt.js";
 import { buildmockInterviewPrompt } from "./prompts/mockInterview.prompt.js";
+import { buildinterviewCoachPrompt } from "./prompts/interviewCoach.prompt.js";
 import { buildskillGapPrompt } from "./prompts/skillGap.prompt.js";
 import { buildscamDetectorPrompt } from "./prompts/scamDetector.prompt.js";
 import { buildcareerChatPrompt } from "./prompts/careerChat.prompt.js";
@@ -20,6 +21,7 @@ import { buildlinkedinOptimizerPrompt } from "./prompts/linkedinOptimizer.prompt
 import { buildfollowUpPrompt } from "./prompts/followUp.prompt.js";
 import {
   applicationKitOutputSchema,
+  interviewCoachOutputSchema,
   interviewPrepOutputSchema,
   jobMatchOutputSchema,
   looseObjectOutputSchema,
@@ -99,6 +101,15 @@ const mockInterviewFallback = {
   feedback: "Good structure. Add one concrete project example and explain tradeoffs more clearly.",
   improvedAnswer: "A stronger answer starts with the result, explains your specific responsibility, then mentions the technical decisions and impact.",
   nextQuestion: "Walk me through the architecture of your strongest full-stack project."
+};
+
+const interviewCoachFallback = {
+  readinessScore: 72,
+  focusAreas: ["Project explanation", "JavaScript fundamentals", "API design", "Concise HR answers"],
+  practicePlan: ["Practice one project story using problem-action-result.", "Revise React hooks and Node API basics.", "Solve two easy DSA problems aloud.", "Record one mock HR answer."],
+  projectQuestions: ["Why did you build this project?", "What was your exact contribution?", "How would you improve the architecture?"],
+  hrQuestions: ["Tell me about yourself.", "Why should we hire you?", "How do you handle feedback?"],
+  dsaQuestions: ["Explain two sum.", "Find duplicates in an array.", "Reverse words in a string."]
 };
 
 const skillGapFallback = {
@@ -183,6 +194,7 @@ export const aiService = {
   generateApplicationKit: (userId: string | undefined, context: any) => run(userId, "application-kit", buildapplicationKitPrompt(context), applicationKitFallback, applicationKitOutputSchema),
   coverLetter: (userId: string | undefined, context: any) => run(userId, "cover-letter", buildcoverLetterPrompt(context), { coverLetter: applicationKitFallback.coverLetter }, looseObjectOutputSchema),
   interviewPrep: (userId: string | undefined, context: any) => run(userId, "interview-prep", buildinterviewPrepPrompt(context), interviewPrepFallback, interviewPrepOutputSchema),
+  interviewCoach: (userId: string | undefined, context: any) => run(userId, "interview-coach", buildinterviewCoachPrompt(context), interviewCoachFallback, interviewCoachOutputSchema),
   mockInterview: (userId: string | undefined, context: any) => run(userId, "mock-interview", buildmockInterviewPrompt(context), mockInterviewFallback, mockInterviewOutputSchema),
   skillGap: (userId: string | undefined, context: any) => run(userId, "skill-gap", buildskillGapPrompt(context), skillGapFallback, skillGapOutputSchema),
   scamCheck: (userId: string | undefined, context: any) => run(userId, "scam-check", buildscamDetectorPrompt(context), scamFallback, scamDetectorOutputSchema),

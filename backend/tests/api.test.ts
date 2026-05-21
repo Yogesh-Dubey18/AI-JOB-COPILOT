@@ -192,6 +192,22 @@ describe("AI Job Copilot API", () => {
     expect(res.body.data.technicalTopics.length).toBeGreaterThan(0);
   });
 
+  it("runs interview coach sessions and readiness endpoints", async () => {
+    const agent = await authAgent();
+    const session = await agent.post("/api/interviews/sessions/start").send({ role: "Full Stack Developer", focus: "project" }).expect(201);
+    expect(session.body.data.currentQuestion).toMatch(/project/i);
+    const answer = await agent.post("/api/interviews/sessions/answer").send({ sessionId: session.body.data._id, answer: "I built a job tracker with React, Node.js, Express, MongoDB, auth, and dashboards." }).expect(200);
+    expect(answer.body.data.scoreHistory.length).toBeGreaterThan(0);
+    const readiness = await agent.get("/api/interviews/readiness").expect(200);
+    expect(readiness.body.data.readinessScore).toBeGreaterThanOrEqual(0);
+    const bank = await agent.get("/api/interviews/question-bank/Full%20Stack%20Developer").expect(200);
+    expect(bank.body.data.project.length).toBeGreaterThan(0);
+    const history = await agent.get("/api/interviews/history").expect(200);
+    expect(history.body.data.sessions.length).toBeGreaterThan(0);
+    const dsa = await agent.get("/api/interviews/dsa-tracker").expect(200);
+    expect(dsa.body.data.questions.length).toBeGreaterThan(0);
+  });
+
   it("generates public portfolios with privacy controls", async () => {
     const agent = await authAgent();
     const created = await agent.post("/api/portfolios/generate").send({

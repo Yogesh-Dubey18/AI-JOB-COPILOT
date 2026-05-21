@@ -162,6 +162,8 @@
 ## Interview Mastery
 
 - [Interview Master Plan](interview-master-plan.md)
+- [Interview Coach v2](interview-coach-v2.md)
+- [Mock Interview Scoring Guide](mock-interview-scoring-guide.md)
 - [First Interview Sprint Plan](first-interview-sprint-plan.md)
 - [Company-Specific Interview Research Template](company-specific-interview-research-template.md)
 - [Role-Wise Interview Prep Guide](role-wise-interview-prep-guide.md)
