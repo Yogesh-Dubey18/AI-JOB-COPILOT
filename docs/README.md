@@ -227,6 +227,8 @@
 - [CI Troubleshooting](ci-troubleshooting.md)
 - [Release Checklist v2](release-checklist-v2.md)
 - [Performance Accessibility UX v2](performance-accessibility-ux-v2.md)
+- [PWA Mobile v2](pwa-mobile-v2.md)
+- [Mobile UX Checklist](mobile-ux-checklist.md)
 - [Security Hardening](security-hardening.md)
 - [Observability](observability.md)
 

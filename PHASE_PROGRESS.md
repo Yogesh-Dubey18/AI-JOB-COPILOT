@@ -2249,3 +2249,69 @@ Blockers:
 
 Next phase to start:
 - Phase 44: v2 mobile/PWA offline experience.
+
+## Phase 44: v2 Mobile/PWA Offline Experience
+
+Status: Complete
+
+Completed work:
+- Improved PWA manifest with app id, scope, display override, orientation, categories, shortcuts, and maskable icon purpose.
+- Added conservative service worker at `frontend/public/sw.js`.
+- Added install helper client component that registers the service worker and shows an install action only when the browser provides a prompt.
+- Improved offline page with clearer fallback state and mobile-friendly action links.
+- Improved mobile app shell safe-area padding, header truncation, sidebar scrolling, and bottom navigation spacing.
+- Added offline page frontend test coverage.
+- Added PWA mobile and mobile UX documentation.
+- Confirmed the service worker avoids caching API responses, uploads, generated PDFs, private dashboard data, and AI responses.
+
+Files changed:
+- `frontend/public/manifest.json`
+- `frontend/public/sw.js`
+- `frontend/app/layout.tsx`
+- `frontend/app/offline/page.tsx`
+- `frontend/components/layout/app-shell.tsx`
+- `frontend/components/shared/pwa-client.tsx`
+- `frontend/tests/pages.test.tsx`
+- `docs/README.md`
+- `docs/pwa-mobile-v2.md`
+- `docs/mobile-ux-checklist.md`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:docs`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run build --prefix extension`
+- `npm test --prefix extension`
+- `npm run build`
+- `npm test`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 273 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 24 tests and frontend 22 tests.
+- Frontend build passed with 51 app routes.
+- Frontend tests passed: 22 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Extension build passed.
+- Extension tests passed: 2 tests.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Offline behavior is intentionally limited to a navigation fallback. Private user data, AI outputs, uploads, and generated PDFs are not cached offline.
+- Full PWA store-quality assets such as PNG icons and screenshots remain a future polish task.
+
+Next phase to start:
+- Phase 45: v2 final stabilization + beta release.

@@ -18,6 +18,7 @@ import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
 import PrivacySettingsPage from "@/app/settings/privacy/page";
 import PrivacyPage from "@/app/privacy/page";
+import OfflinePage from "@/app/offline/page";
 import PortfolioGeneratorPage from "@/app/portfolio-generator/page";
 import PublicPortfolioPage from "@/app/u/[slug]/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
@@ -118,6 +119,11 @@ describe("frontend pages", () => {
     renderWithProviders(<PrivacyPage />);
     expect(screen.getByRole("heading", { name: "Privacy" })).toBeInTheDocument();
     expect(screen.getByText(/Data export/i)).toBeInTheDocument();
+  });
+
+  it("offline page renders", () => {
+    renderWithProviders(<OfflinePage />);
+    expect(screen.getByRole("heading", { name: "You are offline" })).toBeInTheDocument();
   });
 
   it("admin dashboard renders", () => {
