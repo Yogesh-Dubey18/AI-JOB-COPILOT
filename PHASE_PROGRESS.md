@@ -2376,7 +2376,7 @@ Build/test result:
 
 Git safety result:
 - Passed before staging.
-- Beta tag status will be confirmed after commit/push.
+- Beta tag status: `v2.0.0-beta` was created locally and pushed to `origin`.
 
 Blockers:
 - v2.0.0-beta is a local beta architecture release, not verified live production deployment.
@@ -2385,3 +2385,87 @@ Blockers:
 
 Next phase to start:
 - Phase 46: v2 production deployment verification + stable release.
+
+## Phase 46: v2 Production Deployment Verification + Stable Release
+
+Status: Complete
+
+Completed work:
+- Added v2 production environment checklist, deployment verification guide, production smoke test report template, go-live manual, stable release closure, and v2 stable release notes.
+- Updated README with stable v2 source release status and honest production launch boundaries.
+- Updated CHANGELOG with `v2.0.0` release notes.
+- Updated final project audit and known limitations to clarify stable source readiness versus live production deployment.
+- Updated docs index with v2 stable and production verification documents.
+- Updated root, backend, frontend, shared, and extension package metadata to `2.0.0`.
+- Verified local stable release build/test/docs/security/git safety flow.
+
+Files changed:
+- `README.md`
+- `CHANGELOG.md`
+- `package.json`
+- `package-lock.json`
+- `backend/package.json`
+- `frontend/package.json`
+- `shared/package.json`
+- `extension/package.json`
+- `docs/README.md`
+- `docs/final-project-audit.md`
+- `docs/known-limitations.md`
+- `docs/release-notes-v2-stable.md`
+- `docs/v2-production-env-checklist.md`
+- `docs/v2-production-deployment-verification.md`
+- `docs/v2-production-smoke-test-report.md`
+- `docs/v2-production-go-live-manual.md`
+- `docs/v2-stable-release-closure.md`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run check:docs`
+- `npm run check:security`
+- `npm run check:git-safety`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix extension`
+- `npm test --prefix extension`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+- final safety audit
+- `git status --short`
+- `git add .`
+- `git commit -m "Prepare v2 stable production release documentation"`
+- `git push`
+- `git tag -a v2.0.0 -m "AI Job Copilot v2.0.0 stable production-ready architecture release"`
+- `git push origin v2.0.0`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 284 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 24 tests and frontend 22 tests.
+- Backend build passed.
+- Backend tests passed: 24 tests.
+- Frontend build passed with 51 app routes.
+- Frontend tests passed: 22 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Extension build passed.
+- Extension tests passed: 2 tests.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+- Stable tag status will be confirmed after commit/push.
+
+Blockers:
+- Live production deployment cannot be verified without real frontend/backend URLs and hosting dashboard access.
+- MongoDB Atlas, provider credentials, object storage, active Playwright E2E, and Chrome Web Store packaging remain manual production actions.
+
+Next phase to start:
+- Phase 47: real user feedback loop + issue-driven sprint.

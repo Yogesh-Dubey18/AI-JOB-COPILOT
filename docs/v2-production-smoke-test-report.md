@@ -1,0 +1,40 @@
+# v2 Production Smoke Test Report
+
+This report is a template for the first real deployment smoke test. Current status is pending because live URLs and platform access have not been provided.
+
+## Environment
+
+- Frontend URL: `FRONTEND_LIVE_URL`
+- Backend URL: `BACKEND_LIVE_URL`
+- Backend health URL: `BACKEND_HEALTH_URL`
+- Database: MongoDB Atlas project pending
+- AI provider: mock unless configured
+- Email provider: mock unless configured
+- Billing provider: mock unless configured
+
+## Smoke Tests
+
+| Area | Test | Status | Notes |
+| --- | --- | --- | --- |
+| Backend | Health endpoint returns safe JSON | Pending | Requires `BACKEND_HEALTH_URL` |
+| Frontend | Landing page loads | Pending | Requires `FRONTEND_LIVE_URL` |
+| Auth | Register and login demo user | Pending | Requires deployed backend and database |
+| Resume | Upload TXT resume and analyze | Pending | Use mock AI unless provider keys are configured |
+| Jobs | View jobs and match score | Pending | Seed or manual jobs required |
+| Applications | Create and update application | Pending | Requires authenticated user |
+| Interviews | Generate interview prep | Pending | Mock AI allowed |
+| Analytics | Dashboard renders charts | Pending | Requires sample or user data |
+| Privacy | Export account data | Pending | Requires authenticated user |
+| Admin | Admin pages protected | Pending | Requires admin test account |
+
+## Local Pre-Deployment Verification
+
+- Root build: pass when `npm run build` succeeds.
+- Root tests: pass when `npm test` succeeds.
+- Security check: pass when `npm run check:security` succeeds.
+- Git safety: pass when `npm run check:git-safety` succeeds.
+- Docs links: pass when `npm run check:docs` succeeds.
+
+## Final Result
+
+Current result: not live-verified. Replace this with real results only after deployment URLs are available.

@@ -18,6 +18,7 @@
 ## Deployment
 
 - No live URLs are currently verified.
+- v2.0.0 is a stable source and architecture release, not a verified live production deployment.
 - MongoDB Atlas must be configured for persistent deployed data.
 - CORS must be updated with the real frontend origin.
 - PWA behavior is a navigation fallback only; private app data is not cached offline.

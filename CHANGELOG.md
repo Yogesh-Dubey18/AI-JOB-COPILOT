@@ -6,6 +6,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 - No unreleased changes yet.
 
+## v2.0.0 - 2026-05-21
+
+- Promoted v2 from beta to a stable source, documentation, and architecture release for production deployment preparation.
+- Added production environment checklist, deployment verification guide, production smoke test report template, go-live manual, and stable release closure documentation.
+- Updated README, final audit, known limitations, documentation index, and release notes with honest live-deployment status.
+- Verified the stable release locally before tagging; live production verification remains pending until real URLs and platform access are provided.
+
 ## v2.0.0-beta - 2026-05-21
 
 - Added v2 resume parsing, ATS scoring, role keyword banks, job source normalization, trust scoring, and duplicate detection.

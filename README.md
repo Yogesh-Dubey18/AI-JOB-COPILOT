@@ -110,6 +110,23 @@ Beta docs:
 
 Still pending for real production use: live deployment verification, provider credentials, object storage, active Playwright E2E, Chrome Web Store packaging, and professional legal/commercial review.
 
+## v2 Stable Status
+
+Current stable source release: `v2.0.0`
+
+This stable release means the repository has a verified v2 architecture, documentation, local build/test loop, safety checks, and deployment runbooks. It does not mean the app has been deployed to live production yet.
+
+Stable release docs:
+
+- [Release Notes v2 Stable](docs/release-notes-v2-stable.md)
+- [v2 Production Env Checklist](docs/v2-production-env-checklist.md)
+- [v2 Production Deployment Verification](docs/v2-production-deployment-verification.md)
+- [v2 Production Smoke Test Report](docs/v2-production-smoke-test-report.md)
+- [v2 Production Go-Live Manual](docs/v2-production-go-live-manual.md)
+- [v2 Stable Release Closure](docs/v2-stable-release-closure.md)
+
+Production launch remains pending until MongoDB Atlas, backend hosting, frontend hosting, provider secrets, CORS, and live smoke tests are configured with real values.
+
 ## Environment
 
 Copy `.env.example`, `frontend/.env.example`, and `backend/.env.example`. Add MongoDB Atlas URI and JWT secrets for production. AI keys are optional because the app has structured mock fallback responses.
