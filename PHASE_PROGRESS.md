@@ -2095,3 +2095,81 @@ Blockers:
 
 Next phase to start:
 - Phase 42: v2 real resume/portfolio PDF export.
+
+## Phase 42: v2 Real Resume/Portfolio PDF Export
+
+Status: Complete
+
+Completed work:
+- Added `PdfExport` model for export history, renderer metadata, file metadata, and privacy notes.
+- Added repository and memory-store support for `pdfExports`.
+- Added privacy export/delete coverage for PDF export history records.
+- Replaced the placeholder PDF service with a native minimal PDF renderer that creates valid local PDFs without a heavy runtime dependency.
+- Added PDF templates for base resumes, resume versions, tailored resumes, application kits, portfolios, and interview prep.
+- Added authenticated export routes and history retrieval under `/api/exports`.
+- Preserved legacy compatibility through `POST /api/resumes/:id/export-pdf`.
+- Added ownership checks before every export.
+- Applied portfolio visibility settings to portfolio PDF exports.
+- Added `/pdf-export` frontend command center and navigation entry.
+- Added frontend page test coverage for the export UI.
+- Added backend API test coverage for PDF generation, static file serving, multiple export types, and export history.
+- Added PDF export system and resume export guide documentation.
+- Made generated PDF upload output explicitly ignored in `.gitignore`.
+
+Files changed:
+- `.gitignore`
+- `backend/src/app.ts`
+- `backend/src/models/PdfExport.ts`
+- `backend/src/routes/export.routes.ts`
+- `backend/src/routes/resume.routes.ts`
+- `backend/src/services/pdf-export.service.ts`
+- `backend/src/services/privacy.service.ts`
+- `backend/src/utils/memoryStore.ts`
+- `backend/src/utils/repository.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/pdf-export-system-v2.md`
+- `docs/resume-export-guide.md`
+- `frontend/app/pdf-export/page.tsx`
+- `frontend/components/layout/app-shell.tsx`
+- `frontend/tests/pages.test.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 269 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 24 tests and frontend 21 tests.
+- Backend build passed after adding explicit return types in the PDF text helpers.
+- Backend tests passed: 24 tests.
+- Frontend build passed with 51 app routes.
+- Frontend tests passed: 21 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Generated PDFs currently use local ignored upload storage. Production should connect object storage and signed URLs before public commercial use.
+- The renderer is intentionally basic; branded visual templates and one-page ATS layout tuning remain future enhancements.
+
+Next phase to start:
+- Phase 43: v2 Chrome extension/browser assistant.

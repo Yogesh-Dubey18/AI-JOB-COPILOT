@@ -35,8 +35,9 @@ pnpm-debug.log*
 # Local uploads, generated exports, and binary output
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/uploads/exports/
 uploads/
-exports/
+/exports/
 generated/
 *.pdf
 

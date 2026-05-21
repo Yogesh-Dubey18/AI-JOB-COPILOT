@@ -24,6 +24,7 @@ const userOwnedCollections: CollectionName[] = [
   "learningPlans",
   "portfolios",
   "publicProfiles",
+  "pdfExports",
   "jobScamReports",
   "chatSessions",
   "notifications",

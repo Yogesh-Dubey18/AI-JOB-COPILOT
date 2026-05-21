@@ -207,6 +207,8 @@
 - [Privacy System v2](privacy-system-v2.md)
 - [Public Portfolio v2](public-portfolio-v2.md)
 - [Portfolio Privacy Guide](portfolio-privacy-guide.md)
+- [PDF Export System v2](pdf-export-system-v2.md)
+- [Resume Export Guide](resume-export-guide.md)
 - [Advanced Analytics v2](advanced-analytics-v2.md)
 - [Job Search Intelligence Guide](job-search-intelligence-guide.md)
 - [SaaS Billing v2](saas-billing-v2.md)

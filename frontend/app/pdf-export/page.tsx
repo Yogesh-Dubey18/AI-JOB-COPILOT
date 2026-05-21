@@ -1,0 +1,98 @@
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, FileArchive, FileText, History, IdCard, LayoutTemplate, MessagesSquare } from "lucide-react";
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeading } from "@/components/shared/page-heading";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
+
+const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, "");
+
+const exportTypes = [
+  { key: "resume", label: "Resume", icon: FileText, placeholder: "Resume or resume version ID" },
+  { key: "tailored-resume", label: "Tailored resume", icon: LayoutTemplate, placeholder: "Tailored resume ID" },
+  { key: "application-kit", label: "Application kit", icon: MessagesSquare, placeholder: "Application kit ID" },
+  { key: "portfolio", label: "Portfolio", icon: IdCard, placeholder: "Portfolio ID" },
+  { key: "interview-prep", label: "Interview prep", icon: FileArchive, placeholder: "Interview ID" }
+] as const;
+
+export default function PdfExportPage() {
+  const queryClient = useQueryClient();
+  const [ids, setIds] = useState<Record<string, string>>({});
+  const history = useQuery({ queryKey: ["pdf-exports"], queryFn: () => api.get<any[]>("/exports/history"), retry: false });
+  const createExport = useMutation({
+    mutationFn: ({ type, id }: { type: string; id: string }) => api.post<any>(`/exports/${type}/${id}`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pdf-exports"] })
+  });
+
+  function fileHref(fileUrl: string) {
+    return fileUrl?.startsWith("http") ? fileUrl : `${backendOrigin}${fileUrl}`;
+  }
+
+  return (
+    <AppShell>
+      <PageHeading title="PDF exports" description="Generate reviewable PDFs for resumes, tailored resumes, application kits, portfolios, and interview prep." />
+      <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Download className="h-4 w-4" />Create export</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {exportTypes.map(({ key, label, icon: Icon, placeholder }) => (
+              <div key={key} className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_auto]">
+                <label className="space-y-1">
+                  <span className="flex items-center gap-2 text-sm font-medium"><Icon className="h-4 w-4" />{label}</span>
+                  <Input value={ids[key] || ""} onChange={(event) => setIds({ ...ids, [key]: event.target.value })} placeholder={placeholder} />
+                </label>
+                <Button
+                  className="self-end"
+                  variant="outline"
+                  disabled={!ids[key] || createExport.isPending}
+                  onClick={() => createExport.mutate({ type: key, id: ids[key] })}
+                >
+                  Export
+                </Button>
+              </div>
+            ))}
+            {createExport.data ? (
+              <div className="rounded-md border bg-muted p-3 text-sm">
+                Latest export ready: <a className="font-semibold text-primary" href={fileHref(createExport.data.fileUrl)} target="_blank" rel="noreferrer">{createExport.data.fileName}</a>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><History className="h-4 w-4" />Export history</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {(history.data || []).length ? (history.data || []).map((item) => (
+              <div key={item._id} className="rounded-md border p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground">{item.fileName}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge>{item.sourceType}</Badge>
+                    <Badge>{Math.ceil((item.byteSize || 0) / 1024)} KB</Badge>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  <a className="inline-flex h-9 items-center justify-center gap-2 rounded-md border px-3 font-semibold hover:bg-muted" href={fileHref(item.fileUrl)} target="_blank" rel="noreferrer">
+                    <Download className="h-4 w-4" />Open PDF
+                  </a>
+                  <span className="text-muted-foreground">{item.renderer} - {item.status}</span>
+                </div>
+              </div>
+            )) : (
+              <div className="rounded-md border p-5 text-sm text-muted-foreground">No PDF exports yet.</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AppShell>
+  );
+}

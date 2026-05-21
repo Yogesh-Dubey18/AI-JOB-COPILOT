@@ -12,6 +12,7 @@ import JobDetailPage from "@/app/jobs/[jobId]/page";
 import ApplicationsPage from "@/app/applications/page";
 import InterviewsPage from "@/app/interviews/page";
 import InterviewHistoryPage from "@/app/interviews/history/page";
+import PdfExportPage from "@/app/pdf-export/page";
 import AnalyticsPage from "@/app/analytics/page";
 import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
@@ -76,6 +77,11 @@ describe("frontend pages", () => {
   it("interview history page renders", () => {
     renderWithProviders(<InterviewHistoryPage />);
     expect(screen.getByText(/Interview history/i)).toBeInTheDocument();
+  });
+
+  it("exports page renders", () => {
+    renderWithProviders(<PdfExportPage />);
+    expect(screen.getByRole("heading", { name: "PDF exports" })).toBeInTheDocument();
   });
 
   it("analytics page renders", () => {

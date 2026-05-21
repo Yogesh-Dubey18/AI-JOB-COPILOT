@@ -235,6 +235,37 @@ describe("AI Job Copilot API", () => {
     expect(visible.body.data.contactEmail).toBe("public@example.com");
   });
 
+  it("generates PDF exports and keeps export history user-scoped", async () => {
+    const agent = await authAgent();
+    const upload = await agent.post("/api/resumes/upload").attach("resume", Buffer.from("Test User\nSkills React Node.js MongoDB\nProjects AI Job Copilot"), "resume.txt").expect(201);
+    const resumeExport = await agent.post("/api/exports/resume/" + upload.body.data._id).send({}).expect(201);
+    expect(resumeExport.body.data.fileUrl).toMatch(/\.pdf$/);
+    await agent.get(resumeExport.body.data.fileUrl).expect(200);
+
+    const jobs = await agent.get("/api/jobs").expect(200);
+    const tailored = await agent.post("/api/jobs/" + jobs.body.data.items[0]._id + "/tailor-resume").send({ baseResumeId: upload.body.data._id }).expect(201);
+    const tailoredExport = await agent.post("/api/exports/tailored-resume/" + tailored.body.data._id).send({}).expect(201);
+    expect(tailoredExport.body.data.sourceType).toBe("tailored-resume");
+
+    const kit = await agent.post("/api/ai/generate-application-kit").send({ jobId: jobs.body.data.items[0]._id, resumeVersionId: tailored.body.data.resumeVersionId }).expect(200);
+    const kitExport = await agent.post("/api/exports/application-kit/" + kit.body.data._id).send({}).expect(201);
+    expect(kitExport.body.data.sourceType).toBe("application-kit");
+
+    const portfolio = await agent.post("/api/portfolios/generate").send({ slug: "export-portfolio", message: "React Node MongoDB portfolio", sections: { showEmail: false, showResume: false } }).expect(201);
+    const portfolioExport = await agent.post("/api/exports/portfolio/" + portfolio.body.data._id).send({}).expect(201);
+    expect(portfolioExport.body.data.privacy.notes.join(" ")).toMatch(/visibility settings/i);
+
+    const interview = await agent.post("/api/interviews").send({ roundType: "Technical", roundNumber: 1, mode: "Video", topicsExpected: ["React", "Node.js"], nextSteps: ["Revise projects"] }).expect(201);
+    const prepExport = await agent.post("/api/exports/interview-prep/" + interview.body.data._id).send({}).expect(201);
+    expect(prepExport.body.data.sourceType).toBe("interview-prep");
+
+    const legacyResumeExport = await agent.post("/api/resumes/" + upload.body.data._id + "/export-pdf").send({}).expect(201);
+    expect(legacyResumeExport.body.data.renderer).toBe("native-basic-pdf");
+
+    const history = await agent.get("/api/exports/history").expect(200);
+    expect(history.body.data.length).toBeGreaterThanOrEqual(6);
+  });
+
   it("reports ai status and tracks guarded usage", async () => {
     const agent = await authAgent();
     const redactionSample = "sk-" + "testsecretvalueforredaction";
