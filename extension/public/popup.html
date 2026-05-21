@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Job Copilot</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="header">
+        <strong>AI Job Copilot</strong>
+        <button id="openApp" type="button">Open app</button>
+      </header>
+      <p class="muted">Review every field before saving. This assistant never applies or sends messages for you.</p>
+      <div class="actions">
+        <button id="parsePage" type="button">Parse visible job</button>
+        <button id="saveJob" type="button">Save reviewed job</button>
+        <button id="copyMessage" type="button">Copy interest message</button>
+      </div>
+      <form id="jobForm" class="form">
+        <label>Title<input id="title" name="title" autocomplete="off"></label>
+        <label>Company<input id="company" name="company" autocomplete="off"></label>
+        <label>Location<input id="location" name="location" autocomplete="off"></label>
+        <label>Apply URL<input id="applyUrl" name="applyUrl" autocomplete="off"></label>
+        <label>Skills<input id="skillsRequired" name="skillsRequired" autocomplete="off"></label>
+        <label>Description<textarea id="description" name="description" rows="5"></textarea></label>
+      </form>
+      <p id="status" class="status" role="status">Ready.</p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

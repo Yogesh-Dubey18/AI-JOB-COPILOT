@@ -1,0 +1,10 @@
+{
+  "name": "ai-job-copilot-extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/clean.mjs && node ../node_modules/typescript/bin/tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs"
+  }
+}

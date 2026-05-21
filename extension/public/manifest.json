@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "AI Job Copilot Assistant",
+  "description": "Manually capture visible job details, save reviewed jobs, and copy application messages into AI Job Copilot.",
+  "version": "1.0.0",
+  "action": {
+    "default_title": "AI Job Copilot",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

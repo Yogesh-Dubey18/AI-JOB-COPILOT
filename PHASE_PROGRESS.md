@@ -2173,3 +2173,79 @@ Blockers:
 
 Next phase to start:
 - Phase 43: v2 Chrome extension/browser assistant.
+
+## Phase 43: v2 Chrome Extension/Browser Assistant
+
+Status: Complete
+
+Completed work:
+- Added standalone `extension/` package with Manifest V3 configuration.
+- Added popup UI for manually parsing visible job pages, reviewing fields, saving reviewed jobs, copying an interest message, and opening the web app.
+- Added options page for configurable local/deployed API and app URLs.
+- Added safe content script that responds only to explicit parse requests from the popup.
+- Added job page parser with visible-text extraction, skill detection, location/company/title inference, and scam-risk hints.
+- Added extension API client using existing authenticated manual job import endpoint.
+- Added copy-message helper that writes to clipboard only and never sends automatically.
+- Added extension build script that outputs ignored unpacked files to `extension/dist`.
+- Added extension tests for parser and message generation.
+- Added Chrome extension and extension privacy/safety documentation.
+- Confirmed existing backend `POST /api/jobs/manual-import` supports the extension manual save workflow.
+
+Files changed:
+- `docs/README.md`
+- `docs/chrome-extension-v2.md`
+- `docs/extension-privacy-and-safety.md`
+- `extension/package.json`
+- `extension/tsconfig.json`
+- `extension/scripts/clean.mjs`
+- `extension/scripts/copy-static.mjs`
+- `extension/public/manifest.json`
+- `extension/public/popup.html`
+- `extension/public/options.html`
+- `extension/public/styles.css`
+- `extension/src/chrome.d.ts`
+- `extension/src/types.ts`
+- `extension/src/storage.ts`
+- `extension/src/jobParser.ts`
+- `extension/src/apiClient.ts`
+- `extension/src/messageTemplates.ts`
+- `extension/src/contentScript.ts`
+- `extension/src/popup.ts`
+- `extension/src/options.ts`
+- `extension/tests/jobParser.test.mjs`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix extension`
+- `npm test --prefix extension`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 271 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 24 tests and frontend 21 tests.
+- Extension build passed.
+- Extension tests passed: 2 tests.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- The extension is an unpacked/developer-mode foundation. Chrome Web Store packaging, icons, privacy review, and narrowed host permissions require manual product/legal review before publication.
+- Saving jobs from the extension requires the user to be logged in to AI Job Copilot in the same browser and backend CORS/session settings to match the deployed URLs.
+
+Next phase to start:
+- Phase 44: v2 mobile/PWA offline experience.
