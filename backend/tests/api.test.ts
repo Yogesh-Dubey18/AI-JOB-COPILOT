@@ -2,7 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { resetMemoryStore } from "../src/utils/memoryStore.js";
-import { updateRecord } from "../src/utils/repository.js";
+import { createRecord, updateRecord } from "../src/utils/repository.js";
 import { ensureSampleJobs } from "../src/services/job.service.js";
 import { recordUsageEvent } from "../src/services/usage.service.js";
 
@@ -133,6 +133,22 @@ describe("AI Job Copilot API", () => {
     expect(updated.body.data.timeline.length).toBeGreaterThan(1);
     const insights = await agent.get("/api/applications/insights").expect(200);
     expect(insights.body.data.active).toBe(1);
+  });
+
+  it("returns advanced analytics and job-search intelligence", async () => {
+    const agent = await authAgent();
+    const me = await agent.get("/api/auth/me").expect(200);
+    await agent.put("/api/profile").send({ headline: "Analytics developer", profileCompletenessScore: 85, skills: ["React", "Node.js"] }).expect(200);
+    await agent.post("/api/applications").send({ company: "Analytics Co", role: "React Developer", status: "Applied", applicationSource: "Company careers" }).expect(201);
+    await agent.post("/api/applications").send({ company: "Interview Co", role: "Node Developer", status: "HR Call", applicationSource: "Referral", nextFollowUpDate: new Date(Date.now() - 86400000).toISOString() }).expect(201);
+    await createRecord("resumeAnalyses", { userId: me.body.data.id, atsScore: 78, missingKeywords: ["Docker", "Testing"] });
+    await createRecord("jobMatches", { userId: me.body.data.id, missingSkills: ["Docker", "AWS"], matchScore: 72 });
+    const overview = await agent.get("/api/analytics/overview").expect(200);
+    expect(overview.body.data.jobSearchHealth.healthScore).toBeGreaterThanOrEqual(0);
+    expect(overview.body.data.bestJobSources.length).toBeGreaterThan(0);
+    const intelligence = await agent.get("/api/analytics/job-search-intelligence").expect(200);
+    expect(intelligence.body.data.topMissingSkills[0].name).toBe("Docker");
+    expect(intelligence.body.data.followUpsDue.length).toBeGreaterThan(0);
   });
 
   it("creates notification reminders and updates preferences", async () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BriefcaseBusiness, CalendarClock, FileText, Layers, Sparkles, Target, TrendingUp, Wrench } from "lucide-react";
+import { BriefcaseBusiness, CalendarClock, FileText, HeartPulse, Layers, Sparkles, Target, TrendingUp, Wrench } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/app-shell";
 import { MetricCard } from "@/components/shared/metric-card";
@@ -16,6 +16,8 @@ export default function DashboardPage() {
   const analytics = useQuery({ queryKey: ["analytics"], queryFn: () => api.get<any>("/analytics/overview"), retry: false });
   const jobs = useQuery({ queryKey: ["jobs-daily"], queryFn: () => api.get<any>("/jobs/daily-feed"), retry: false });
   const data = analytics.data || {};
+  const health = data.jobSearchHealth || {};
+  const missingSkills = (health.topMissingSkills || []).slice(0, 3).map((skill: any) => skill.name).join(", ") || "Add job matches";
   return (
     <AppShell>
       <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -25,9 +27,10 @@ export default function DashboardPage() {
         </div>
         <Link href="/resume/upload"><Button><FileText className="h-4 w-4" /> Upload resume</Button></Link>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard label="Profile completion" value={(profile.data?.profileCompletenessScore || 35) + "%"} icon={<Target className="h-5 w-5" />} hint="Complete onboarding for better matches" />
         <MetricCard label="Average ATS score" value={data.averageAtsScore || 82} icon={<FileText className="h-5 w-5" />} />
+        <MetricCard label="Job-search health" value={(health.healthScore || 0) + "/100"} icon={<HeartPulse className="h-5 w-5" />} hint={health.healthLevel || "Needs data"} />
         <MetricCard label="Applications" value={data.totalApplied || 0} icon={<Layers className="h-5 w-5" />} />
         <MetricCard label="Upcoming interviews" value={data.totalInterviews || 0} icon={<CalendarClock className="h-5 w-5" />} />
       </div>
@@ -49,7 +52,7 @@ export default function DashboardPage() {
           <CardHeader><CardTitle>AI mentor suggestions</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div><p className="text-sm font-semibold">Resume health</p><Progress value={data.averageAtsScore || 82} /></div>
-            <p className="text-sm text-muted-foreground">Tailor your resume for the top two roles before applying. Practice project explanation for technical screens.</p>
+            <p className="text-sm text-muted-foreground">{health.bestNextActions?.[0] || "Tailor your resume for the top two roles before applying. Practice project explanation for technical screens."}</p>
             <div className="flex flex-wrap gap-2">
               <Link href="/skill-gap"><Button variant="outline"><Wrench className="h-4 w-4" /> Skill gaps</Button></Link>
               <Link href="/career-mentor-chat"><Button variant="outline"><Sparkles className="h-4 w-4" /> Ask mentor</Button></Link>
@@ -60,7 +63,7 @@ export default function DashboardPage() {
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <MetricCard label="Response rate" value={(data.responseRate || 0) + "%"} icon={<TrendingUp className="h-5 w-5" />} />
         <MetricCard label="Shortlisted" value={data.totalShortlisted || 0} icon={<BriefcaseBusiness className="h-5 w-5" />} />
-        <MetricCard label="Missing skills" value="Docker, AWS, Testing" icon={<Wrench className="h-5 w-5" />} />
+        <MetricCard label="Missing skills" value={missingSkills} icon={<Wrench className="h-5 w-5" />} />
       </div>
     </AppShell>
   );

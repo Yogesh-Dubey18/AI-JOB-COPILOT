@@ -1,8 +1,12 @@
 import { findRecords } from "../utils/repository.js";
+import { getJobSearchIntelligence } from "./job-search-intelligence.service.js";
 
 export async function getAnalyticsOverview(userId: string) {
-  const applications = await findRecords("applications", { userId });
-  const analyses = await findRecords("resumeAnalyses", { userId });
+  const [applications, analyses, jobSearchHealth] = await Promise.all([
+    findRecords("applications", { userId }),
+    findRecords("resumeAnalyses", { userId }),
+    getJobSearchIntelligence(userId)
+  ]);
   const totalApplied = applications.filter((app: any) => app.status !== "Saved").length;
   const totalInterviews = applications.filter((app: any) => /Round|Call|Assignment|Offer|Selected/i.test(app.status)).length;
   const totalRejected = applications.filter((app: any) => app.status === "Rejected").length;
@@ -10,6 +14,11 @@ export async function getAnalyticsOverview(userId: string) {
   const averageAtsScore = analyses.length ? Math.round(analyses.reduce((sum: number, item: any) => sum + (item.atsScore || 0), 0) / analyses.length) : 82;
   const statusCounts = applications.reduce((acc: Record<string, number>, app: any) => {
     acc[app.status] = (acc[app.status] || 0) + 1;
+    return acc;
+  }, {});
+  const sourceCounts = applications.reduce((acc: Record<string, number>, app: any) => {
+    const source = app.applicationSource || "Manual";
+    acc[source] = (acc[source] || 0) + 1;
     return acc;
   }, {});
   return {
@@ -24,9 +33,10 @@ export async function getAnalyticsOverview(userId: string) {
     offerRate: totalInterviews ? Math.round((totalOffers / totalInterviews) * 100) : 0,
     averageAtsScore,
     resumeScoreTrend: analyses.map((item: any, index: number) => ({ name: "V" + (index + 1), score: item.atsScore })),
-    bestJobSources: [{ name: "Company careers", value: 5 }, { name: "Curated boards", value: 4 }],
-    mostMissingSkills: [{ name: "Docker", count: 5 }, { name: "AWS", count: 4 }, { name: "Testing", count: 3 }],
+    bestJobSources: Object.entries(sourceCounts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+    mostMissingSkills: jobSearchHealth.topMissingSkills,
     weeklyApplicationChart: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((name, index) => ({ name, applications: index + 1 })),
-    applicationStatusChart: Object.entries(statusCounts).map(([name, value]) => ({ name, value }))
+    applicationStatusChart: Object.entries(statusCounts).map(([name, value]) => ({ name, value })),
+    jobSearchHealth
   };
 }

@@ -1959,3 +1959,67 @@ Blockers:
 
 Next phase to start:
 - Phase 40: v2 advanced analytics + job-search intelligence.
+
+## Phase 40: v2 Advanced Analytics + Job-Search Intelligence
+
+Status: Complete
+
+Completed work:
+- Added `job-search-intelligence.service.ts` with health score, health level, funnel, velocity, conversion, follow-up risk, stale applications, missing skills, next actions, and risk flags.
+- Upgraded analytics overview to include job-search health and real best-source aggregation from tracked applications.
+- Added `/api/analytics/job-search-intelligence`.
+- Improved analytics dashboard with health score, score breakdown, next actions, and risk flags.
+- Improved main dashboard with job-search health widget and dynamic missing skills.
+- Added advanced analytics and job-search intelligence docs.
+- Added backend test coverage for analytics intelligence, source aggregation, follow-up detection, and missing-skill ranking.
+
+Files changed:
+- `backend/src/routes/analytics.routes.ts`
+- `backend/src/services/analytics.service.ts`
+- `backend/src/services/job-search-intelligence.service.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/advanced-analytics-v2.md`
+- `docs/job-search-intelligence-guide.md`
+- `frontend/app/analytics/page.tsx`
+- `frontend/app/dashboard/page.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix backend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 265 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 22 tests and frontend 19 tests.
+- Backend build passed.
+- Backend tests passed: 22 tests.
+- Frontend build passed.
+- Frontend tests passed: 19 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Health score is process intelligence, not a hiring prediction.
+- More accurate source ROI and trends need more real user data after deployment.
+
+Next phase to start:
+- Phase 41: v2 interview coach + mock scoring.
