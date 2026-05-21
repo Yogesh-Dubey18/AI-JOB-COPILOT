@@ -11,6 +11,7 @@ const adminCards = [
   ["/admin/usage-analytics", Activity, "Usage analytics", "Review AI credits, subscriptions, and billing usage events."],
   ["/admin/audit-logs", ClipboardList, "Audit logs", "Review sensitive actions, admin access, and operational changes."],
   ["/admin/system-health", HeartPulse, "System health", "Check provider modes, database mode, counts, and runtime status."],
+  ["/admin/monitoring", HeartPulse, "Monitoring", "Inspect provider status, monitoring mode, and operational runbook links."],
   ["/admin/risk-signals", ShieldAlert, "Risk signals", "Spot high-risk jobs, fallback spikes, and admin access denials."],
   ["/admin/feedback", MessageSquare, "Feedback", "Review user feedback and convert it into issues."],
   ["/analytics", Activity, "Product analytics", "Inspect application conversion and job-search health."]

@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { writeAuditLog } from "../services/audit-log.service.js";
+import { logger } from "../utils/logger.js";
 
 function categoryFromPath(path: string) {
   const segment = path.split("/").filter(Boolean)[1] || "api";
@@ -11,8 +12,8 @@ function categoryFromPath(path: string) {
   return segment;
 }
 
-function actionFromRequest(req: Request) {
-  const category = categoryFromPath(req.path);
+function actionFromRequest(req: Request, path: string) {
+  const category = categoryFromPath(path);
   const verb = req.method.toLowerCase();
   if (verb === "get") return `${category}.read`;
   if (verb === "post") return `${category}.create`;
@@ -22,27 +23,28 @@ function actionFromRequest(req: Request) {
 }
 
 export function auditLogger(req: Request, _res: Response, next: NextFunction) {
-  if (req.path.startsWith("/api")) {
-    console.info(JSON.stringify({ event: "api_request", method: req.method, path: req.path, userId: req.user?.id || null }));
+  const requestPath = req.originalUrl.split("?")[0] || req.path;
+  if (requestPath.startsWith("/api")) {
+    logger.info("api_request", { requestId: req.requestId, method: req.method, path: requestPath, userId: req.user?.id || null });
   }
   _res.on("finish", () => {
-    if (!req.path.startsWith("/api")) return;
-    const category = categoryFromPath(req.path);
+    if (!requestPath.startsWith("/api")) return;
+    const category = categoryFromPath(requestPath);
     const sensitive = req.method !== "GET" || ["auth", "admin", "billing", "ai"].includes(category);
     if (!sensitive) return;
     void writeAuditLog({
       actorUserId: req.user?.id,
       actorRole: req.user?.role,
-      action: actionFromRequest(req),
+      action: actionFromRequest(req, requestPath),
       category,
       method: req.method,
-      path: req.path,
+      path: requestPath,
       statusCode: _res.statusCode,
       ip: req.ip,
       userAgent: req.get("user-agent"),
       riskLevel: _res.statusCode >= 400 ? "medium" : "low",
       metadata: { queryKeys: Object.keys(req.query || {}) }
-    }).catch((error) => console.error("Audit log write failed", error));
+    }).catch((error) => logger.error("audit_log_write_failed", { requestId: req.requestId, message: error instanceof Error ? error.message : "Unknown audit error" }));
   });
   next();
 }

@@ -3,6 +3,7 @@ import { ensureSampleJobs } from "./job.service.js";
 import { normalizeJobSourceJob } from "./job-source.service.js";
 import { listAuditLogs } from "./audit-log.service.js";
 import { getRiskSignals, getSystemHealth } from "./system-health.service.js";
+import { getProviderStatus } from "./provider-status.service.js";
 
 export async function listUsers() {
   return findRecords("users", {}, { sort: { createdAt: -1 } });
@@ -40,6 +41,16 @@ export async function systemHealth() {
 
 export async function riskSignals() {
   return getRiskSignals();
+}
+
+export async function monitoringStatus() {
+  const health = await getSystemHealth();
+  return {
+    health,
+    providers: getProviderStatus(),
+    runbook: "docs/observability-runbook.md",
+    logPrivacy: "docs/log-privacy-guide.md"
+  };
 }
 
 export async function usageAnalytics() {

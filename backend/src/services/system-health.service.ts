@@ -2,6 +2,7 @@ import { isDbReady } from "../config/db.js";
 import { getAiRuntime } from "../ai/aiClient.js";
 import { getBillingProviderStatus } from "./billing-provider.service.js";
 import { countRecords, findRecords } from "../utils/repository.js";
+import { getProviderStatus } from "./provider-status.service.js";
 
 export async function getSystemHealth() {
   const ai = getAiRuntime();
@@ -17,6 +18,7 @@ export async function getSystemHealth() {
     database: { connected: isDbReady(), mode: isDbReady() ? "mongodb" : "memory-fallback" },
     ai: { provider: ai.provider, model: ai.model, timeoutMs: ai.timeoutMs, retryAttempts: ai.retryAttempts },
     billing: getBillingProviderStatus(),
+    providers: getProviderStatus(),
     counts: { users, jobs, applications, aiRequests, auditLogs },
     checkedAt: new Date().toISOString()
   };

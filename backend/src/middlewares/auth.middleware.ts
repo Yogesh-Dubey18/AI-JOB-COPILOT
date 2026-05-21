@@ -4,6 +4,7 @@ import { env } from "../config/env.js";
 import { findRecordById } from "../utils/repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { writeAuditLog } from "../services/audit-log.service.js";
+import { logger } from "../utils/logger.js";
 
 declare global {
   namespace Express {
@@ -46,7 +47,7 @@ export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
       path: req.path,
       statusCode: 403,
       riskLevel: "medium"
-    }).catch((error) => console.error("Admin denial audit failed", error));
+    }).catch((error) => logger.error("admin_denial_audit_failed", { requestId: req.requestId, message: error instanceof Error ? error.message : "Unknown audit error" }));
     throw new ApiError(403, "Admin access required");
   }
   next();

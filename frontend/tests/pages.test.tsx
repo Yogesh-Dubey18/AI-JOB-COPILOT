@@ -15,6 +15,7 @@ import AnalyticsPage from "@/app/analytics/page";
 import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
+import AdminMonitoringPage from "@/app/admin/monitoring/page";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -85,6 +86,11 @@ describe("frontend pages", () => {
   it("admin dashboard renders", () => {
     renderWithProviders(<AdminDashboardPage />);
     expect(screen.getByText(/Admin dashboard/i)).toBeInTheDocument();
+  });
+
+  it("admin monitoring page renders", () => {
+    renderWithProviders(<AdminMonitoringPage />);
+    expect(screen.getByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
   });
 
   it("shared UX states expose accessible status and alert roles", () => {

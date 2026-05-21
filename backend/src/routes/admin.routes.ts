@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAdmin, requireAuth } from "../middlewares/auth.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { aiUsage, auditLogs, createAdminJob, deleteAdminJob, feedback, listAdminJobs, listUsers, reports, riskSignals, systemHealth, updateAdminJob, usageAnalytics } from "../services/admin.service.js";
+import { aiUsage, auditLogs, createAdminJob, deleteAdminJob, feedback, listAdminJobs, listUsers, monitoringStatus, reports, riskSignals, systemHealth, updateAdminJob, usageAnalytics } from "../services/admin.service.js";
 
 const router = Router();
 const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : value);
@@ -14,6 +14,7 @@ router.delete("/jobs/:id", asyncHandler(async (req, res) => res.json({ success: 
 router.get("/ai-usage", asyncHandler(async (_req, res) => res.json({ success: true, data: await aiUsage() })));
 router.get("/audit-logs", asyncHandler(async (_req, res) => res.json({ success: true, data: await auditLogs() })));
 router.get("/system-health", asyncHandler(async (_req, res) => res.json({ success: true, data: await systemHealth() })));
+router.get("/monitoring", asyncHandler(async (_req, res) => res.json({ success: true, data: await monitoringStatus() })));
 router.get("/risk-signals", asyncHandler(async (_req, res) => res.json({ success: true, data: await riskSignals() })));
 router.get("/usage-analytics", asyncHandler(async (_req, res) => res.json({ success: true, data: await usageAnalytics() })));
 router.get("/reports", asyncHandler(async (_req, res) => res.json({ success: true, data: await reports() })));

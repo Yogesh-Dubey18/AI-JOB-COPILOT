@@ -1705,3 +1705,94 @@ Blockers:
 
 Next phase to start:
 - Phase 37: v2 observability + monitoring.
+
+## Phase 37: v2 Observability + Monitoring
+
+Status: Complete
+
+Completed work:
+- Added request ID middleware with `X-Request-Id` response headers and safe inbound request ID sanitization.
+- Added structured backend logger and request logging middleware with duration, status, method, path, and request ID fields.
+- Updated audit logging and request logging to use stable `originalUrl` paths for nested routers.
+- Improved error middleware to include `requestId` in API errors and route unexpected errors through a no-op/Sentry-ready monitoring boundary.
+- Added backend provider status and monitoring services for AI, billing, email, calendar, and monitoring modes.
+- Added public `/health`, `/ready`, and `/status` endpoints with safe, secret-free responses.
+- Added admin monitoring API and `/admin/monitoring` frontend page.
+- Added frontend monitoring boundary, root error page, and API client errors that preserve status code and request ID.
+- Updated root, backend, and frontend env examples with monitoring placeholders.
+- Added uptime, Sentry, observability runbook, and log privacy documentation.
+- Added backend tests for health/readiness/status request IDs and admin monitoring, and frontend test coverage for the monitoring page.
+
+Files changed:
+- `.env.example`
+- `backend/.env.example`
+- `backend/src/app.ts`
+- `backend/src/config/env.ts`
+- `backend/src/middlewares/audit.middleware.ts`
+- `backend/src/middlewares/auth.middleware.ts`
+- `backend/src/middlewares/error.middleware.ts`
+- `backend/src/middlewares/request-id.middleware.ts`
+- `backend/src/middlewares/request-logging.middleware.ts`
+- `backend/src/routes/admin.routes.ts`
+- `backend/src/services/admin.service.ts`
+- `backend/src/services/monitoring.service.ts`
+- `backend/src/services/provider-status.service.ts`
+- `backend/src/services/system-health.service.ts`
+- `backend/src/utils/logger.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/log-privacy-guide.md`
+- `docs/observability-runbook.md`
+- `docs/sentry-monitoring-setup.md`
+- `docs/uptime-monitoring-setup.md`
+- `frontend/.env.example`
+- `frontend/app/admin/dashboard/page.tsx`
+- `frontend/app/admin/monitoring/page.tsx`
+- `frontend/app/error.tsx`
+- `frontend/lib/api.ts`
+- `frontend/lib/monitoring.ts`
+- `frontend/tests/pages.test.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+
+Build/test result:
+- Passed after tightening the admin monitoring frontend test to assert the `Monitoring` heading specifically.
+- Documentation link check passed for 258 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 19 tests and frontend 15 tests.
+- Backend build passed.
+- Backend tests passed: 19 tests.
+- Frontend build passed.
+- Frontend tests passed: 15 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Real Sentry event delivery and source map upload require approved Sentry SDK packages and deployment secrets.
+- Real uptime checks require deployed backend URLs.
+
+Next phase to start:
+- Phase 38: v2 data privacy + export/delete account.

@@ -25,6 +25,18 @@ describe("AI Job Copilot API", () => {
     await ensureSampleJobs();
   });
 
+  it("exposes safe health readiness and status endpoints with request ids", async () => {
+    const health = await request(app).get("/health").expect(200);
+    expect(health.headers["x-request-id"]).toBeTruthy();
+    expect(health.body.data.status).toBe("ok");
+    const ready = await request(app).get("/ready").expect(200);
+    expect(ready.body.data.status).toBe("ready");
+    expect(ready.body.data.providers.ai.provider).toBeTruthy();
+    const status = await request(app).get("/status").set("x-request-id", "test-request-1").expect(200);
+    expect(status.headers["x-request-id"]).toBe("test-request-1");
+    expect(status.body.data.providers.monitoring.provider).toBe("noop");
+  });
+
   it("registers a user", async () => {
     const res = await request(app).post("/api/auth/register").send({ fullName: "Asha Dev", email: "asha@example.com", password: "Password123!" }).expect(201);
     expect(res.body.data.user.email).toBe("asha@example.com");
@@ -178,6 +190,8 @@ describe("AI Job Copilot API", () => {
     const admin = await adminAgent();
     const health = await admin.get("/api/admin/system-health").expect(200);
     expect(health.body.data.status).toBe("ok");
+    const monitoring = await admin.get("/api/admin/monitoring").expect(200);
+    expect(monitoring.body.data.providers.monitoring.provider).toBe("noop");
     const risks = await admin.get("/api/admin/risk-signals").expect(200);
     expect(Array.isArray(risks.body.data.signals)).toBe(true);
     const usage = await admin.get("/api/admin/usage-analytics").expect(200);

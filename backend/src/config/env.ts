@@ -37,7 +37,9 @@ export const env = {
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
   STRIPE_PRICE_PRO: process.env.STRIPE_PRICE_PRO || "",
   STRIPE_PRICE_PREMIUM: process.env.STRIPE_PRICE_PREMIUM || "",
-  LOG_LEVEL: process.env.LOG_LEVEL || "info"
+  LOG_LEVEL: process.env.LOG_LEVEL || "info",
+  MONITORING_PROVIDER: process.env.MONITORING_PROVIDER || "noop",
+  SENTRY_DSN: process.env.SENTRY_DSN || ""
 };
 
 export const isProduction = env.NODE_ENV === "production";

@@ -2,6 +2,18 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 export type ApiEnvelope<T> = { success: boolean; data: T; message?: string };
 
+export class ApiClientError extends Error {
+  statusCode: number;
+  requestId?: string;
+
+  constructor(message: string, statusCode: number, requestId?: string) {
+    super(message);
+    this.name = "ApiClientError";
+    this.statusCode = statusCode;
+    this.requestId = requestId;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const isForm = options.body instanceof FormData;
   const response = await fetch(API_URL + path, {
@@ -13,7 +25,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.message || "Request failed");
+  const requestId = response.headers.get("x-request-id") || payload.requestId;
+  if (!response.ok) throw new ApiClientError(payload.message || "Request failed", response.status, requestId);
   return payload.data as T;
 }
 

@@ -7,6 +7,8 @@ import helmet from "helmet";
 import { env, isTest } from "./config/env.js";
 import { auditLogger } from "./middlewares/audit.middleware.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
+import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
+import { requestLoggingMiddleware } from "./middlewares/request-logging.middleware.js";
 import adminRoutes from "./routes/admin.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
@@ -18,6 +20,9 @@ import jobRoutes from "./routes/job.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import resumeRoutes from "./routes/resume.routes.js";
+import { getProviderStatus } from "./services/provider-status.service.js";
+import { getSystemHealth } from "./services/system-health.service.js";
+import { asyncHandler } from "./utils/asyncHandler.js";
 
 export const app = express();
 const allowedOrigins = env.CLIENT_URL.split(",").map((origin) => origin.trim()).filter(Boolean);
@@ -25,6 +30,7 @@ const allowedOrigins = env.CLIENT_URL.split(",").map((origin) => origin.trim()).
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(helmet());
+app.use(requestIdMiddleware);
 app.use(cors({
   credentials: true,
   origin: (origin, callback) => {
@@ -42,11 +48,21 @@ app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", req.method === "GET" && req.path.startsWith("/jobs") ? "private, max-age=30" : "no-store");
   next();
 });
+app.use(requestLoggingMiddleware);
 app.use(auditLogger);
 
 app.get("/health", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API", uptimeSeconds: Math.round(process.uptime()), timestamp: new Date().toISOString() } });
+});
+app.get("/ready", asyncHandler(async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const health = await getSystemHealth();
+  res.json({ success: true, data: { status: "ready", database: health.database, providers: health.providers, checkedAt: health.checkedAt } });
+}));
+app.get("/status", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API", providers: getProviderStatus(), uptimeSeconds: Math.round(process.uptime()) } });
 });
 app.use("/api/auth", authRoutes);
 app.use("/api/billing", billingRoutes);
