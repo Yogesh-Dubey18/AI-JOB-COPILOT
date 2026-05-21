@@ -2,24 +2,24 @@
 
 ## Status
 
-Pending. Live URLs were not provided in the local environment.
+URLs provided by the project owner. Full live verification is still pending until each check below is run against the deployed frontend/backend.
 
-Required values:
+Provided values:
 
-- `FRONTEND_LIVE_URL`
-- `BACKEND_LIVE_URL`
-- `BACKEND_HEALTH_URL`
+- Frontend URL: `https://ai-job-copilot-frontend.vercel.app/`
+- Backend URL: `https://ai-job-copilot-backend-l6ut.onrender.com`
+- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/api/health`
 
 ## Verification Results
 
 | Check | Result | Notes |
 | --- | --- | --- |
-| Frontend URL opens | Pending | Requires real URL |
-| Backend URL opens | Pending | Requires real URL |
-| Backend health passes | Pending | Requires real URL |
+| Frontend URL opens | Pending manual verification | Use `https://ai-job-copilot-frontend.vercel.app/` |
+| Backend URL opens | Pending manual verification | Use `https://ai-job-copilot-backend-l6ut.onrender.com` |
+| Backend health passes | Pending manual verification | Use `https://ai-job-copilot-backend-l6ut.onrender.com/api/health` |
 | Frontend API config | Pending | Requires deployed frontend env |
 | CORS allows frontend | Pending | Requires deployed backend env |
 
 ## Next Action
 
-Deploy backend and frontend, then update this report with real, verified URLs only.
+Run the production smoke test, confirm CORS and auth flows, then update this report with verified results only.

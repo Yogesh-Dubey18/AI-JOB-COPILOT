@@ -19,6 +19,16 @@ Honest scope:
 - Job data is seeded/manual-source ready; it does not scrape protected job sites.
 - Resume/application content is user-reviewed; the app does not auto-apply or auto-send messages.
 
+## Live Demo URLs
+
+Owner-provided deployment URLs:
+
+- Frontend: https://ai-job-copilot-frontend.vercel.app/
+- Backend: https://ai-job-copilot-backend-l6ut.onrender.com
+- Backend health: https://ai-job-copilot-backend-l6ut.onrender.com/api/health
+
+Live smoke testing should still be completed before presenting the deployment as production-ready. Keep provider secrets, MongoDB URI, JWT secrets, billing keys, email keys, and AI keys in hosting dashboards only.
+
 ## Recruiter-Friendly Highlights
 
 - Built a complete monorepo with Next.js App Router frontend, Express TypeScript backend, shared types, and deployment docs.
@@ -120,7 +130,7 @@ Still pending for real production use: live deployment verification, provider cr
 
 Current stable source release: `v2.0.0`
 
-This stable release means the repository has a verified v2 architecture, documentation, local build/test loop, safety checks, and deployment runbooks. It does not mean the app has been deployed to live production yet.
+This stable release means the repository has a verified v2 architecture, documentation, local build/test loop, safety checks, and deployment runbooks. Live demo URLs have been provided, but production readiness still depends on live smoke testing, provider configuration, monitoring, and manual operations review.
 
 Stable release docs:
 
@@ -131,7 +141,7 @@ Stable release docs:
 - [v2 Production Go-Live Manual](docs/v2-production-go-live-manual.md)
 - [v2 Stable Release Closure](docs/v2-stable-release-closure.md)
 
-Production launch remains pending until MongoDB Atlas, backend hosting, frontend hosting, provider secrets, CORS, and live smoke tests are configured with real values.
+Production launch remains pending until MongoDB Atlas, provider secrets, CORS, monitoring, and live smoke tests are configured and verified with real values.
 
 ## Environment
 
@@ -159,7 +169,7 @@ Final deployment execution docs:
 Backend health check:
 
 ~~~bash
-GET https://your-backend-host.example.com/health
+GET https://ai-job-copilot-backend-l6ut.onrender.com/api/health
 ~~~
 
 Expected safe response:
@@ -177,10 +187,10 @@ Expected safe response:
 Frontend API configuration:
 
 ~~~bash
-NEXT_PUBLIC_API_URL=https://your-backend-host.example.com/api
+NEXT_PUBLIC_API_URL=https://ai-job-copilot-backend-l6ut.onrender.com/api
 ~~~
 
-No live URLs are committed until they are provided and verified.
+Live URLs are documented above because they were provided by the project owner. Do not add or commit secrets; use hosting dashboards for environment variables.
 
 ## Demo Flow
 

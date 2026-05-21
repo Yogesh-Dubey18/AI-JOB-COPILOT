@@ -1,10 +1,12 @@
 # Final Live URL Update
 
-Only update docs with real URLs after all values are provided and verified:
+These live URLs have been provided by the project owner:
 
-- `FRONTEND_LIVE_URL`
-- `BACKEND_LIVE_URL`
-- `BACKEND_HEALTH_URL`
+- `FRONTEND_LIVE_URL=https://ai-job-copilot-frontend.vercel.app/`
+- `BACKEND_LIVE_URL=https://ai-job-copilot-backend-l6ut.onrender.com`
+- `BACKEND_HEALTH_URL=https://ai-job-copilot-backend-l6ut.onrender.com/api/health`
+
+Before marking the deployment as fully verified, run the smoke checks below and record actual results.
 
 ## Update Locations
 
@@ -24,4 +26,4 @@ Only update docs with real URLs after all values are provided and verified:
 
 ## Rule
 
-Do not invent live URLs. Keep placeholders until real deployment is available.
+Do not invent live URLs, secrets, users, revenue, provider status, or smoke-test results. Keep unverified checks marked pending until they are actually verified.

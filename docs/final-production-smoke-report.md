@@ -2,10 +2,10 @@
 
 ## URLs
 
-- Frontend URL: `PENDING`
-- Backend URL: `PENDING`
-- Backend health URL: `PENDING`
-- Live URL environment variables: not provided during Phase 18.
+- Frontend URL: `https://ai-job-copilot-frontend.vercel.app/`
+- Backend URL: `https://ai-job-copilot-backend-l6ut.onrender.com`
+- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/api/health`
+- Live URL environment variables: provided after the archive handoff.
 
 ## Health
 
@@ -34,6 +34,6 @@
 
 ## Notes
 
-- Pending until live URLs and deployment access are provided.
+- Pending until live smoke tests are manually completed and recorded.
 - Do not mark launch complete until smoke test passes.
-- Phase 18 kept placeholders because `FRONTEND_LIVE_URL`, `BACKEND_LIVE_URL`, and `BACKEND_HEALTH_URL` were not available.
+- Earlier phases kept placeholders because `FRONTEND_LIVE_URL`, `BACKEND_LIVE_URL`, and `BACKEND_HEALTH_URL` were not available at that time.

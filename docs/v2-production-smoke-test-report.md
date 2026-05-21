@@ -1,12 +1,12 @@
 # v2 Production Smoke Test Report
 
-This report is a template for the first real deployment smoke test. Current status is pending because live URLs and platform access have not been provided.
+This report is a template for the first real deployment smoke test. Live URLs have been provided, but end-to-end production smoke results still need to be recorded after manual verification.
 
 ## Environment
 
-- Frontend URL: `FRONTEND_LIVE_URL`
-- Backend URL: `BACKEND_LIVE_URL`
-- Backend health URL: `BACKEND_HEALTH_URL`
+- Frontend URL: `https://ai-job-copilot-frontend.vercel.app/`
+- Backend URL: `https://ai-job-copilot-backend-l6ut.onrender.com`
+- Backend health URL: `https://ai-job-copilot-backend-l6ut.onrender.com/api/health`
 - Database: MongoDB Atlas project pending
 - AI provider: mock unless configured
 - Email provider: mock unless configured
@@ -16,8 +16,8 @@ This report is a template for the first real deployment smoke test. Current stat
 
 | Area | Test | Status | Notes |
 | --- | --- | --- | --- |
-| Backend | Health endpoint returns safe JSON | Pending | Requires `BACKEND_HEALTH_URL` |
-| Frontend | Landing page loads | Pending | Requires `FRONTEND_LIVE_URL` |
+| Backend | Health endpoint returns safe JSON | Pending manual verification | Use provided backend health URL |
+| Frontend | Landing page loads | Pending manual verification | Use provided frontend URL |
 | Auth | Register and login demo user | Pending | Requires deployed backend and database |
 | Resume | Upload TXT resume and analyze | Pending | Use mock AI unless provider keys are configured |
 | Jobs | View jobs and match score | Pending | Seed or manual jobs required |
@@ -37,4 +37,4 @@ This report is a template for the first real deployment smoke test. Current stat
 
 ## Final Result
 
-Current result: not live-verified. Replace this with real results only after deployment URLs are available.
+Current result: URLs recorded, not fully live-verified in this report. Replace pending statuses with real results only after production smoke testing is completed.
