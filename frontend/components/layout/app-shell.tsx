@@ -16,6 +16,7 @@ const nav = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const mobileNav = nav.slice(0, 5);
   return (
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r bg-card lg:block">
@@ -23,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Gauge className="h-5 w-5 text-primary" />
           AI Job Copilot
         </div>
-        <nav className="space-y-1 p-3">
+        <nav aria-label="Primary navigation" className="space-y-1 p-3">
           {nav.map(([href, Icon, label]) => (
             <Link key={String(href)} href={String(href)} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
               <Icon className="h-4 w-4" />
@@ -32,16 +33,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
       </aside>
-      <div className="lg:pl-64">
+      <div className="pb-20 lg:pb-0 lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/90 px-4 backdrop-blur lg:px-8">
-          <div className="font-semibold">Career operating system</div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Link href="/notifications" className="flex items-center gap-2"><Bell className="h-4 w-4" /> Notifications</Link>
-            <Link href="/profile" className="flex items-center gap-2"><UserRound className="h-4 w-4" /> Profile</Link>
+          <Link href="/dashboard" className="font-semibold" aria-label="AI Job Copilot dashboard">Career operating system</Link>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground sm:gap-3">
+            <Link href="/notifications" aria-label="Notifications" className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground"><Bell className="h-4 w-4" /><span className="hidden sm:inline">Notifications</span></Link>
+            <Link href="/profile" aria-label="Profile" className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground"><UserRound className="h-4 w-4" /><span className="hidden sm:inline">Profile</span></Link>
           </div>
         </header>
         <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8">{children}</main>
       </div>
+      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/95 px-2 py-2 backdrop-blur lg:hidden">
+        {mobileNav.map(([href, Icon, label]) => (
+          <Link key={String(href)} href={String(href)} className="flex min-w-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Icon className="h-4 w-4" />
+            <span className="max-w-full truncate">{String(label)}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }

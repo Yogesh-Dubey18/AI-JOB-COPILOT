@@ -5,6 +5,7 @@ import { BriefcaseBusiness, CalendarClock, FileText, Layers, Sparkles, Target, T
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/app-shell";
 import { MetricCard } from "@/components/shared/metric-card";
+import { EmptyState, LoadingState } from "@/components/shared/status-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -34,9 +35,11 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Recommended jobs</CardTitle></CardHeader>
           <CardContent className="space-y-3">
+            {jobs.isLoading ? <LoadingState title="Loading today's matches" description="Checking your curated job feed and match signals." /> : null}
+            {!jobs.isLoading && !(jobs.data?.today || []).length ? <EmptyState title="No daily matches yet" description="Upload a resume and complete your profile to improve your daily match feed." /> : null}
             {(jobs.data?.today || []).slice(0, 4).map((job: any) => (
               <div key={job._id} className="flex flex-col justify-between gap-3 rounded-md border p-3 sm:flex-row sm:items-center">
-                <div><p className="font-semibold">{job.title}</p><p className="text-sm text-muted-foreground">{job.company} • {job.location}</p></div>
+                <div><p className="font-semibold">{job.title}</p><p className="text-sm text-muted-foreground">{job.company} - {job.location}</p></div>
                 <Link href={"/jobs/" + job._id}><Button variant="outline">Open</Button></Link>
               </div>
             ))}

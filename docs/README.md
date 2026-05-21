@@ -208,6 +208,7 @@
 - [Security Audit Checklist v2](security-audit-checklist-v2.md)
 - [Testing Strategy v2](testing-strategy-v2.md)
 - [E2E Testing Guide](e2e-testing-guide.md)
+- [Performance Accessibility UX v2](performance-accessibility-ux-v2.md)
 - [Security Hardening](security-hardening.md)
 - [Observability](observability.md)
 
@@ -232,6 +233,8 @@
 - [Production Checklist](production-checklist.md)
 - [Security Checklist](security-checklist.md)
 - [Repository Quality Checklist](repository-quality-checklist.md)
+- [Accessibility Checklist](accessibility-checklist.md)
+- [UX Review Checklist](ux-review-checklist.md)
 - [Final Project Audit](final-project-audit.md)
 - [Final Handover](final-handover.md)
 - [Master Codex Prompt](master-codex-prompt.md)

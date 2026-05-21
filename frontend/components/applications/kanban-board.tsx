@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge";
 
 export function KanbanBoard({ applications }: { applications: any[] }) {
   return (
-    <div className="grid min-h-[420px] gap-3 overflow-x-auto pb-3 md:grid-flow-col md:auto-cols-[260px]">
+    <div role="region" aria-label="Application pipeline board" className="grid min-h-[420px] gap-3 overflow-x-auto pb-3 md:grid-flow-col md:auto-cols-[260px]">
       {applicationStatuses.map((status) => {
         const items = applications.filter((app) => app.status === status);
         return (
-          <Card key={status} className="shadow-none">
+          <Card key={status} className="shadow-none" role="group" aria-label={`${status} applications`}>
             <CardHeader className="p-3"><CardTitle className="flex items-center justify-between text-sm">{status}<Badge>{items.length}</Badge></CardTitle></CardHeader>
             <CardContent className="space-y-2 p-3 pt-0">
+              {!items.length ? <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">No applications in this stage.</p> : null}
               {items.map((app) => (
                 <div key={app._id} className="rounded-md border bg-background p-3">
                   <p className="text-sm font-semibold">{app.role}</p>

@@ -48,6 +48,14 @@ button, input, textarea, select {
   font: inherit;
 }
 
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
 .product-scene {
   background:
     linear-gradient(120deg, rgba(10, 82, 86, 0.84), rgba(16, 34, 48, 0.72)),

@@ -5,6 +5,7 @@ import { CalendarClock, Plus, TrendingUp } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { KanbanBoard } from "@/components/applications/kanban-board";
 import { PageHeading } from "@/components/shared/page-heading";
+import { EmptyState, ErrorState, LoadingState, RetryButton } from "@/components/shared/status-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,14 +46,20 @@ export default function ApplicationsPage() {
             }}
             className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]"
           >
-            <Input name="company" placeholder="Company" />
-            <Input name="role" placeholder="Role" />
-            <Input name="source" placeholder="Source" />
-            <Button><Plus className="h-4 w-4" /> Add</Button>
+            <Input aria-label="Company name" name="company" placeholder="Company" required />
+            <Input aria-label="Role title" name="role" placeholder="Role" required />
+            <Input aria-label="Application source" name="source" placeholder="Source" />
+            <Button type="submit" disabled={create.isPending} aria-busy={create.isPending}><Plus className="h-4 w-4" /> {create.isPending ? "Adding..." : "Add"}</Button>
           </form>
+          {create.isError ? <p role="alert" className="mt-3 text-sm text-danger">{create.error instanceof Error ? create.error.message : "Could not add application."}</p> : null}
         </CardContent>
       </Card>
-      <KanbanBoard applications={apps.data || []} />
+      {apps.isLoading ? <LoadingState title="Loading application pipeline" description="Preparing the Kanban stages, follow-up signals, and current rounds." /> : null}
+      {apps.isError ? <ErrorState description={apps.error instanceof Error ? apps.error.message : "Could not load applications."} action={<RetryButton onClick={() => apps.refetch()} />} /> : null}
+      {!apps.isLoading && !apps.isError && !(apps.data || []).length ? (
+        <EmptyState title="No applications tracked yet" description="Add your first manual application above, then move it through the pipeline as recruiters respond." />
+      ) : null}
+      {!apps.isLoading && !apps.isError ? <KanbanBoard applications={apps.data || []} /> : null}
     </AppShell>
   );
 }

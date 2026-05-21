@@ -15,6 +15,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ className, v
     ghost: "hover:bg-muted",
     danger: "bg-danger text-white hover:opacity-90"
   };
-  return <button ref={ref} className={cn("inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60", variants[variant], className)} {...props} />;
+  return <button ref={ref} className={cn("inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60", variants[variant], className)} {...props} />;
 });
 Button.displayName = "Button";

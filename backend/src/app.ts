@@ -38,9 +38,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use(rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false, skip: () => isTest }));
 app.use("/api/ai", rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false, skip: () => isTest }));
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", req.method === "GET" && req.path.startsWith("/jobs") ? "private, max-age=30" : "no-store");
+  next();
+});
 app.use(auditLogger);
 
-app.get("/health", (_req, res) => res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API" } }));
+app.get("/health", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API", uptimeSeconds: Math.round(process.uptime()), timestamp: new Date().toISOString() } });
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/profile", profileRoutes);

@@ -15,6 +15,7 @@ import AnalyticsPage from "@/app/analytics/page";
 import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<Providers>{ui}</Providers>);
@@ -84,5 +85,17 @@ describe("frontend pages", () => {
   it("admin dashboard renders", () => {
     renderWithProviders(<AdminDashboardPage />);
     expect(screen.getByText(/Admin dashboard/i)).toBeInTheDocument();
+  });
+
+  it("shared UX states expose accessible status and alert roles", () => {
+    render(<>
+      <LoadingState title="Loading test" description="Waiting for data" />
+      <EmptyState title="Empty test" description="No records" />
+      <ErrorState title="Error test" description="Request failed" />
+    </>);
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/Loading test/i)).toBeInTheDocument();
+    expect(screen.getByText(/Empty test/i)).toBeInTheDocument();
+    expect(screen.getByText(/Error test/i)).toBeInTheDocument();
   });
 });

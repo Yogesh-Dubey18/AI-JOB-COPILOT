@@ -26,8 +26,8 @@ export function JobCard({ job }: { job: any }) {
         <div className="flex flex-wrap gap-2">
           <Link href={"/jobs/" + job._id}><Button>Analyze</Button></Link>
           <Link href={job.applyUrl || "#"}><Button variant="outline">Official link</Button></Link>
-          <Button title="Save job" variant="ghost" className="w-10 px-0"><Bookmark className="h-4 w-4" /></Button>
-          <Button title="AI match" variant="ghost" className="w-10 px-0"><Sparkles className="h-4 w-4" /></Button>
+          <Button type="button" title="Save job" aria-label={`Save ${job.title}`} variant="ghost" className="w-10 px-0"><Bookmark className="h-4 w-4" /></Button>
+          <Button type="button" title="AI match" aria-label={`Analyze AI match for ${job.title}`} variant="ghost" className="w-10 px-0"><Sparkles className="h-4 w-4" /></Button>
         </div>
       </CardContent>
     </Card>

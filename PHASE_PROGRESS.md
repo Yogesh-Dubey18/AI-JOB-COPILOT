@@ -1560,3 +1560,78 @@ Blockers:
 
 Next phase to start:
 - Phase 35: v2 performance + accessibility + UX polish.
+
+## Phase 35: v2 Performance + Accessibility + UX Polish
+
+Status: Complete
+
+Completed work:
+- Added shared `LoadingState`, `EmptyState`, `ErrorState`, and `RetryButton` components for consistent workflow states.
+- Improved keyboard focus visibility for buttons, links, inputs, selects, and textareas.
+- Added mobile bottom navigation and clearer navigation landmarks.
+- Improved dashboard daily matches, resume upload, jobs, and application tracker loading/empty/error states.
+- Added accessible names to job filters, resume file input, application form fields, and icon-only job actions.
+- Added client-side resume file type and size validation before upload.
+- Added empty placeholders to application pipeline columns.
+- Added safe API cache headers and richer secret-free health metadata.
+- Added frontend tests for the shared UX state components.
+- Added Phase 35 performance, accessibility, and UX documentation/checklists.
+
+Files changed:
+- `backend/src/app.ts`
+- `docs/README.md`
+- `docs/accessibility-checklist.md`
+- `docs/performance-accessibility-ux-v2.md`
+- `docs/ux-review-checklist.md`
+- `frontend/app/applications/page.tsx`
+- `frontend/app/dashboard/page.tsx`
+- `frontend/app/globals.css`
+- `frontend/app/jobs/page.tsx`
+- `frontend/app/resume/upload/page.tsx`
+- `frontend/components/applications/kanban-board.tsx`
+- `frontend/components/jobs/job-card.tsx`
+- `frontend/components/layout/app-shell.tsx`
+- `frontend/components/shared/feature-workbench.tsx`
+- `frontend/components/shared/status-state.tsx`
+- `frontend/components/ui/button.tsx`
+- `frontend/tests/pages.test.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 249 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 18 tests and frontend 14 tests.
+- Backend build passed.
+- Backend tests passed: 18 tests.
+- Frontend build passed.
+- Frontend tests passed: 14 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- Optional root `typecheck` and root `lint` checks were skipped cleanly because those scripts do not exist.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Real browser E2E and automated accessibility scans require approved Playwright/axe dependencies and browser binaries.
+
+Next phase to start:
+- Phase 36: v2 CI/CD pipeline + deployment automation docs.
