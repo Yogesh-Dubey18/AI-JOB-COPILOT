@@ -11,11 +11,15 @@
     "check:git-safety": "node scripts/check-git-safety.mjs",
     "check:security": "node scripts/check-security-safety.mjs",
     "check:docs": "node scripts/check-doc-links.mjs",
+    "ci:verify": "npm run check:git-safety && npm run check:security && npm run check:docs && npm run build && npm test && npm run test:e2e --prefix frontend",
     "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\"",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
     "build": "npm run build --prefix shared && npm run build --prefix backend && npm run build --prefix frontend",
     "test": "npm test --prefix backend && npm test --prefix frontend",
+    "test:e2e": "npm run test:e2e --prefix frontend",
+    "typecheck": "npm run build --prefix shared && npm run build --prefix backend",
+    "lint": "npm run check:docs && npm run check:security",
     "seed": "npm run seed --prefix backend"
   },
   "devDependencies": {

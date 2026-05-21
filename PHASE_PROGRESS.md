@@ -1635,3 +1635,73 @@ Blockers:
 
 Next phase to start:
 - Phase 36: v2 CI/CD pipeline + deployment automation docs.
+
+## Phase 36: v2 CI/CD Pipeline + Deployment Automation Docs
+
+Status: Complete
+
+Completed work:
+- Added GitHub Actions workflows for CI, skip-safe frontend E2E, security safety, and release validation.
+- Added `.nvmrc` pinned to Node 20 for local and CI consistency.
+- Added root scripts for `ci:verify`, `test:e2e`, `typecheck`, and `lint`.
+- Updated the pull request template with security, E2E, product impact, and provider-safety checks.
+- Added GitHub Actions badges to README because the repository path is now known.
+- Added CI/CD, deployment automation, branch protection, CI troubleshooting, and release checklist documentation.
+- Linked the new CI/CD documentation from `docs/README.md`.
+
+Files changed:
+- `.github/pull_request_template.md`
+- `.github/workflows/ci.yml`
+- `.github/workflows/e2e.yml`
+- `.github/workflows/security.yml`
+- `.github/workflows/release-validation.yml`
+- `.nvmrc`
+- `README.md`
+- `docs/README.md`
+- `docs/branch-protection-guide.md`
+- `docs/ci-cd-v2.md`
+- `docs/ci-troubleshooting.md`
+- `docs/deployment-automation-plan.md`
+- `docs/release-checklist-v2.md`
+- `package.json`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run ci:verify`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 254 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 18 tests and frontend 14 tests.
+- Backend build passed.
+- Backend tests passed: 18 tests.
+- Frontend build passed.
+- Frontend tests passed: 14 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+- Initial sandboxed `ci:verify` attempt failed with `spawnSync git EPERM` in `check-git-safety`; rerun with elevated permissions passed, confirming the failure was a Windows sandbox subprocess permission issue.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Real Playwright browser execution, CI deployment jobs, and required branch protection checks need GitHub/hosting dashboard configuration and optional dependency approval.
+
+Next phase to start:
+- Phase 37: v2 observability + monitoring.

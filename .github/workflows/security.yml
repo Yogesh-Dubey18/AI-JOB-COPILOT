@@ -1,0 +1,41 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  safety:
+    name: Repository Safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check secret and artifact safety
+        run: npm run check:git-safety
+
+      - name: Check security policy safety
+        run: npm run check:security
+
+      - name: Dependency audit advisory report
+        run: npm audit --audit-level=high
+        continue-on-error: true

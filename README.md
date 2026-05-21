@@ -1,5 +1,9 @@
 # AI Job Copilot
 
+[![CI](https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT/actions/workflows/ci.yml/badge.svg)](https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT/actions/workflows/ci.yml)
+[![Security](https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT/actions/workflows/security.yml/badge.svg)](https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT/actions/workflows/security.yml)
+[![Release Validation](https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT/actions/workflows/release-validation.yml/badge.svg)](https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT/actions/workflows/release-validation.yml)
+
 Upload your resume once. Get matching jobs, tailored resumes, application help, and interview preparation until selection.
 
 AI Job Copilot is a job-seeker focused AI SaaS platform. It is not an employer job-posting board and it does not auto-apply. It helps candidates analyze resumes, match jobs, create reviewable application content, track applications, prepare for interviews, learn missing skills, detect scams, and improve after rejection.
@@ -61,11 +65,13 @@ npm run dev:frontend
 npm run dev:backend
 npm run build
 npm run check:docs
+npm run check:security
 npm run build --prefix frontend
 npm run build --prefix backend
 npm test
 npm test --prefix frontend
 npm test --prefix backend
+npm run test:e2e --prefix frontend
 npm run seed --prefix backend
 ~~~
 
