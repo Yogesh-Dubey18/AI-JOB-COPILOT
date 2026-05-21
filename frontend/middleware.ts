@@ -4,8 +4,9 @@ const protectedRoutes = ["/dashboard", "/onboarding", "/profile", "/resume", "/j
 
 export function middleware(req: NextRequest) {
   const isProtected = protectedRoutes.some((route) => req.nextUrl.pathname.startsWith(route));
-  const hasToken = req.cookies.has("accessToken");
-  if (isProtected && !hasToken) {
+  const hasBackendCookie = req.cookies.has("accessToken");
+  const hasFrontendSessionMarker = req.cookies.has("ajc_session");
+  if (isProtected && !hasBackendCookie && !hasFrontendSessionMarker) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", req.nextUrl.pathname);

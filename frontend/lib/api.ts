@@ -1,3 +1,5 @@
+import { getStoredAccessToken } from "./auth-session";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 export type ApiEnvelope<T> = { success: boolean; data: T; message?: string };
@@ -16,18 +18,20 @@ export class ApiClientError extends Error {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const isForm = options.body instanceof FormData;
+  const accessToken = getStoredAccessToken();
   const response = await fetch(API_URL + path, {
     ...options,
     credentials: "include",
     headers: {
       ...(isForm ? {} : { "Content-Type": "application/json" }),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(options.headers || {})
     }
   });
   const payload = await response.json().catch(() => ({}));
   const requestId = response.headers.get("x-request-id") || payload.requestId;
   if (!response.ok) throw new ApiClientError(payload.message || "Request failed", response.status, requestId);
-  return payload.data as T;
+  return (payload && typeof payload === "object" && "data" in payload ? payload.data : payload) as T;
 }
 
 export const api = {

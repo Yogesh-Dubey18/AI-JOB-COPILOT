@@ -8,7 +8,7 @@ import { requireAuth } from "../middlewares/auth.middleware.js";
 import { isProduction, isTest } from "../config/env.js";
 
 const router = Router();
-const cookieOptions = { httpOnly: true, secure: isProduction, sameSite: "lax" as const, path: "/" };
+const cookieOptions = { httpOnly: true, secure: isProduction, sameSite: (isProduction ? "none" : "lax") as "none" | "lax", path: "/" };
 const authLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 20, standardHeaders: true, legacyHeaders: false, skip: () => isTest });
 
 function setAuthCookies(res: any, accessToken: string, refreshToken: string) {

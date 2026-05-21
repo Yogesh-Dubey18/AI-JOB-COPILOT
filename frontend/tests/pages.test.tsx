@@ -1,6 +1,7 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/app/providers";
 import LoginPage from "@/app/auth/login/page";
 import RegisterPage from "@/app/auth/register/page";
@@ -35,6 +36,26 @@ function renderWithProviders(ui: React.ReactElement) {
   return render(<Providers>{ui}</Providers>);
 }
 
+const originalFetch = globalThis.fetch;
+
+function mockApiResponse(payload: unknown, ok = true, status = 200) {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok,
+    status,
+    headers: new Headers(),
+    json: async () => payload
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  globalThis.fetch = originalFetch;
+  window.sessionStorage.clear();
+  document.cookie = "ajc_session=; Path=/; Max-Age=0; SameSite=Lax";
+});
+
 describe("frontend pages", () => {
   it("login page renders", () => {
     renderWithProviders(<LoginPage />);
@@ -54,6 +75,45 @@ describe("frontend pages", () => {
 
     renderWithProviders(<RootRegisterPage />);
     expect(screen.getByText(/Create your account/i)).toBeInTheDocument();
+  });
+
+  it("login submit calls the auth endpoint and stores browser auth state", async () => {
+    const fetchMock = mockApiResponse({
+      success: true,
+      data: {
+        accessToken: "test-access-token",
+        refreshToken: "test-refresh-token",
+        user: { id: "user-1", fullName: "Asha Dev", email: "asha@example.com", role: "job_seeker" }
+      }
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<LoginPage />);
+    await user.type(screen.getByLabelText(/^Email$/i), "asha@example.com");
+    await user.type(screen.getByLabelText(/^Password$/i), "Password123!");
+    await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Login" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(String(url)).toMatch(/\/api\/auth\/login$/);
+    expect(options).toMatchObject({ method: "POST", credentials: "include" });
+    expect(JSON.parse(String(options.body))).toEqual({ email: "asha@example.com", password: "Password123!" });
+    expect(window.sessionStorage.getItem("ajc_access_token")).toBe("test-access-token");
+    expect(document.cookie).toContain("ajc_session=1");
+  });
+
+  it("login failure shows a safe error state", async () => {
+    mockApiResponse({ success: false, message: "Invalid email or password" }, false, 401);
+    const user = userEvent.setup();
+
+    renderWithProviders(<LoginPage />);
+    await user.type(screen.getByLabelText(/^Email$/i), "asha@example.com");
+    await user.type(screen.getByLabelText(/^Password$/i), "WrongPass123!");
+    await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Login" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/Invalid email or password/i));
+    expect(window.sessionStorage.getItem("ajc_access_token")).toBeNull();
+    expect(document.cookie).not.toContain("ajc_session=1");
   });
 
   it("dashboard renders", () => {

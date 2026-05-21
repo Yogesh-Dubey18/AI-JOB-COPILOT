@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Link from "next/link";
 import { api, ApiClientError } from "@/lib/api";
+import { persistAuthSession } from "@/lib/auth-session";
 import { loginSchema, registerSchema } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     setError("");
     setNotice("");
     try {
-      await api.post(mode === "login" ? "/auth/login" : "/auth/register", values);
+      const result = await api.post(mode === "login" ? "/auth/login" : "/auth/register", values);
+      const sessionReady = persistAuthSession(result);
+      if (!sessionReady) {
+        setNotice("Authentication succeeded, but this deployment did not return a browser session token. Please check the backend auth response configuration.");
+        return;
+      }
       router.push("/dashboard");
     } catch (err) {
       if (err instanceof ApiClientError) {
