@@ -147,6 +147,17 @@ Production launch remains pending until MongoDB Atlas, provider secrets, CORS, m
 
 Copy `.env.example`, `frontend/.env.example`, and `backend/.env.example`. Add MongoDB Atlas URI and JWT secrets for production. AI keys are optional because the app has structured mock fallback responses.
 
+Provider-ready integrations are documented as placeholders until approved credentials are available:
+
+- `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, and `LINKEDIN_REDIRECT_URI` enable official LinkedIn OAuth/profile-import work only when the app is approved for the needed scopes.
+- `INDEED_API_KEY`, `ZIPRECRUITER_API_KEY`, `DICE_API_KEY`, and `NAUKRI_API_KEY` are reserved for approved APIs or partner feeds. The app must not scrape protected job boards.
+- `COURSE_PROVIDER`, `COURSERA_API_KEY`, `UDEMY_CLIENT_ID`, and `UDEMY_CLIENT_SECRET` are reserved for skill-gap learning resources. Mock learning plans remain available without keys.
+- `STORAGE_PROVIDER`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY` are placeholders for object storage. Local uploads remain the development fallback.
+
+The product keeps applications user-reviewed. It can open official apply URLs and generate checklists/drafts, but it must not auto-submit applications or auto-send recruiter messages unless a future provider explicitly supports it and the user confirms each action.
+
+See [Provider Integrations](docs/provider-integrations.md) for job-board, OAuth, storage, and course-provider setup notes.
+
 ## Deployment Readiness
 
 AI Job Copilot is structured for split deployment:

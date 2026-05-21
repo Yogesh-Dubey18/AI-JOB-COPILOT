@@ -1,34 +1,58 @@
 import { aiService } from "../ai/ai.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findRecordById } from "../utils/repository.js";
-import { scoreResumeForRole } from "./ats-scoring.service.js";
+import { scoreResumeAgainstJobDescription, scoreResumeForRole } from "./ats-scoring.service.js";
+import { anonymizeResumeRecord } from "./resume-parser.service.js";
+
+type AnalyzeResumeOptions = string | {
+  targetRole?: string;
+  jobDescription?: string;
+  anonymizeForAnalysis?: boolean;
+};
 
 function mergeUnique(...groups: unknown[]) {
   return Array.from(new Set(groups.flatMap((group) => Array.isArray(group) ? group : []).filter(Boolean).map(String)));
 }
 
-export async function analyzeResume(userId: string, resumeId: string, targetRole = "Full Stack Developer") {
+function normalizeOptions(options: AnalyzeResumeOptions = "Full Stack Developer") {
+  if (typeof options === "string") return { targetRole: options || "Full Stack Developer", jobDescription: "", anonymizeForAnalysis: false };
+  return {
+    targetRole: options.targetRole || "Full Stack Developer",
+    jobDescription: options.jobDescription || "",
+    anonymizeForAnalysis: Boolean(options.anonymizeForAnalysis)
+  };
+}
+
+export async function analyzeResume(userId: string, resumeId: string, options: AnalyzeResumeOptions = "Full Stack Developer") {
+  const normalized = normalizeOptions(options);
   const resume = await findRecordById("resumes", resumeId);
   if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
-  const localScore = scoreResumeForRole(resume, targetRole);
-  const analysis = await aiService.analyzeResume(userId, { resume, targetRole, localScore });
-  const atsScore = Math.round((Number(analysis.atsScore || localScore.atsScore) * 0.35) + (localScore.atsScore * 0.65));
+  const localScore = scoreResumeForRole(resume, normalized.targetRole);
+  const jobDescriptionCoverage = scoreResumeAgainstJobDescription(resume, normalized.jobDescription);
+  const resumeForAi = normalized.anonymizeForAnalysis ? anonymizeResumeRecord(resume) : resume;
+  const analysis = await aiService.analyzeResume(userId, { resume: resumeForAi, targetRole: normalized.targetRole, jobDescription: normalized.jobDescription, localScore });
+  const jdWeightedScore = jobDescriptionCoverage ? Math.round((localScore.atsScore * 0.75) + (jobDescriptionCoverage.coveragePercent * 0.25)) : localScore.atsScore;
+  const atsScore = Math.round((Number(analysis.atsScore || jdWeightedScore) * 0.35) + (jdWeightedScore * 0.65));
+  const redactedFields = normalized.anonymizeForAnalysis ? resumeForAi.parsedData?.redactedFields || [] : [];
   return createRecord("resumeAnalyses", {
     userId,
     resumeId,
-    targetRole,
+    targetRole: normalized.targetRole,
     ...analysis,
     atsScore,
     resumeLevel: localScore.resumeLevel,
     sectionScores: { ...analysis.sectionScores, ...localScore.sectionScores },
     strengths: mergeUnique(localScore.strengths, analysis.strengths),
     weaknesses: mergeUnique(localScore.weaknesses, analysis.weaknesses),
-    missingKeywords: mergeUnique(localScore.missingKeywords, analysis.missingKeywords),
-    improvementSuggestions: mergeUnique(localScore.improvementSuggestions, analysis.improvementSuggestions),
+    missingKeywords: mergeUnique(localScore.missingKeywords, jobDescriptionCoverage?.missingKeywords, analysis.missingKeywords),
+    improvementSuggestions: mergeUnique(localScore.improvementSuggestions, jobDescriptionCoverage?.suggestions, analysis.improvementSuggestions),
     recruiterView: `${localScore.recruiterView} ${analysis.recruiterView || ""}`.trim(),
     roleKeywordBank: localScore.roleKeywordBank,
     keywordCoverage: localScore.keywordCoverage,
     atsBreakdown: localScore.atsBreakdown,
+    jobDescriptionCoverage,
+    privacyMode: normalized.anonymizeForAnalysis ? "anonymized_for_analysis" : "standard",
+    redactedFields,
     parserWarnings: resume.parsedData?.parserWarnings || []
   });
 }

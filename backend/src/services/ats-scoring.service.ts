@@ -49,6 +49,42 @@ function unique(items: string[]) {
   return Array.from(new Set(items.filter(Boolean)));
 }
 
+const commonJobWords = new Set([
+  "and", "the", "with", "for", "you", "our", "will", "are", "this", "that", "from", "have", "has", "must", "good", "role", "team", "work", "job", "skills", "experience", "required", "preferred"
+]);
+
+function extractJobKeywords(jobDescription: string) {
+  const text = normalize(jobDescription);
+  const bankKeywords = technicalKeywordBank.filter((keyword) => includesTerm(text, keyword));
+  const phraseKeywords = Array.from(jobDescription.matchAll(/\b[A-Z][A-Za-z0-9.+#-]*(?:\s+[A-Z][A-Za-z0-9.+#-]*){0,2}\b/g)).map((match) => match[0]);
+  const tokenKeywords = text
+    .split(/[^a-z0-9.+#-]+/i)
+    .filter((token) => token.length >= 4 && !commonJobWords.has(token))
+    .slice(0, 120);
+  return unique([...bankKeywords, ...phraseKeywords, ...tokenKeywords]).slice(0, 28);
+}
+
+export function scoreResumeAgainstJobDescription(resume: any, jobDescription = "") {
+  if (!jobDescription.trim()) return null;
+  const parsed = resume?.parsedData || {};
+  const searchable = normalize([resume?.rawText, parsed.summary, parsed.skills?.join(" "), parsed.projects?.join(" "), parsed.experience?.join(" ")].join(" "));
+  const keywords = extractJobKeywords(jobDescription);
+  const detectedKeywords = keywords.filter((keyword) => includesTerm(searchable, keyword));
+  const missingKeywords = keywords.filter((keyword) => !detectedKeywords.includes(keyword));
+  const coveragePercent = keywords.length ? Math.round((detectedKeywords.length / keywords.length) * 100) : 0;
+  return {
+    detectedKeywords,
+    missingKeywords,
+    coveragePercent,
+    keywordCount: keywords.length,
+    suggestions: unique([
+      missingKeywords.length ? `Work in truthful job-description keywords where they match your real background: ${missingKeywords.slice(0, 6).join(", ")}.` : "",
+      "Mirror the job description's wording for tools and responsibilities without inventing skills.",
+      "Move the most relevant project and experience bullets closer to the top before applying."
+    ])
+  };
+}
+
 export function scoreResumeForRole(resume: any, targetRole = "Full Stack Developer") {
   const parsed = resume?.parsedData || {};
   const rawText = String(resume?.rawText || "");

@@ -14,11 +14,14 @@ import { api } from "@/lib/api";
 export default function ResumeAnalyzerPage() {
   const [resumeId, setResumeId] = useState("");
   const [targetRole, setTargetRole] = useState("Full Stack Developer");
+  const [jobDescription, setJobDescription] = useState("");
+  const [anonymizeForAnalysis, setAnonymizeForAnalysis] = useState(false);
   const resumes = useQuery({ queryKey: ["resumes"], queryFn: () => api.get<any[]>("/resumes"), retry: false });
-  const analyze = useMutation({ mutationFn: () => api.post<any>("/resumes/" + resumeId + "/analyze", { targetRole }) });
+  const analyze = useMutation({ mutationFn: () => api.post<any>("/resumes/" + resumeId + "/analyze", { targetRole, jobDescription, anonymizeForAnalysis }) });
   const result = analyze.data;
   const breakdown = result?.atsBreakdown || {};
   const keywordCoverage = result?.keywordCoverage;
+  const jobCoverage = result?.jobDescriptionCoverage;
   return (
     <AppShell>
       <PageHeading title="AI resume ATS analyzer" description="Select a resume and target role to get ATS score, section scores, strengths, weaknesses, missing keywords, recruiter view, and improvement suggestions." />
@@ -31,6 +34,20 @@ export default function ResumeAnalyzerPage() {
               {(resumes.data || []).map((resume) => <option key={resume._id} value={resume._id}>{resume.fileName}</option>)}
             </select>
             <Input value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
+            <textarea
+              aria-label="Job description"
+              className="min-h-36 w-full rounded-md border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Paste a job description to calculate job-specific ATS keyword coverage."
+              value={jobDescription}
+              onChange={(event) => setJobDescription(event.target.value)}
+            />
+            <label className="flex items-start gap-2 rounded-md border p-3 text-sm">
+              <input className="mt-1" type="checkbox" checked={anonymizeForAnalysis} onChange={(event) => setAnonymizeForAnalysis(event.target.checked)} />
+              <span>
+                <span className="block font-medium">Anonymize personal details for AI analysis</span>
+                <span className="text-muted-foreground">Name, email, phone, and links are redacted from the AI payload while the ATS heuristic still checks resume completeness.</span>
+              </span>
+            </label>
             <Button disabled={!resumeId || analyze.isPending} onClick={() => analyze.mutate()}><Sparkles className="h-4 w-4" /> {analyze.isPending ? "Analyzing..." : "Analyze resume"}</Button>
           </CardContent>
         </Card>
@@ -49,6 +66,23 @@ export default function ResumeAnalyzerPage() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   {(keywordCoverage.detectedKeywords || []).map((keyword: string) => <span key={keyword} className="rounded-md border px-2 py-1 text-xs">{keyword}</span>)}
                 </div>
+              </div>
+            ) : null}
+            {jobCoverage ? (
+              <div className="rounded-md border p-3">
+                <p className="text-sm font-semibold">Job description coverage</p>
+                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span>{jobCoverage.coveragePercent}% matched across {jobCoverage.keywordCount} detected job keywords</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(jobCoverage.missingKeywords || []).slice(0, 10).map((keyword: string) => <span key={keyword} className="rounded-md border px-2 py-1 text-xs">{keyword}</span>)}
+                </div>
+              </div>
+            ) : null}
+            {result?.privacyMode === "anonymized_for_analysis" ? (
+              <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+                AI analysis used anonymized resume details. Redacted fields: {(result.redactedFields || []).join(", ") || "none"}.
               </div>
             ) : null}
             {result?.atsBreakdown ? (

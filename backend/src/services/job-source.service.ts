@@ -1,10 +1,21 @@
 export type JobSourceConfig = {
   id: string;
   name: string;
-  type: "manual" | "curated" | "company-careers" | "csv";
+  type: "manual" | "curated" | "company-careers" | "csv" | "api-provider" | "partner-feed";
   trustBaseline: number;
   requiresReview: boolean;
   notes: string;
+};
+
+export type ExternalJobProviderConfig = JobSourceConfig & {
+  envVars: string[];
+  capabilities: {
+    search: boolean;
+    easyApply: boolean;
+    statusTracking: boolean;
+    oauthImport: boolean;
+  };
+  policy: string;
 };
 
 export const curatedJobSources: JobSourceConfig[] = [
@@ -34,6 +45,85 @@ export const curatedJobSources: JobSourceConfig[] = [
   }
 ];
 
+export const externalJobProviders: ExternalJobProviderConfig[] = [
+  {
+    id: "linkedin",
+    name: "LinkedIn Jobs",
+    type: "api-provider",
+    trustBaseline: 88,
+    requiresReview: true,
+    envVars: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: true },
+    policy: "Use official LinkedIn APIs or approved partner access only. Scraping and automatic application submission stay disabled.",
+    notes: "Provider-ready OAuth import and profile optimization hooks. Job search/easy apply require approved LinkedIn access."
+  },
+  {
+    id: "indeed",
+    name: "Indeed",
+    type: "partner-feed",
+    trustBaseline: 82,
+    requiresReview: true,
+    envVars: ["INDEED_API_KEY"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use approved API/feed access only. Do not scrape protected pages.",
+    notes: "Configured as a partner-feed placeholder until approved credentials are available."
+  },
+  {
+    id: "ziprecruiter",
+    name: "ZipRecruiter",
+    type: "api-provider",
+    trustBaseline: 82,
+    requiresReview: true,
+    envVars: ["ZIPRECRUITER_API_KEY"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use public/partner API access and keep applications user-reviewed.",
+    notes: "Provider-ready search connector placeholder."
+  },
+  {
+    id: "dice",
+    name: "Dice",
+    type: "partner-feed",
+    trustBaseline: 80,
+    requiresReview: true,
+    envVars: ["DICE_API_KEY"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use approved feed/API access only.",
+    notes: "Technology-role source placeholder."
+  },
+  {
+    id: "naukri",
+    name: "Naukri",
+    type: "partner-feed",
+    trustBaseline: 78,
+    requiresReview: true,
+    envVars: ["NAUKRI_API_KEY"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use approved partner integration only. Do not scrape protected listings.",
+    notes: "India-focused source placeholder for approved integrations."
+  }
+];
+
+export function listJobSourceReadiness() {
+  return {
+    localSources: curatedJobSources,
+    externalProviders: externalJobProviders.map((provider) => {
+      const configuredVars = provider.envVars.filter((name) => Boolean(process.env[name]));
+      return {
+        ...provider,
+        configured: configuredVars.length === provider.envVars.length,
+        configuredVars,
+        missingVars: provider.envVars.filter((name) => !process.env[name]),
+        status: configuredVars.length === provider.envVars.length ? "configured_requires_review" : "not_configured"
+      };
+    }),
+    safetyRules: [
+      "Use official APIs, partner feeds, CSV imports, or user-provided official job URLs only.",
+      "Do not scrape protected job boards or bypass terms of service.",
+      "Do not auto-apply or auto-message recruiters without explicit user review."
+    ]
+  };
+}
+
 function clean(value: unknown, fallback = "") {
   return String(value || fallback).trim();
 }
@@ -50,6 +140,8 @@ function list(value: unknown) {
 function sourceType(source: string): JobSourceConfig["type"] {
   const lower = source.toLowerCase();
   if (lower.includes("csv")) return "csv";
+  if (lower.includes("api")) return "api-provider";
+  if (lower.includes("partner")) return "partner-feed";
   if (lower.includes("career")) return "company-careers";
   if (lower.includes("manual")) return "manual";
   return "curated";

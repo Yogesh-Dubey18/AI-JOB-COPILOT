@@ -39,6 +39,15 @@ const ResumeAnalysisSchema = new Schema(
       actionVerbs: Number,
       total: Number
     },
+    jobDescriptionCoverage: {
+      detectedKeywords: [String],
+      missingKeywords: [String],
+      coveragePercent: Number,
+      keywordCount: Number,
+      suggestions: [String]
+    },
+    privacyMode: String,
+    redactedFields: [String],
     parserWarnings: [String]
   },
   { timestamps: true }

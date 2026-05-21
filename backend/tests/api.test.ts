@@ -73,11 +73,16 @@ describe("AI Job Copilot API", () => {
 
   it("uploads resume and analyzes fallback", async () => {
     const agent = await authAgent();
-    const upload = await agent.post("/api/resumes/upload").field("isBaseResume", "true").attach("resume", Buffer.from("Test User\ntest@example.com\n9876543210\nSkills React Node.js MongoDB\nProjects built AI Job Copilot project with REST API authentication"), "resume.txt").expect(201);
+    const upload = await agent.post("/api/resumes/upload").field("isBaseResume", "true").field("anonymizePreview", "true").attach("resume", Buffer.from("Test User\ntest@example.com\n9876543210\nSkills React Node.js MongoDB\nProjects built AI Job Copilot project with REST API authentication"), "resume.txt").expect(201);
     expect(upload.body.data.parsedData.parserQuality).toBe("high");
-    const analysis = await agent.post("/api/resumes/" + upload.body.data._id + "/analyze").send({ targetRole: "MERN Stack Developer" }).expect(201);
+    expect(upload.body.data.parsedData.redactedPreview.email).toBe("[redacted-email]");
+    const edited = await agent.patch("/api/resumes/" + upload.body.data._id + "/parsed-data").send({ parsedData: { summary: "Updated MERN summary", skills: ["React", "Node.js", "MongoDB", "JWT"] } }).expect(200);
+    expect(edited.body.data.parsedData.updatedByUser).toBe(true);
+    const analysis = await agent.post("/api/resumes/" + upload.body.data._id + "/analyze").send({ targetRole: "MERN Stack Developer", jobDescription: "React Node.js MongoDB JWT Docker AWS REST API role", anonymizeForAnalysis: true }).expect(201);
     expect(analysis.body.data.atsScore).toBeGreaterThan(0);
     expect(analysis.body.data.keywordCoverage.coveragePercent).toBeGreaterThan(0);
+    expect(analysis.body.data.jobDescriptionCoverage.coveragePercent).toBeGreaterThan(0);
+    expect(analysis.body.data.privacyMode).toBe("anonymized_for_analysis");
     expect(analysis.body.data.atsBreakdown.total).toBeGreaterThan(0);
   });
 
@@ -112,6 +117,9 @@ describe("AI Job Copilot API", () => {
     expect(duplicate.body.data.duplicate).toBe(true);
     const preview = await agent.post("/api/jobs/import/csv-preview").send({ csv: "title,company,location,applyUrl,skillsRequired\nNode Developer,CSV Co,Remote,https://csv.example/node,Node.js" }).expect(200);
     expect(preview.body.data[0].duplicateKey).toBeTruthy();
+    const sources = await agent.get("/api/jobs/sources").expect(200);
+    expect(sources.body.data.externalProviders.some((source: any) => source.id === "linkedin")).toBe(true);
+    expect(sources.body.data.safetyRules.join(" ")).toMatch(/Do not scrape/i);
   });
 
   it("creates tailored resume fallback", async () => {

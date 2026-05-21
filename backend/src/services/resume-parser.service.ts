@@ -12,6 +12,10 @@ type ParserResult = {
   wordCount: number;
 };
 
+const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const phonePattern = /(?:\+?\d[\s-]?){10,14}/g;
+const urlPattern = /https?:\/\/[^\s)]+/g;
+
 async function parsePlainText(filePath: string): Promise<ParserResult> {
   const buffer = await fs.readFile(filePath);
   const text = cleanText(buffer.toString("utf8"));
@@ -48,6 +52,63 @@ function detectFileType(filePath: string, fileType: string) {
   return fileType;
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function redactText(text: string, parsedData: any = {}) {
+  const redactedFields = new Set<string>();
+  let redacted = text;
+  if (parsedData.name) {
+    redacted = redacted.replace(new RegExp("\\b" + escapeRegExp(parsedData.name) + "\\b", "gi"), () => {
+      redactedFields.add("name");
+      return "[redacted-name]";
+    });
+  }
+  redacted = redacted.replace(emailPattern, () => {
+    redactedFields.add("email");
+    return "[redacted-email]";
+  });
+  redacted = redacted.replace(phonePattern, () => {
+    redactedFields.add("phone");
+    return "[redacted-phone]";
+  });
+  redacted = redacted.replace(urlPattern, () => {
+    redactedFields.add("links");
+    return "[redacted-link]";
+  });
+  return { text: redacted, redactedFields: Array.from(redactedFields) };
+}
+
+export function anonymizeParsedResume(parsedData: any = {}, rawText = "") {
+  const redacted = redactText(rawText, parsedData);
+  const redactedFields = new Set(redacted.redactedFields);
+  const anonymized = {
+    ...parsedData,
+    name: parsedData.name ? "[redacted-name]" : "",
+    email: parsedData.email ? "[redacted-email]" : "",
+    phone: parsedData.phone ? "[redacted-phone]" : "",
+    links: Array.isArray(parsedData.links) ? parsedData.links.map(() => "[redacted-link]") : [],
+    summary: redactText(parsedData.summary || "", parsedData).text,
+    redactedFields: Array.from(redactedFields)
+  };
+  if (parsedData.name) redactedFields.add("name");
+  if (parsedData.email) redactedFields.add("email");
+  if (parsedData.phone) redactedFields.add("phone");
+  if (Array.isArray(parsedData.links) && parsedData.links.length) redactedFields.add("links");
+  anonymized.redactedFields = Array.from(redactedFields);
+  return { rawText: redacted.text, parsedData: anonymized, redactedFields: anonymized.redactedFields };
+}
+
+export function anonymizeResumeRecord<T extends Record<string, any>>(resume: T) {
+  const anonymized = anonymizeParsedResume(resume?.parsedData || {}, resume?.rawText || "");
+  return {
+    ...resume,
+    rawText: anonymized.rawText,
+    parsedData: anonymized.parsedData
+  };
+}
+
 export async function extractResumeTextDetailed(filePath: string, fileType: string): Promise<ParserResult> {
   const detectedType = detectFileType(filePath, fileType);
   if (detectedType === "text/plain") return parsePlainText(filePath);
@@ -66,9 +127,9 @@ export async function extractResumeText(filePath: string, fileType: string) {
 }
 
 export function parseResumeText(text: string) {
-  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
-  const phone = text.match(/(?:\+?\d[\s-]?){10,14}/)?.[0] || "";
-  const links = Array.from(text.matchAll(/https?:\/\/[^\s)]+/g)).map((m) => m[0]);
+  const email = text.match(emailPattern)?.[0] || "";
+  const phone = text.match(phonePattern)?.[0] || "";
+  const links = Array.from(text.matchAll(urlPattern)).map((m) => m[0]);
   const skills = knownSkills.filter((skill) => new RegExp("\\b" + skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(text));
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const detectedSections = ["summary", "skills", "experience", "projects", "education", "certifications"].filter((section) => new RegExp("\\b" + section + "\\b", "i").test(text));

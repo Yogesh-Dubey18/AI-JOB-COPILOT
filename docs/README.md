@@ -36,6 +36,7 @@
 - [Commercial Readiness Audit](commercial-readiness-audit.md)
 - [Legal Review Checklist](legal-review-checklist.md)
 - [AI Job Search Disclaimer](ai-job-search-disclaimer.md)
+- [Provider Integrations](provider-integrations.md)
 - [Refund And Cancellation Policy Template](refund-cancellation-policy-template.md)
 - [Support Operations Guide](support-operations-guide.md)
 - [Incident Response Plan](incident-response-plan.md)

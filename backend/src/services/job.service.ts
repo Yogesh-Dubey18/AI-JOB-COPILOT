@@ -1,7 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { countRecords, createRecord, findRecordById, findRecords } from "../utils/repository.js";
 import { createApplication } from "./application.service.js";
-import { normalizeJobSourceJob, parseCsvPreview } from "./job-source.service.js";
+import { listJobSourceReadiness, normalizeJobSourceJob, parseCsvPreview } from "./job-source.service.js";
 
 export const sampleJobs = [
   ["React Developer", "PixelCraft Labs", "Bengaluru", "Hybrid", "Full-time", "0-2 years", ["React", "TypeScript", "Tailwind", "REST API"]],
@@ -63,8 +63,22 @@ export async function listJobs(query: any = {}) {
   if (query.freshersOnly === "true") jobs = jobs.filter((job: any) => /fresh|0-1|0-2/i.test(job.experienceRequired));
   if (query.internshipOnly === "true") jobs = jobs.filter((job: any) => job.jobType === "Internship");
   if (query.trustMin) jobs = jobs.filter((job: any) => Number(job.trustScore || 0) >= Number(query.trustMin));
+  if (query.salaryMin) jobs = jobs.filter((job: any) => Number(job.salaryMax || job.salaryMin || 0) >= Number(query.salaryMin));
+  if (query.salaryMax) jobs = jobs.filter((job: any) => Number(job.salaryMin || job.salaryMax || 0) <= Number(query.salaryMax));
+  if (query.experienceLevel) jobs = jobs.filter((job: any) => String(job.experienceRequired || "").toLowerCase().includes(String(query.experienceLevel).toLowerCase()));
+  const sort = String(query.sort || "postedAt");
+  jobs = jobs.sort((a: any, b: any) => {
+    if (sort === "salary") return Number(b.salaryMax || 0) - Number(a.salaryMax || 0);
+    if (sort === "trust") return Number(b.trustScore || 0) - Number(a.trustScore || 0);
+    if (sort === "scamRisk") return Number(a.scamRiskScore || 0) - Number(b.scamRiskScore || 0);
+    return new Date(b.postedAt || b.createdAt || 0).getTime() - new Date(a.postedAt || a.createdAt || 0).getTime();
+  });
   const start = (page - 1) * limit;
   return { items: jobs.slice(start, start + limit), page, limit, total: jobs.length };
+}
+
+export function getJobSources() {
+  return listJobSourceReadiness();
 }
 
 export async function getJob(id: string) {

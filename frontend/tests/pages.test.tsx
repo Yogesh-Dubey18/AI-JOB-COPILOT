@@ -124,11 +124,15 @@ describe("frontend pages", () => {
   it("resume upload page renders", () => {
     renderWithProviders(<ResumeUploadPage />);
     expect(screen.getByText(/Resume upload/i)).toBeInTheDocument();
+    expect(screen.getByText(/Generate anonymized preview/i)).toBeInTheDocument();
+    expect(screen.getByText(/LinkedIn import/i)).toBeInTheDocument();
   });
 
   it("resume analyzer page renders", () => {
     renderWithProviders(<ResumeAnalyzerPage />);
     expect(screen.getByText(/AI resume ATS analyzer/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Job description/i)).toBeInTheDocument();
+    expect(screen.getByText(/Anonymize personal details/i)).toBeInTheDocument();
   });
 
   it("job listing page renders", () => {

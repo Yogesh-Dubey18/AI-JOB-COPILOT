@@ -23,6 +23,9 @@ const ResumeSchema = new Schema(
       parserQuality: String,
       parserWarnings: [String],
       parserWordCount: Number,
+      redactedPreview: Schema.Types.Mixed,
+      redactedFields: [String],
+      updatedByUser: Boolean,
       wordCount: Number
     },
     isBaseResume: { type: Boolean, default: false }
