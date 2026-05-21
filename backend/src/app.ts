@@ -16,6 +16,7 @@ import applicationRoutes from "./routes/application.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import billingRoutes from "./routes/billing.routes.js";
 import exportRoutes from "./routes/export.routes.js";
+import feedbackRoutes from "./routes/feedback.routes.js";
 import interviewRoutes from "./routes/interview.routes.js";
 import jobRoutes from "./routes/job.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
@@ -70,6 +71,7 @@ app.get("/status", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/exports", exportRoutes);
+app.use("/api/feedback", feedbackRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/resumes", resumeRoutes);
 app.use("/api/jobs", jobRoutes);

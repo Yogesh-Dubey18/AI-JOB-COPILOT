@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BriefcaseBusiness, CalendarClock, FileText, HeartPulse, Layers, Sparkles, Target, TrendingUp, Wrench } from "lucide-react";
+import { BriefcaseBusiness, CalendarClock, FileText, HeartPulse, Layers, MessageSquarePlus, Sparkles, Target, TrendingUp, Wrench } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/app-shell";
 import { MetricCard } from "@/components/shared/metric-card";
@@ -25,7 +25,10 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold md:text-3xl">Welcome back{profile.data?.headline ? ", builder" : ""}</h1>
           <p className="mt-2 text-muted-foreground">Your resume, jobs, applications, interviews, and skill plan in one place.</p>
         </div>
-        <Link href="/resume/upload"><Button><FileText className="h-4 w-4" /> Upload resume</Button></Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/feedback"><Button variant="outline"><MessageSquarePlus className="h-4 w-4" /> Feedback</Button></Link>
+          <Link href="/resume/upload"><Button><FileText className="h-4 w-4" /> Upload resume</Button></Link>
+        </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard label="Profile completion" value={(profile.data?.profileCompletenessScore || 35) + "%"} icon={<Target className="h-5 w-5" />} hint="Complete onboarding for better matches" />

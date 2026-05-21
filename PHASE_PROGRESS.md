@@ -2461,7 +2461,7 @@ Build/test result:
 
 Git safety result:
 - Passed before staging.
-- Stable tag status will be confirmed after commit/push.
+- Stable tag status: `v2.0.0` was created locally and pushed to `origin`.
 
 Blockers:
 - Live production deployment cannot be verified without real frontend/backend URLs and hosting dashboard access.
@@ -2469,3 +2469,96 @@ Blockers:
 
 Next phase to start:
 - Phase 47: real user feedback loop + issue-driven sprint.
+
+## Phase 47: Real User Feedback Loop + Issue-Driven Sprint
+
+Status: Complete
+
+Completed work:
+- Upgraded the feedback model with status, priority, sentiment, issue draft, labels, release target, and admin notes.
+- Added authenticated user feedback APIs for submission and personal feedback history.
+- Added admin feedback triage APIs for inbox summaries, status updates, and issue draft generation.
+- Added feedback service logic for priority/sentiment inference and privacy-aware issue draft generation.
+- Added in-app feedback form UI, dashboard CTA, contact CTA, app navigation link, and admin feedback operations dashboard.
+- Added backend API coverage and frontend render coverage for feedback flows.
+- Added feedback-to-issue, triage, sprint, cadence, beta tester, privacy, and release-loop documentation.
+- Updated README, CHANGELOG, docs index, and product improvement backlog.
+
+Files changed:
+- `CHANGELOG.md`
+- `README.md`
+- `backend/src/app.ts`
+- `backend/src/models/Feedback.ts`
+- `backend/src/routes/admin.routes.ts`
+- `backend/src/routes/feedback.routes.ts`
+- `backend/src/services/admin.service.ts`
+- `backend/src/services/feedback.service.ts`
+- `backend/src/validators/feedback.validator.ts`
+- `backend/tests/api.test.ts`
+- `frontend/app/feedback/page.tsx`
+- `frontend/app/admin/feedback/page.tsx`
+- `frontend/app/contact/page.tsx`
+- `frontend/app/dashboard/page.tsx`
+- `frontend/components/admin/feedback-dashboard.tsx`
+- `frontend/components/feedback/feedback-form.tsx`
+- `frontend/components/layout/app-shell.tsx`
+- `frontend/lib/validators.ts`
+- `frontend/tests/pages.test.tsx`
+- `docs/README.md`
+- `docs/product-improvement-backlog.md`
+- `docs/feedback-to-issue-template.md`
+- `docs/issue-triage-system.md`
+- `docs/improvement-sprint-template.md`
+- `docs/user-feedback-review-cadence.md`
+- `docs/beta-tester-guide.md`
+- `docs/feedback-privacy-guide.md`
+- `docs/feedback-to-release-loop.md`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:docs`
+- `npm run check:security`
+- `npm run check:git-safety`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix extension`
+- `npm test --prefix extension`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+- final safety audit
+- `git status --short`
+- `git add .`
+- `git commit -m "Add real user feedback loop and issue-driven improvement sprint"`
+- `git push`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 291 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 25 tests and frontend 24 tests.
+- Backend build passed.
+- Backend tests passed: 25 tests.
+- Frontend build passed with 52 app routes.
+- Frontend tests passed: 24 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Extension build passed.
+- Extension tests passed: 2 tests.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Feedback issue creation is intentionally draft-only; GitHub API integration requires future credentials and explicit review.
+- Real user follow-up requires deployed URLs, mail provider setup, and support process ownership.
+
+Next phase to start:
+- Phase 48: commercial readiness audit + legal/business checklist.

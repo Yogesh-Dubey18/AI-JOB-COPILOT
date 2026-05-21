@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ReactNode } from "react";
-import { BarChart3, Bell, Bot, BriefcaseBusiness, Download, FileText, Gauge, Home, Layers, MessageSquare, Settings, ShieldAlert, UserRound, Wrench } from "lucide-react";
+import { BarChart3, Bell, Bot, BriefcaseBusiness, Download, FileText, Gauge, Home, Layers, MessageSquare, MessageSquarePlus, Settings, ShieldAlert, UserRound, Wrench } from "lucide-react";
 
 const nav = [
   ["/dashboard", Home, "Dashboard"],
@@ -13,6 +13,7 @@ const nav = [
   ["/career-mentor-chat", Bot, "Mentor"],
   ["/analytics", BarChart3, "Analytics"],
   ["/job-scam-detector", ShieldAlert, "Scam check"],
+  ["/feedback", MessageSquarePlus, "Feedback"],
   ["/settings", Settings, "Settings"]
 ];
 
@@ -39,6 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/dashboard" className="min-w-0 truncate font-semibold" aria-label="AI Job Copilot dashboard">Career operating system</Link>
           <div className="ml-3 flex shrink-0 items-center gap-2 text-sm text-muted-foreground sm:gap-3">
             <Link href="/notifications" aria-label="Notifications" className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground"><Bell className="h-4 w-4" /><span className="hidden sm:inline">Notifications</span></Link>
+            <Link href="/feedback" aria-label="Feedback" className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground"><MessageSquarePlus className="h-4 w-4" /><span className="hidden sm:inline">Feedback</span></Link>
             <Link href="/profile" aria-label="Profile" className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground"><UserRound className="h-4 w-4" /><span className="hidden sm:inline">Profile</span></Link>
           </div>
         </header>

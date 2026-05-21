@@ -168,6 +168,30 @@ describe("AI Job Copilot API", () => {
     expect(notifications.body.data.length).toBeGreaterThan(0);
   });
 
+  it("collects feedback and lets admins triage issue drafts", async () => {
+    const agent = await authAgent();
+    const created = await agent.post("/api/feedback").send({
+      type: "bug",
+      rating: 2,
+      page: "/resume/analyzer",
+      message: "The analyzer result was confusing after I uploaded a resume and should explain the next action."
+    }).expect(201);
+    expect(created.body.data.status).toBe("open");
+    expect(created.body.data.issueTitle).toMatch(/BUG/i);
+    const mine = await agent.get("/api/feedback/mine").expect(200);
+    expect(mine.body.data.summary.total).toBe(1);
+
+    const admin = await adminAgent();
+    const inbox = await admin.get("/api/admin/feedback").expect(200);
+    expect(inbox.body.data.summary.open).toBeGreaterThan(0);
+    expect(inbox.body.data.issueQueue.length).toBeGreaterThan(0);
+    const draft = await admin.post("/api/admin/feedback/" + created.body.data._id + "/issue-draft").send({}).expect(200);
+    expect(draft.body.data.body).toMatch(/Triage Checklist/);
+    const updated = await admin.patch("/api/admin/feedback/" + created.body.data._id).send({ status: "in_review", priority: "high", releaseTarget: "v2.1" }).expect(200);
+    expect(updated.body.data.status).toBe("in_review");
+    expect(updated.body.data.priority).toBe("high");
+  });
+
   it("exports privacy data, updates preferences, sanitizes admin users, and requires confirmed deletion", async () => {
     const agent = await authAgent();
     await agent.put("/api/profile").send({ headline: "Privacy-aware developer", skills: ["React"], targetRoles: ["Frontend Developer"] }).expect(200);

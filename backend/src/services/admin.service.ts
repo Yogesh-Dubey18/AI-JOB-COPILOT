@@ -4,6 +4,7 @@ import { normalizeJobSourceJob } from "./job-source.service.js";
 import { listAuditLogs } from "./audit-log.service.js";
 import { getRiskSignals, getSystemHealth } from "./system-health.service.js";
 import { getProviderStatus } from "./provider-status.service.js";
+import { listFeedbackInbox } from "./feedback.service.js";
 
 export async function listUsers() {
   const users = await findRecords("users", {}, { sort: { createdAt: -1 } });
@@ -77,5 +78,5 @@ export async function reports() {
 }
 
 export async function feedback() {
-  return findRecords("feedback", {}, { sort: { createdAt: -1 }, limit: 100 });
+  return listFeedbackInbox();
 }

@@ -19,9 +19,11 @@ import BillingSettingsPage from "@/app/settings/billing/page";
 import PrivacySettingsPage from "@/app/settings/privacy/page";
 import PrivacyPage from "@/app/privacy/page";
 import OfflinePage from "@/app/offline/page";
+import FeedbackPage from "@/app/feedback/page";
 import PortfolioGeneratorPage from "@/app/portfolio-generator/page";
 import PublicPortfolioPage from "@/app/u/[slug]/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
+import AdminFeedbackPage from "@/app/admin/feedback/page";
 import AdminMonitoringPage from "@/app/admin/monitoring/page";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
@@ -126,9 +128,19 @@ describe("frontend pages", () => {
     expect(screen.getByRole("heading", { name: "You are offline" })).toBeInTheDocument();
   });
 
+  it("feedback page renders", () => {
+    renderWithProviders(<FeedbackPage />);
+    expect(screen.getByRole("heading", { name: "Product feedback" })).toBeInTheDocument();
+  });
+
   it("admin dashboard renders", () => {
     renderWithProviders(<AdminDashboardPage />);
     expect(screen.getByText(/Admin dashboard/i)).toBeInTheDocument();
+  });
+
+  it("admin feedback page renders", () => {
+    renderWithProviders(<AdminFeedbackPage />);
+    expect(screen.getByRole("heading", { name: "Feedback operations" })).toBeInTheDocument();
   });
 
   it("admin monitoring page renders", () => {

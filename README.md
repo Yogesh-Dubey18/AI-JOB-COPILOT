@@ -27,6 +27,7 @@ Honest scope:
 - Added MongoDB/Mongoose models, in-memory local fallback, repository abstraction, and seed data.
 - Added verification workflow with builds, tests, and Git safety checks.
 - Documented deployment, security, limitations, demo flow, and handoff requirements.
+- Added feedback-to-issue workflow with in-app feedback, admin triage, issue drafts, and privacy-aware improvement sprint docs.
 
 Portfolio package docs:
 
@@ -35,6 +36,7 @@ Portfolio package docs:
 - [LinkedIn Post](docs/linkedin-post.md)
 - [Resume Project Bullets](docs/resume-project-bullets.md)
 - [Interview Q&A](docs/interview-qa-ai-job-copilot.md)
+- [Feedback To Release Loop](docs/feedback-to-release-loop.md)
 
 ## Monorepo
 
