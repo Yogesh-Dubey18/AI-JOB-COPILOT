@@ -18,6 +18,8 @@ import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
 import PrivacySettingsPage from "@/app/settings/privacy/page";
 import PrivacyPage from "@/app/privacy/page";
+import PricingPage from "@/app/pricing/page";
+import TermsPage from "@/app/terms/page";
 import OfflinePage from "@/app/offline/page";
 import FeedbackPage from "@/app/feedback/page";
 import PortfolioGeneratorPage from "@/app/portfolio-generator/page";
@@ -121,6 +123,18 @@ describe("frontend pages", () => {
     renderWithProviders(<PrivacyPage />);
     expect(screen.getByRole("heading", { name: "Privacy" })).toBeInTheDocument();
     expect(screen.getByText(/Data export/i)).toBeInTheDocument();
+  });
+
+  it("public pricing page renders commercial disclaimer", () => {
+    renderWithProviders(<PricingPage />);
+    expect(screen.getByRole("heading", { name: "Pricing" })).toBeInTheDocument();
+    expect(screen.getByText(/Commercial readiness note/i)).toBeInTheDocument();
+  });
+
+  it("public terms page renders professional placeholder", () => {
+    renderWithProviders(<TermsPage />);
+    expect(screen.getByRole("heading", { name: "Terms" })).toBeInTheDocument();
+    expect(screen.getByText(/No outcome guarantee/i)).toBeInTheDocument();
   });
 
   it("offline page renders", () => {

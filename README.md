@@ -28,6 +28,7 @@ Honest scope:
 - Added verification workflow with builds, tests, and Git safety checks.
 - Documented deployment, security, limitations, demo flow, and handoff requirements.
 - Added feedback-to-issue workflow with in-app feedback, admin triage, issue drafts, and privacy-aware improvement sprint docs.
+- Added commercial readiness, legal review, support, incident response, refund/cancellation, and pricing validation templates that require professional review before paid launch.
 
 Portfolio package docs:
 
@@ -37,6 +38,7 @@ Portfolio package docs:
 - [Resume Project Bullets](docs/resume-project-bullets.md)
 - [Interview Q&A](docs/interview-qa-ai-job-copilot.md)
 - [Feedback To Release Loop](docs/feedback-to-release-loop.md)
+- [Commercial Readiness Index](docs/commercial-readiness-index.md)
 
 ## Monorepo
 

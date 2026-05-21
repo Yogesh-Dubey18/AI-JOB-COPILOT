@@ -5,6 +5,7 @@ All notable changes to AI Job Copilot will be documented here.
 ## Unreleased
 
 - Added authenticated in-app feedback submission, admin feedback triage, issue draft generation, feedback docs, and tests.
+- Added commercial readiness audit, legal/business templates, pricing disclaimers, and professional placeholder updates for privacy and terms pages.
 
 ## v2.0.0 - 2026-05-21
 
