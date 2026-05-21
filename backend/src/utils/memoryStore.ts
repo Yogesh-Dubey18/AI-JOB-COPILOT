@@ -18,6 +18,7 @@ export type CollectionName =
   | "jobScamReports"
   | "chatSessions"
   | "notifications"
+  | "notificationPreferences"
   | "analyticsSnapshots"
   | "aiRequests"
   | "feedback";
@@ -46,6 +47,7 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   jobScamReports: [],
   chatSessions: [],
   notifications: [],
+  notificationPreferences: [],
   analyticsSnapshots: [],
   aiRequests: [],
   feedback: []

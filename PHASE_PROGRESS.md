@@ -1174,3 +1174,48 @@ Blockers:
 
 Next phase to start:
 - Phase 29: v2 notification center + email/calendar foundation.
+
+## Phase 29: v2 Notification Center + Email/Calendar Foundation
+
+Status: Complete
+
+Completed work:
+- Improved notification model and added notification preferences persistence.
+- Added reminder scheduler service for due application follow-ups with deduped in-app notifications.
+- Added mock-safe email provider architecture for mock, SMTP, Resend-ready, and SendGrid-ready modes.
+- Added mock-safe calendar provider architecture for mock and Google-ready modes.
+- Improved notification routes, application tracker notification integration, frontend notification center, env examples, tests, and docs.
+
+Commands run:
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed after tightening the notification page test to target the page heading instead of matching duplicate navigation text.
+- Documentation link check passed for 236 markdown files.
+- Root build passed.
+- Root tests passed: backend 11 tests and frontend 11 tests.
+- Backend build passed.
+- Backend tests passed: 11 tests.
+- Frontend build passed.
+- Frontend tests passed: 11 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Real email/calendar sending requires provider credentials, OAuth setup where applicable, and user opt-in.
+
+Next phase to start:
+- Phase 30: v2 AI Copilot quality upgrade.

@@ -19,11 +19,17 @@ export const env = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || "",
   REDIS_URL: process.env.REDIS_URL || "",
+  EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || "mock",
   EMAIL_HOST: process.env.EMAIL_HOST || "",
   EMAIL_PORT: Number(process.env.EMAIL_PORT || 587),
   EMAIL_USER: process.env.EMAIL_USER || "",
   EMAIL_PASS: process.env.EMAIL_PASS || "",
   EMAIL_FROM: process.env.EMAIL_FROM || "AI Job Copilot <no-reply@example.local>",
+  RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || "",
+  CALENDAR_PROVIDER: process.env.CALENDAR_PROVIDER || "mock",
+  GOOGLE_CALENDAR_CLIENT_ID: process.env.GOOGLE_CALENDAR_CLIENT_ID || "",
+  GOOGLE_CALENDAR_CLIENT_SECRET: process.env.GOOGLE_CALENDAR_CLIENT_SECRET || "",
   LOG_LEVEL: process.env.LOG_LEVEL || "info"
 };
 

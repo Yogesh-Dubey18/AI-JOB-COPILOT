@@ -17,6 +17,7 @@ import { PortfolioModel } from "../models/Portfolio.js";
 import { JobScamReportModel } from "../models/JobScamReport.js";
 import { ChatSessionModel } from "../models/ChatSession.js";
 import { NotificationModel } from "../models/Notification.js";
+import { NotificationPreferenceModel } from "../models/NotificationPreference.js";
 import { AnalyticsSnapshotModel } from "../models/AnalyticsSnapshot.js";
 import { AIRequestModel } from "../models/AIRequest.js";
 import { FeedbackModel } from "../models/Feedback.js";
@@ -40,6 +41,7 @@ const modelMap: Record<CollectionName, Model<any>> = {
   jobScamReports: JobScamReportModel,
   chatSessions: ChatSessionModel,
   notifications: NotificationModel,
+  notificationPreferences: NotificationPreferenceModel,
   analyticsSnapshots: AnalyticsSnapshotModel,
   aiRequests: AIRequestModel,
   feedback: FeedbackModel

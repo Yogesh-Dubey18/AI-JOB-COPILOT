@@ -12,6 +12,7 @@ import JobDetailPage from "@/app/jobs/[jobId]/page";
 import ApplicationsPage from "@/app/applications/page";
 import InterviewsPage from "@/app/interviews/page";
 import AnalyticsPage from "@/app/analytics/page";
+import NotificationsPage from "@/app/notifications/page";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<Providers>{ui}</Providers>);
@@ -66,5 +67,10 @@ describe("frontend pages", () => {
   it("analytics page renders", () => {
     renderWithProviders(<AnalyticsPage />);
     expect(screen.getByText(/Analytics dashboard/i)).toBeInTheDocument();
+  });
+
+  it("notifications page renders", () => {
+    renderWithProviders(<NotificationsPage />);
+    expect(screen.getByRole("heading", { name: "Notifications" })).toBeInTheDocument();
   });
 });

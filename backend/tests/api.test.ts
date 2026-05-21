@@ -101,6 +101,23 @@ describe("AI Job Copilot API", () => {
     expect(insights.body.data.active).toBe(1);
   });
 
+  it("creates notification reminders and updates preferences", async () => {
+    const agent = await authAgent();
+    await agent.patch("/api/notifications/preferences").send({ email: true, applicationReminders: true }).expect(200);
+    const preferences = await agent.get("/api/notifications/preferences").expect(200);
+    expect(preferences.body.data.email).toBe(true);
+    await agent.post("/api/applications").send({
+      company: "Reminder Co",
+      role: "Node Developer",
+      status: "Applied",
+      nextFollowUpDate: new Date(Date.now() - 86400000).toISOString()
+    }).expect(201);
+    const scan = await agent.post("/api/notifications/reminders/applications").send({}).expect(200);
+    expect(scan.body.data.created).toBeGreaterThan(0);
+    const notifications = await agent.get("/api/notifications").expect(200);
+    expect(notifications.body.data.length).toBeGreaterThan(0);
+  });
+
   it("generates interview prep fallback", async () => {
     const agent = await authAgent();
     const res = await agent.post("/api/ai/interview-prep").send({ role: "Full Stack Developer" }).expect(200);

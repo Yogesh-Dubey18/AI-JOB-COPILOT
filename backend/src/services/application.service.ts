@@ -1,6 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, deleteRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { buildTimelineEvent, enrichApplicationForStage, summarizeApplications } from "./application-intelligence.service.js";
+import { createNotification } from "./notification.service.js";
 
 export async function createApplication(userId: string, input: any) {
   const status = input.status || "Saved";
@@ -43,7 +44,18 @@ export async function updateApplicationStatus(userId: string, id: string, status
   const updates: any = { status };
   if (status === "Applied") updates.appliedDate = new Date();
   updates.statusHistory = [...(app.statusHistory || []), { status, note: "Status updated", changedAt: new Date() }];
-  return updateApplication(userId, id, updates);
+  const updated = await updateApplication(userId, id, updates);
+  if (["HR Call", "Assignment", "Technical Round 1", "Technical Round 2", "Managerial Round", "HR Round", "Offer"].includes(status)) {
+    await createNotification(userId, {
+      type: "application_stage",
+      title: `${status}: ${updated.role}`,
+      message: `${updated.company} moved to ${status}. Prepare next steps and schedule follow-up.`,
+      actionUrl: `/applications/${updated._id}`,
+      priority: status === "Offer" ? "high" : "normal",
+      dedupeKey: `application-stage:${updated._id}:${status}`
+    });
+  }
+  return updated;
 }
 
 export async function getApplicationTimeline(userId: string, id: string) {
@@ -59,7 +71,16 @@ export async function applicationInsights(userId: string) {
 export async function scheduleFollowUp(userId: string, id: string, nextFollowUpDate: string, note = "Follow-up scheduled") {
   const app = await getApplication(userId, id);
   const timeline = [...(app.timeline || []), buildTimelineEvent("follow_up_scheduled", "Follow-up scheduled", note, { nextFollowUpDate })];
-  return updateApplication(userId, id, { nextFollowUpDate, timeline });
+  const updated = await updateApplication(userId, id, { nextFollowUpDate, timeline });
+  await createNotification(userId, {
+    type: "application_follow_up_scheduled",
+    title: `Follow-up scheduled: ${updated.role}`,
+    message: `${updated.company} follow-up scheduled for ${new Date(nextFollowUpDate).toLocaleDateString()}.`,
+    actionUrl: `/applications/${updated._id}`,
+    scheduledFor: nextFollowUpDate,
+    dedupeKey: `application-follow-up-scheduled:${updated._id}:${new Date(nextFollowUpDate).toISOString().slice(0, 10)}`
+  });
+  return updated;
 }
 
 export async function deleteApplication(userId: string, id: string) {
