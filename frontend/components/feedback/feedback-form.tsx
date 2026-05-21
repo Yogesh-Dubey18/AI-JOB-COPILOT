@@ -16,6 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, ErrorState, LoadingState, RetryButton } from "@/components/shared/status-state";
 
 type FeedbackValues = z.infer<typeof feedbackSchema>;
+type FeedbackFormProps = {
+  showHistory?: boolean;
+};
 type FeedbackList = {
   summary: { total: number; open: number; highPriority: number; averageRating: number };
   items: Array<{ _id: string; type: string; rating?: number; message: string; page?: string; status: string; priority: string; createdAt?: string }>;
@@ -31,19 +34,19 @@ const feedbackTypes = [
   ["other", "Other"]
 ];
 
-export function FeedbackForm() {
+export function FeedbackForm({ showHistory = true }: FeedbackFormProps) {
   const [success, setSuccess] = useState("");
   const form = useForm<FeedbackValues>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: { type: "ux", message: "", page: "", contactEmail: "" }
   });
-  const feedback = useQuery({ queryKey: ["my-feedback"], queryFn: () => api.get<FeedbackList>("/feedback/mine"), retry: false });
+  const feedback = useQuery({ queryKey: ["my-feedback"], queryFn: () => api.get<FeedbackList>("/feedback/mine"), enabled: showHistory, retry: false });
   const mutation = useMutation({
-    mutationFn: (values: FeedbackValues) => api.post<any>("/feedback", values),
+    mutationFn: (values: FeedbackValues) => api.post<any>("/feedback", { ...values, source: showHistory ? "in_app" : "public_site" }),
     onSuccess: () => {
-      setSuccess("Feedback saved for triage.");
+      setSuccess(showHistory ? "Feedback saved for triage." : "Feedback saved for triage. If you included an email, we can reply.");
       form.reset({ type: "ux", message: "", page: "", contactEmail: "" });
-      void feedback.refetch();
+      if (showHistory) void feedback.refetch();
     },
     onError: () => setSuccess("")
   });
@@ -96,26 +99,36 @@ export function FeedbackForm() {
           </form>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader><CardTitle>Your feedback history</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          {feedback.isLoading ? <LoadingState title="Loading feedback" description="Checking your saved product notes." /> : null}
-          {feedback.isError ? <ErrorState description={feedback.error instanceof Error ? feedback.error.message : "Could not load feedback."} action={<RetryButton onClick={() => feedback.refetch()} />} /> : null}
-          {!feedback.isLoading && !feedback.isError && !(feedback.data?.items || []).length ? <EmptyState title="No feedback yet" description="Share a bug, improvement, or workflow idea when something slows you down." /> : null}
-          {(feedback.data?.items || []).map((item) => (
-            <div key={item._id} className="rounded-md border p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge>{item.type}</Badge>
-                <Badge>{item.status}</Badge>
-                <Badge>{item.priority}</Badge>
-                {item.rating ? <Badge>{item.rating}/5</Badge> : null}
+      {showHistory ? (
+        <Card>
+          <CardHeader><CardTitle>Your feedback history</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {feedback.isLoading ? <LoadingState title="Loading feedback" description="Checking your saved product notes." /> : null}
+            {feedback.isError ? <ErrorState description={feedback.error instanceof Error ? feedback.error.message : "Could not load feedback."} action={<RetryButton onClick={() => feedback.refetch()} />} /> : null}
+            {!feedback.isLoading && !feedback.isError && !(feedback.data?.items || []).length ? <EmptyState title="No feedback yet" description="Share a bug, improvement, or workflow idea when something slows you down." /> : null}
+            {(feedback.data?.items || []).map((item) => (
+              <div key={item._id} className="rounded-md border p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge>{item.type}</Badge>
+                  <Badge>{item.status}</Badge>
+                  <Badge>{item.priority}</Badge>
+                  {item.rating ? <Badge>{item.rating}/5</Badge> : null}
+                </div>
+                <p className="mt-2 text-sm">{item.message}</p>
+                {item.page ? <p className="mt-1 text-xs text-muted-foreground">{item.page}</p> : null}
               </div>
-              <p className="mt-2 text-sm">{item.message}</p>
-              {item.page ? <p className="mt-1 text-xs text-muted-foreground">{item.page}</p> : null}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            ))}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader><CardTitle>Public feedback mode</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>This page does not load account-specific feedback history or private dashboard data.</p>
+            <p>Dashboard-only workflows still require login, and protected links redirect to the login page when you are signed out.</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

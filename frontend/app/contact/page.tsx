@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 const items = [
   {
     "title": "Support",
-    "text": "Use the in-app feedback module or email support@example.com."
+    "text": "Use the in-app feedback module or email yogidubey07@gmail.com."
   },
   {
     "title": "Feedback",

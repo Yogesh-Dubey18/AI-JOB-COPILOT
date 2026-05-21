@@ -169,6 +169,15 @@ describe("AI Job Copilot API", () => {
   });
 
   it("collects feedback and lets admins triage issue drafts", async () => {
+    const publicFeedback = await request(app).post("/api/feedback").send({
+      type: "ux",
+      contactEmail: "visitor@example.com",
+      page: "/feedback",
+      message: "The public feedback page should be usable before logging in."
+    }).expect(201);
+    expect(publicFeedback.body.data.userId).toBeUndefined();
+    expect(publicFeedback.body.data.source).toBe("public_site");
+
     const agent = await authAgent();
     const created = await agent.post("/api/feedback").send({
       type: "bug",

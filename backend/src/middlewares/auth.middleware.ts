@@ -36,6 +36,24 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
   }
 }
 
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  try {
+    const header = req.headers.authorization;
+    const bearer = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
+    const token = bearer || req.cookies?.accessToken;
+    if (!token) return next();
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as { sub: string; typ?: string };
+    if (decoded.typ !== "access") return next();
+    const user = await findRecordById("users", decoded.sub);
+    if (user) {
+      req.user = { id: String(user._id), email: user.email, role: user.role, fullName: user.fullName };
+    }
+    return next();
+  } catch {
+    return next();
+  }
+}
+
 export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
   if (req.user?.role !== "admin") {
     void writeAuditLog({

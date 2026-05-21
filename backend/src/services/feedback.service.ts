@@ -87,15 +87,15 @@ export function buildIssueDraft(feedback: any) {
   return { title, labels, body };
 }
 
-export async function createFeedback(user: { id: string; email: string }, input: FeedbackInput) {
+export async function createFeedback(user: { id: string; email: string } | undefined, input: FeedbackInput) {
   const record = await createRecord("feedback", {
-    userId: user.id,
+    userId: user?.id,
     type: input.type || "other",
     rating: input.rating,
     message: input.message,
     page: input.page,
-    source: input.source || "in_app",
-    contactEmail: input.contactEmail || user.email,
+    source: input.source || (user ? "in_app" : "public_site"),
+    contactEmail: input.contactEmail || user?.email,
     status: "open",
     priority: inferPriority(input),
     sentiment: inferSentiment(input.rating)

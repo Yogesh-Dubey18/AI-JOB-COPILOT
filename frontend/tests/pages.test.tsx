@@ -217,6 +217,8 @@ describe("frontend pages", () => {
   it("feedback page renders", () => {
     renderWithProviders(<FeedbackPage />);
     expect(screen.getByRole("heading", { name: "Product feedback" })).toBeInTheDocument();
+    expect(screen.getByText(/Public feedback mode/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Login/i })).toHaveAttribute("href", "/login");
   });
 
   it("admin dashboard renders", () => {
