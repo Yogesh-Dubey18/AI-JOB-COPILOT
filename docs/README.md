@@ -203,6 +203,8 @@
 - [Data Inventory](data-inventory.md)
 - [Data Retention Policy](data-retention-policy.md)
 - [Privacy System v2](privacy-system-v2.md)
+- [Public Portfolio v2](public-portfolio-v2.md)
+- [Portfolio Privacy Guide](portfolio-privacy-guide.md)
 - [SaaS Billing v2](saas-billing-v2.md)
 - [Stripe Integration Plan](stripe-integration-plan.md)
 - [Admin Operations v2](admin-operations-v2.md)

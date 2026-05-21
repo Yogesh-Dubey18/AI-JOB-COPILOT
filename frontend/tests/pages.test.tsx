@@ -16,6 +16,8 @@ import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
 import PrivacySettingsPage from "@/app/settings/privacy/page";
 import PrivacyPage from "@/app/privacy/page";
+import PortfolioGeneratorPage from "@/app/portfolio-generator/page";
+import PublicPortfolioPage from "@/app/u/[slug]/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
 import AdminMonitoringPage from "@/app/admin/monitoring/page";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
@@ -88,6 +90,16 @@ describe("frontend pages", () => {
   it("privacy settings page renders", () => {
     renderWithProviders(<PrivacySettingsPage />);
     expect(screen.getByText(/Privacy and data/i)).toBeInTheDocument();
+  });
+
+  it("portfolio generator page renders", () => {
+    renderWithProviders(<PortfolioGeneratorPage />);
+    expect(screen.getByRole("heading", { name: "Portfolio generator" })).toBeInTheDocument();
+  });
+
+  it("public portfolio page renders loading state", () => {
+    renderWithProviders(<PublicPortfolioPage params={{ slug: "demo" }} />);
+    expect(screen.getByText(/Loading portfolio/i)).toBeInTheDocument();
   });
 
   it("public privacy page renders", () => {

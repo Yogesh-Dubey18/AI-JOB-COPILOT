@@ -3,7 +3,7 @@ export const featureFlags = {
   mockBillingOnly: true,
   aiMockFallback: true,
   portfolioPublishing: true,
-  publicPortfolioPrivacyControls: false,
+  publicPortfolioPrivacyControls: true,
   chromeExtension: false,
   e2ePlaywright: false,
   realEmailSending: false

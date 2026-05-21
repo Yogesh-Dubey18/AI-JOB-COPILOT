@@ -14,6 +14,7 @@ import { InterviewModel } from "../models/Interview.js";
 import { MockInterviewModel } from "../models/MockInterview.js";
 import { LearningPlanModel } from "../models/LearningPlan.js";
 import { PortfolioModel } from "../models/Portfolio.js";
+import { PublicProfileModel } from "../models/PublicProfile.js";
 import { JobScamReportModel } from "../models/JobScamReport.js";
 import { ChatSessionModel } from "../models/ChatSession.js";
 import { NotificationModel } from "../models/Notification.js";
@@ -42,6 +43,7 @@ const modelMap: Record<CollectionName, Model<any>> = {
   mockInterviews: MockInterviewModel,
   learningPlans: LearningPlanModel,
   portfolios: PortfolioModel,
+  publicProfiles: PublicProfileModel,
   jobScamReports: JobScamReportModel,
   chatSessions: ChatSessionModel,
   notifications: NotificationModel,

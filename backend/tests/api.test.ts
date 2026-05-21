@@ -176,6 +176,33 @@ describe("AI Job Copilot API", () => {
     expect(res.body.data.technicalTopics.length).toBeGreaterThan(0);
   });
 
+  it("generates public portfolios with privacy controls", async () => {
+    const agent = await authAgent();
+    const created = await agent.post("/api/portfolios/generate").send({
+      slug: "privacy-portfolio",
+      displayName: "Privacy Dev",
+      headline: "Full-stack developer",
+      contactEmail: "private@example.com",
+      resumeUrl: "https://example.com/resume.pdf",
+      isPublished: true,
+      sections: { showEmail: false, showResume: false, showProjects: true, showSkills: true, showLinks: true },
+      message: "React Node MongoDB project portfolio"
+    }).expect(201);
+    expect(created.body.data.publicProfile.slug).toBe("privacy-portfolio");
+    const list = await agent.get("/api/portfolios").expect(200);
+    expect(list.body.data.length).toBe(1);
+    const publicProfile = await request(app).get("/api/portfolios/public/privacy-portfolio").expect(200);
+    expect(publicProfile.body.data.contactEmail).toBe("");
+    expect(publicProfile.body.data.resumeUrl).toBe("");
+    const updated = await agent.patch("/api/portfolios/" + created.body.data._id).send({
+      contactEmail: "public@example.com",
+      sections: { showEmail: true }
+    }).expect(200);
+    expect(updated.body.data.publicProfile.contactEmail).toBe("public@example.com");
+    const visible = await request(app).get("/api/portfolios/public/privacy-portfolio").expect(200);
+    expect(visible.body.data.contactEmail).toBe("public@example.com");
+  });
+
   it("reports ai status and tracks guarded usage", async () => {
     const agent = await authAgent();
     const redactionSample = "sk-" + "testsecretvalueforredaction";

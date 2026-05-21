@@ -1881,3 +1881,81 @@ Blockers:
 
 Next phase to start:
 - Phase 39: v2 portfolio/public profile generator.
+
+## Phase 39: v2 Portfolio/Public Profile Generator
+
+Status: Complete
+
+Completed work:
+- Added `PublicProfile` model and memory/MongoDB repository wiring.
+- Extended `Portfolio` with publish theme and public section privacy controls.
+- Added private `/api/portfolios` routes for list, generate, read, update, and publish/unpublish.
+- Added public `/api/portfolios/public/:slug` route that returns only published and privacy-filtered profile data.
+- Added public profile service wrapper and upgraded portfolio generator service to sync public profile projections.
+- Added `/portfolio-generator` builder UI with slug, theme, privacy controls, publish toggle, public link copy, and JSON export preview.
+- Added public `/u/[slug]` profile page.
+- Enabled public portfolio privacy controls feature flag.
+- Added docs for public portfolio v2 and portfolio privacy.
+- Updated data inventory and docs index.
+- Added backend tests for portfolio publishing and email/resume privacy filtering.
+- Added frontend render coverage for portfolio builder and public profile route.
+
+Files changed:
+- `backend/src/app.ts`
+- `backend/src/models/Portfolio.ts`
+- `backend/src/models/PublicProfile.ts`
+- `backend/src/routes/portfolio.routes.ts`
+- `backend/src/services/feature-flags.service.ts`
+- `backend/src/services/portfolio.service.ts`
+- `backend/src/services/privacy.service.ts`
+- `backend/src/services/public-profile.service.ts`
+- `backend/src/utils/memoryStore.ts`
+- `backend/src/utils/repository.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/data-inventory.md`
+- `docs/portfolio-privacy-guide.md`
+- `docs/public-portfolio-v2.md`
+- `frontend/app/portfolio-generator/page.tsx`
+- `frontend/app/u/[slug]/page.tsx`
+- `frontend/tests/pages.test.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix backend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck`
+- `npm run lint`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 263 markdown files.
+- Security safety check passed.
+- Git safety check passed.
+- Root build passed.
+- Root tests passed: backend 21 tests and frontend 19 tests.
+- Backend build passed.
+- Backend tests passed: 21 tests.
+- Frontend build passed.
+- Frontend tests passed: 19 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- `typecheck` passed.
+- `lint` passed as docs/security safety checks.
+
+Git safety result:
+- Passed before staging.
+
+Blockers:
+- Public portfolio publishing uses generated text and local/API data only; real asset uploads, custom domains, and object storage deletion remain future work.
+- Live public URL testing requires deployed frontend/backend URLs.
+
+Next phase to start:
+- Phase 40: v2 advanced analytics + job-search intelligence.

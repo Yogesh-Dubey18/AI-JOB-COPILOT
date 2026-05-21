@@ -38,6 +38,7 @@ This document lists the main data categories handled by AI Job Copilot v2. It is
 ## Portfolio Data
 
 - Model: `Portfolio`
+- Model: `PublicProfile`
 - Examples: slug, hero, about text, skills, projects, resume URL, contact email, publish flag.
 - Purpose: recruiter-friendly public profile or portfolio generation.
 - Privacy note: public portfolio publishing should stay opt-in.
