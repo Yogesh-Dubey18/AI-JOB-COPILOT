@@ -9,11 +9,11 @@ test("public pages render", async ({ page }) => {
 
 test("protected pages redirect to login", async ({ page }) => {
   await page.goto("/dashboard");
-  await expect(page).toHaveURL(/\/auth\/login/);
+  await expect(page).toHaveURL(/\/login/);
   await expect(page.getByText(/Welcome back/i)).toBeVisible();
 });
 
 test("admin pages are protected", async ({ page }) => {
   await page.goto("/admin/system-health");
-  await expect(page).toHaveURL(/\/auth\/login/);
+  await expect(page).toHaveURL(/\/login/);
 });

@@ -7,7 +7,7 @@ export function middleware(req: NextRequest) {
   const hasToken = req.cookies.has("accessToken");
   if (isProtected && !hasToken) {
     const url = req.nextUrl.clone();
-    url.pathname = "/auth/login";
+    url.pathname = "/login";
     url.searchParams.set("next", req.nextUrl.pathname);
     return NextResponse.redirect(url);
   }

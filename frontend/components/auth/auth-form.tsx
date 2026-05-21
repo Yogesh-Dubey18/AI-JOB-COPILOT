@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { api } from "@/lib/api";
+import Link from "next/link";
+import { api, ApiClientError } from "@/lib/api";
 import { loginSchema, registerSchema } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,31 +15,68 @@ import { Input } from "@/components/ui/input";
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const schema = mode === "login" ? loginSchema : registerSchema;
   const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
 
   async function onSubmit(values: z.infer<typeof schema>) {
     setError("");
+    setNotice("");
     try {
       await api.post(mode === "login" ? "/auth/login" : "/auth/register", values);
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      if (err instanceof ApiClientError) {
+        if (err.statusCode === 404) {
+          setNotice("Demo-safe notice: the backend auth endpoint was not found for this deployment. No credentials were saved here.");
+          return;
+        }
+        setError(err.message);
+        return;
+      }
+      setNotice("Demo-safe notice: the backend auth service is currently unavailable. Check NEXT_PUBLIC_API_URL and try again. No credentials were saved here.");
     }
   }
 
   return (
     <Card className="mx-auto max-w-md">
-      <CardHeader><CardTitle>{mode === "login" ? "Welcome back" : "Create your account"}</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle>{mode === "login" ? "Welcome back" : "Create your account"}</CardTitle>
+      </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {mode === "register" ? <Input placeholder="Full name" {...form.register("fullName" as never)} /> : null}
-          {mode === "register" ? <Input placeholder="Phone" {...form.register("phone" as never)} /> : null}
-          <Input placeholder="Email" type="email" {...form.register("email" as never)} />
-          <Input placeholder="Password" type="password" {...form.register("password" as never)} />
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
-          <Button className="w-full" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Please wait..." : mode === "login" ? "Login" : "Register"}</Button>
+          {mode === "register" ? (
+            <label className="block space-y-1 text-sm font-medium">
+              <span>Full name</span>
+              <Input placeholder="Asha Developer" autoComplete="name" {...form.register("fullName" as never)} />
+            </label>
+          ) : null}
+          {mode === "register" ? (
+            <label className="block space-y-1 text-sm font-medium">
+              <span>Phone</span>
+              <Input placeholder="Optional phone number" autoComplete="tel" {...form.register("phone" as never)} />
+            </label>
+          ) : null}
+          <label className="block space-y-1 text-sm font-medium">
+            <span>Email</span>
+            <Input placeholder="you@example.com" type="email" autoComplete="email" {...form.register("email" as never)} />
+          </label>
+          <label className="block space-y-1 text-sm font-medium">
+            <span>Password</span>
+            <Input placeholder="At least 8 characters" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} {...form.register("password" as never)} />
+          </label>
+          {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
+          {notice ? <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100" role="status">{notice}</p> : null}
+          <Button className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Please wait..." : mode === "login" ? "Login" : "Register"}
+          </Button>
         </form>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          {mode === "login" ? "New here?" : "Already have an account?"}{" "}
+          <Link className="font-semibold text-primary hover:underline" href={mode === "login" ? "/register" : "/login"}>
+            {mode === "login" ? "Create an account" : "Login"}
+          </Link>
+        </p>
       </CardContent>
     </Card>
   );

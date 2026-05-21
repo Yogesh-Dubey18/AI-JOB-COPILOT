@@ -19,8 +19,8 @@ export function PublicNav() {
         </nav>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link href="/auth/login"><Button variant="ghost">Login</Button></Link>
-          <Link href="/auth/register"><Button>Start free</Button></Link>
+          <Link href="/login"><Button variant="ghost">Login</Button></Link>
+          <Link href="/register"><Button>Start free</Button></Link>
         </div>
       </div>
     </header>

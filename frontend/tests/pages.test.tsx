@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { Providers } from "@/app/providers";
 import LoginPage from "@/app/auth/login/page";
 import RegisterPage from "@/app/auth/register/page";
+import RootLoginPage from "@/app/login/page";
+import RootRegisterPage from "@/app/register/page";
 import DashboardPage from "@/app/dashboard/page";
 import ResumeUploadPage from "@/app/resume/upload/page";
 import ResumeAnalyzerPage from "@/app/resume/analyzer/page";
@@ -37,10 +39,20 @@ describe("frontend pages", () => {
   it("login page renders", () => {
     renderWithProviders(<LoginPage />);
     expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Create an account/i })).toHaveAttribute("href", "/register");
   });
 
   it("register page renders", () => {
     renderWithProviders(<RegisterPage />);
+    expect(screen.getByText(/Create your account/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Login" }).every((link) => link.getAttribute("href") === "/login")).toBe(true);
+  });
+
+  it("top-level login and register routes render", () => {
+    renderWithProviders(<RootLoginPage />);
+    expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
+
+    renderWithProviders(<RootRegisterPage />);
     expect(screen.getByText(/Create your account/i)).toBeInTheDocument();
   });
 

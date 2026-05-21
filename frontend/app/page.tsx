@@ -25,7 +25,7 @@ export default function LandingPage() {
             <h1 className="text-4xl font-black tracking-normal md:text-6xl">{tagline}</h1>
             <p className="mt-5 max-w-2xl text-base text-white/88 md:text-lg">Built for freshers, MERN learners, Java developers, interns, remote job seekers, and early-career engineers who want a guided path until selection.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/auth/register"><Button className="bg-white text-slate-950 hover:bg-white/90">Upload resume <ArrowRight className="h-4 w-4" /></Button></Link>
+              <Link href="/register"><Button className="bg-white text-slate-950 hover:bg-white/90">Upload resume <ArrowRight className="h-4 w-4" /></Button></Link>
               <Link href="/features"><Button variant="outline" className="border-white/50 text-white hover:bg-white/10">Explore features</Button></Link>
             </div>
           </div>
