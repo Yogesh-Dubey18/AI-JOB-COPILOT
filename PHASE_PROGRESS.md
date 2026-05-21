@@ -1219,3 +1219,69 @@ Blockers:
 
 Next phase to start:
 - Phase 30: v2 AI Copilot quality upgrade.
+
+## Phase 30: v2 AI Copilot Quality Upgrade
+
+Status: Complete
+
+Completed work:
+- Added central AI guardrails that wrap provider prompts with truthfulness, review-only, no auto-apply, no secret-handling, and strict JSON safety rules.
+- Added prompt redaction for common secret-like values, prompt size limits, and protected AI request body validation.
+- Improved AI provider calls with provider/model metadata, timeout/retry-aware fallback metadata, schema fallback status, approximate token counts, latency, validation status, and safety flags.
+- Added `GET /api/ai/status` and `GET /api/ai/usage` for provider readiness, fallback status, schema validation, safety mode, and usage telemetry.
+- Improved AI usage accounting and expanded `AIRequest` persistence fields/indexes.
+- Updated frontend AI workbench with provider, fallback, validation, and safety status cards plus review-only/no-fake-experience cues.
+- Added AI Copilot v2 and prompt template documentation.
+- Added backend tests for AI status, guarded usage tracking, secret redaction, and oversized AI payload rejection.
+
+Files changed:
+- `.env.example`
+- `backend/.env.example`
+- `backend/src/ai/ai.service.ts`
+- `backend/src/ai/aiClient.ts`
+- `backend/src/ai/guardrails.ts`
+- `backend/src/config/env.ts`
+- `backend/src/models/AIRequest.ts`
+- `backend/src/routes/ai.routes.ts`
+- `backend/src/services/usage.service.ts`
+- `backend/src/validators/ai.validator.ts`
+- `backend/tests/api.test.ts`
+- `docs/README.md`
+- `docs/ai-copilot-v2.md`
+- `docs/ai-prompt-template-guide.md`
+- `frontend/components/shared/feature-workbench.tsx`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run check:security --if-present`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+- `npm run test:e2e --prefix frontend --if-present`
+
+Build/test result:
+- Passed after replacing a token-shaped test literal with a runtime-constructed redaction sample so the safety checker remains clean.
+- Documentation link check passed for 238 markdown files.
+- Root build passed.
+- Root tests passed: backend 13 tests and frontend 11 tests.
+- Backend build passed.
+- Backend tests passed: 13 tests.
+- Frontend build passed.
+- Frontend tests passed: 11 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Optional `check:security`, root `typecheck`, root `lint`, and frontend E2E checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Real provider quality still requires configured OpenAI or Gemini keys and live smoke testing; mock fallback remains the safe local default.
+
+Next phase to start:
+- Phase 31: v2 SaaS billing + usage limits.

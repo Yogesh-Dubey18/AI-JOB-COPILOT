@@ -123,4 +123,23 @@ describe("AI Job Copilot API", () => {
     const res = await agent.post("/api/ai/interview-prep").send({ role: "Full Stack Developer" }).expect(200);
     expect(res.body.data.technicalTopics.length).toBeGreaterThan(0);
   });
+
+  it("reports ai status and tracks guarded usage", async () => {
+    const agent = await authAgent();
+    const redactionSample = "sk-" + "testsecretvalueforredaction";
+    const status = await agent.get("/api/ai/status").expect(200);
+    expect(status.body.data.fallbackEnabled).toBe(true);
+    expect(status.body.data.schemaValidation).toBe("enabled");
+    await agent.post("/api/ai/chat").send({
+      message: `Create a truthful 7-day job search plan. Do not send anything automatically. Redact ${redactionSample}.`
+    }).expect(200);
+    const usage = await agent.get("/api/ai/usage").expect(200);
+    expect(usage.body.data.totalEvents).toBeGreaterThan(0);
+    expect(usage.body.data.events[0].safetyFlags).toContain("openai_key_redacted");
+  });
+
+  it("rejects oversized ai payloads", async () => {
+    const agent = await authAgent();
+    await agent.post("/api/ai/chat").send({ message: "x".repeat(30_000) }).expect(422);
+  });
 });

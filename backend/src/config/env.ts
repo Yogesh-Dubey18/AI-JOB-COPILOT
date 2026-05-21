@@ -13,6 +13,8 @@ export const env = {
   AI_MODEL: process.env.AI_MODEL || "",
   AI_TIMEOUT_MS: Number(process.env.AI_TIMEOUT_MS || 12_000),
   AI_RETRY_ATTEMPTS: Number(process.env.AI_RETRY_ATTEMPTS || 1),
+  AI_MAX_PROMPT_CHARS: Number(process.env.AI_MAX_PROMPT_CHARS || 20_000),
+  AI_SAFETY_MODE: process.env.AI_SAFETY_MODE || "strict",
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",

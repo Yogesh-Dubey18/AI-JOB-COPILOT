@@ -1,13 +1,28 @@
 import type { ZodSchema } from "zod";
 import { env } from "../config/env.js";
+import { estimateTokens } from "./guardrails.js";
 
-type AiProvider = "mock" | "openai" | "gemini";
+export type AiProvider = "mock" | "openai" | "gemini";
 
 type AiRuntime = {
   provider: AiProvider;
   model: string;
   timeoutMs: number;
   retryAttempts: number;
+};
+
+export type AiCallStatus = "success" | "mock" | "fallback" | "schema_fallback";
+
+export type AiCallMeta = {
+  provider: AiProvider;
+  model: string;
+  status: AiCallStatus;
+  fallbackUsed: boolean;
+  validationPassed: boolean;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+  error?: string;
 };
 
 function resolveRuntime(): AiRuntime {
@@ -50,9 +65,9 @@ function extractJson(text: string) {
 }
 
 function validateJson<T>(value: unknown, fallback: T, schema?: ZodSchema<T>) {
-  if (!schema) return value as T;
+  if (!schema) return { data: value as T, validationPassed: true };
   const parsed = schema.safeParse(value);
-  return parsed.success ? parsed.data : fallback;
+  return parsed.success ? { data: parsed.data, validationPassed: true } : { data: fallback, validationPassed: false };
 }
 
 async function fetchJsonWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
@@ -126,16 +141,67 @@ async function callGemini(prompt: string, runtime: AiRuntime) {
   return JSON.parse(extractJson(text));
 }
 
-export async function callJsonModel<T>(prompt: string, fallback: T, schema?: ZodSchema<T>) {
+export async function callJsonModelWithMeta<T>(prompt: string, fallback: T, schema?: ZodSchema<T>) {
   const runtime = resolveRuntime();
-  if (runtime.provider === "mock") return validateJson(fallback, fallback, schema);
+  const startedAt = Date.now();
+  const inputTokens = estimateTokens(prompt);
+
+  if (runtime.provider === "mock") {
+    const validated = validateJson(fallback, fallback, schema);
+    return {
+      data: validated.data,
+      meta: {
+        provider: runtime.provider,
+        model: runtime.model,
+        status: "mock" as const,
+        fallbackUsed: true,
+        validationPassed: validated.validationPassed,
+        inputTokens,
+        outputTokens: estimateTokens(JSON.stringify(validated.data)),
+        latencyMs: Date.now() - startedAt
+      }
+    };
+  }
 
   try {
     const json = await withRetry(runtime.retryAttempts, () =>
       runtime.provider === "openai" ? callOpenAi(prompt, runtime) : callGemini(prompt, runtime),
     );
-    return validateJson(json, fallback, schema);
-  } catch {
-    return validateJson(fallback, fallback, schema);
+    const validated = validateJson(json, fallback, schema);
+    return {
+      data: validated.data,
+      meta: {
+        provider: runtime.provider,
+        model: runtime.model,
+        status: validated.validationPassed ? "success" as const : "schema_fallback" as const,
+        fallbackUsed: !validated.validationPassed,
+        validationPassed: validated.validationPassed,
+        inputTokens,
+        outputTokens: estimateTokens(JSON.stringify(validated.data)),
+        latencyMs: Date.now() - startedAt,
+        error: validated.validationPassed ? undefined : "AI response failed output schema validation"
+      }
+    };
+  } catch (error) {
+    const validated = validateJson(fallback, fallback, schema);
+    return {
+      data: validated.data,
+      meta: {
+        provider: runtime.provider,
+        model: runtime.model,
+        status: "fallback" as const,
+        fallbackUsed: true,
+        validationPassed: validated.validationPassed,
+        inputTokens,
+        outputTokens: estimateTokens(JSON.stringify(validated.data)),
+        latencyMs: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : "Unknown AI provider error"
+      }
+    };
   }
+}
+
+export async function callJsonModel<T>(prompt: string, fallback: T, schema?: ZodSchema<T>) {
+  const result = await callJsonModelWithMeta(prompt, fallback, schema);
+  return result.data;
 }

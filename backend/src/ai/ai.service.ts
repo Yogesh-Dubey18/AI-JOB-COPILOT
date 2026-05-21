@@ -1,10 +1,12 @@
 import type { ZodSchema } from "zod";
-import { callJsonModel, getAiRuntime } from "./aiClient.js";
+import { callJsonModelWithMeta, getAiRuntime, type AiCallMeta } from "./aiClient.js";
+import { getUsageSummary } from "../services/usage.service.js";
 import { createRecord } from "../utils/repository.js";
 import { buildresumeAnalysisPrompt } from "./prompts/resumeAnalysis.prompt.js";
 import { buildjobMatchPrompt } from "./prompts/jobMatch.prompt.js";
 import { buildtailorResumePrompt } from "./prompts/tailorResume.prompt.js";
 import { buildapplicationKitPrompt } from "./prompts/applicationKit.prompt.js";
+import { buildcoverLetterPrompt } from "./prompts/coverLetter.prompt.js";
 import { buildinterviewPrepPrompt } from "./prompts/interviewPrep.prompt.js";
 import { buildmockInterviewPrompt } from "./prompts/mockInterview.prompt.js";
 import { buildskillGapPrompt } from "./prompts/skillGap.prompt.js";
@@ -26,6 +28,7 @@ import {
   skillGapOutputSchema,
   tailoredResumeOutputSchema
 } from "./schemas/outputs.js";
+import { buildGuardedPrompt, getAiSafetyStatus, type GuardrailResult } from "./guardrails.js";
 
 const resumeAnalysisFallback = {
   atsScore: 82,
@@ -120,36 +123,52 @@ const rejectionFallback = {
   nextActions: ["Improve resume version", "Apply to 5 better-matched roles", "Schedule a mock interview"]
 };
 
-async function track(userId: string | undefined, feature: string, status = "success", error = "") {
-  const runtime = getAiRuntime();
+async function track(userId: string | undefined, feature: string, meta: AiCallMeta, guardrails: GuardrailResult) {
   await createRecord("aiRequests", {
     userId,
     feature,
-    model: `${runtime.provider}:${runtime.model}`,
-    inputTokens: 0,
-    outputTokens: 0,
-    status,
-    error
+    model: `${meta.provider}:${meta.model}`,
+    provider: meta.provider,
+    inputTokens: meta.inputTokens,
+    outputTokens: meta.outputTokens,
+    status: meta.status,
+    error: meta.error || "",
+    latencyMs: meta.latencyMs,
+    fallbackUsed: meta.fallbackUsed,
+    validationPassed: meta.validationPassed,
+    safetyFlags: guardrails.safetyFlags,
+    promptChars: guardrails.finalChars
   });
 }
 
 async function run<T>(userId: string | undefined, feature: string, prompt: string, fallback: T, schema?: ZodSchema<T>) {
-  try {
-    const data = await callJsonModel(prompt, fallback, schema);
-    await track(userId, feature);
-    return data;
-  } catch (error) {
-    await track(userId, feature, "fallback", error instanceof Error ? error.message : "Unknown AI error");
-    return fallback;
-  }
+  const guardedPrompt = buildGuardedPrompt(feature, prompt);
+  const result = await callJsonModelWithMeta(guardedPrompt.prompt, fallback, schema);
+  await track(userId, feature, result.meta, guardedPrompt);
+  return result.data;
 }
 
 export const aiService = {
+  status: () => {
+    const runtime = getAiRuntime();
+    return {
+      provider: runtime.provider,
+      model: runtime.model,
+      timeoutMs: runtime.timeoutMs,
+      retryAttempts: runtime.retryAttempts,
+      fallbackEnabled: true,
+      providerConfigured: runtime.provider !== "mock",
+      schemaValidation: "enabled",
+      usageTracking: "enabled",
+      safety: getAiSafetyStatus()
+    };
+  },
+  usage: (userId: string) => getUsageSummary(userId),
   analyzeResume: (userId: string | undefined, context: any) => run(userId, "resume-analysis", buildresumeAnalysisPrompt(context), resumeAnalysisFallback, resumeAnalysisOutputSchema),
   matchJob: (userId: string | undefined, context: any) => run(userId, "job-match", buildjobMatchPrompt(context), jobMatchFallback, jobMatchOutputSchema),
   tailorResume: (userId: string | undefined, context: any) => run(userId, "tailor-resume", buildtailorResumePrompt(context), tailoredResumeFallback, tailoredResumeOutputSchema),
   generateApplicationKit: (userId: string | undefined, context: any) => run(userId, "application-kit", buildapplicationKitPrompt(context), applicationKitFallback, applicationKitOutputSchema),
-  coverLetter: (userId: string | undefined, context: any) => run(userId, "cover-letter", buildapplicationKitPrompt(context), { coverLetter: applicationKitFallback.coverLetter }, looseObjectOutputSchema),
+  coverLetter: (userId: string | undefined, context: any) => run(userId, "cover-letter", buildcoverLetterPrompt(context), { coverLetter: applicationKitFallback.coverLetter }, looseObjectOutputSchema),
   interviewPrep: (userId: string | undefined, context: any) => run(userId, "interview-prep", buildinterviewPrepPrompt(context), interviewPrepFallback, interviewPrepOutputSchema),
   mockInterview: (userId: string | undefined, context: any) => run(userId, "mock-interview", buildmockInterviewPrompt(context), mockInterviewFallback, mockInterviewOutputSchema),
   skillGap: (userId: string | undefined, context: any) => run(userId, "skill-gap", buildskillGapPrompt(context), skillGapFallback, skillGapOutputSchema),
