@@ -49,7 +49,7 @@ Portfolio package docs:
 - `shared`: Shared TypeScript types and Zod schemas.
 - `docs`: API, database, setup, roadmap, and deployment documentation.
 
-Start with [Final Master Index](docs/final-master-index.md), [Project Operating Manual](docs/project-operating-manual.md), and [docs/README.md](docs/README.md) for the complete documentation map.
+Start with [START_HERE.md](START_HERE.md), [Final Master Index](docs/final-master-index.md), [Project Operating Manual](docs/project-operating-manual.md), and [docs/README.md](docs/README.md) for the complete documentation map.
 
 ## Local Setup
 
@@ -199,10 +199,18 @@ See [Demo Script](docs/demo-script.md) and [Launch Checklist](docs/launch-checkl
 
 ## Master Navigation
 
+- [Start Here](START_HERE.md)
 - [Final Master Index](docs/final-master-index.md)
 - [Project Operating Manual](docs/project-operating-manual.md)
 - [Project Command Center](docs/project-command-center.md)
 - [Final Project Readiness Dashboard](docs/final-project-readiness-dashboard.md)
+- [Final Archive Checklist](docs/final-archive-checklist.md)
+- [Final Master Handoff v2](docs/final-master-handoff-v2.md)
+- [Final Project Closure](docs/final-project-closure.md)
+- [Final Next 7 Days Action Plan](docs/final-next-7-days-action-plan.md)
+- [Final Issue-Based Roadmap](docs/final-issue-based-roadmap.md)
+- [Final Do Not Overclaim Guide](docs/final-do-not-overclaim-guide.md)
+- [Final Repo Owner Checklist](docs/final-repo-owner-checklist.md)
 - [Release Notes v1.0.0](docs/release-notes-v1.0.0.md)
 - [Final Freeze Checklist](docs/final-freeze-checklist.md)
 - [Documentation Quality Audit](docs/documentation-quality-audit.md)
@@ -211,4 +219,6 @@ See [Demo Script](docs/demo-script.md) and [Launch Checklist](docs/launch-checkl
 
 ## Handover
 
-Future maintainers should start with [Final Handover](docs/final-handover.md), [Developer Onboarding](docs/developer-onboarding.md), and [Final Manual Actions](docs/final-manual-actions.md). Current phase status is tracked in [PHASE_PROGRESS.md](PHASE_PROGRESS.md).
+Future maintainers should start with [START_HERE.md](START_HERE.md), [Final Master Handoff v2](docs/final-master-handoff-v2.md), [Final Handover](docs/final-handover.md), [Developer Onboarding](docs/developer-onboarding.md), and [Final Manual Actions](docs/final-manual-actions.md). Current phase status is tracked in [PHASE_PROGRESS.md](PHASE_PROGRESS.md).
+
+Phase-based expansion is closed after Phase 50. Future work should be managed through focused GitHub issues, small pull requests, and release notes.

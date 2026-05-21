@@ -2,6 +2,14 @@
 
 ## Start Here
 
+- [Repository Start Here](../START_HERE.md)
+- [Final Master Handoff v2](final-master-handoff-v2.md)
+- [Final Archive Checklist](final-archive-checklist.md)
+- [Final Project Closure](final-project-closure.md)
+- [Final Next 7 Days Action Plan](final-next-7-days-action-plan.md)
+- [Final Issue-Based Roadmap](final-issue-based-roadmap.md)
+- [Final Do Not Overclaim Guide](final-do-not-overclaim-guide.md)
+- [Final Repo Owner Checklist](final-repo-owner-checklist.md)
 - [Final Master Index](final-master-index.md)
 - [Project Operating Manual](project-operating-manual.md)
 - [Project Command Center](project-command-center.md)
