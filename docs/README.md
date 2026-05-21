@@ -206,6 +206,8 @@
 - [Audit Logging Guide](audit-logging-guide.md)
 - [Auth Security v2](auth-security-v2.md)
 - [Security Audit Checklist v2](security-audit-checklist-v2.md)
+- [Testing Strategy v2](testing-strategy-v2.md)
+- [E2E Testing Guide](e2e-testing-guide.md)
 - [Security Hardening](security-hardening.md)
 - [Observability](observability.md)
 

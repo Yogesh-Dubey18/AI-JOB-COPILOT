@@ -13,6 +13,8 @@ import ApplicationsPage from "@/app/applications/page";
 import InterviewsPage from "@/app/interviews/page";
 import AnalyticsPage from "@/app/analytics/page";
 import NotificationsPage from "@/app/notifications/page";
+import BillingSettingsPage from "@/app/settings/billing/page";
+import AdminDashboardPage from "@/app/admin/dashboard/page";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<Providers>{ui}</Providers>);
@@ -72,5 +74,15 @@ describe("frontend pages", () => {
   it("notifications page renders", () => {
     renderWithProviders(<NotificationsPage />);
     expect(screen.getByRole("heading", { name: "Notifications" })).toBeInTheDocument();
+  });
+
+  it("billing settings page renders", () => {
+    renderWithProviders(<BillingSettingsPage />);
+    expect(screen.getByText(/Billing and usage/i)).toBeInTheDocument();
+  });
+
+  it("admin dashboard renders", () => {
+    renderWithProviders(<AdminDashboardPage />);
+    expect(screen.getByText(/Admin dashboard/i)).toBeInTheDocument();
   });
 });

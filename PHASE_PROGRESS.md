@@ -1500,3 +1500,63 @@ Blockers:
 
 Next phase to start:
 - Phase 34: v2 testing coverage + Playwright E2E.
+
+## Phase 34: v2 Testing Coverage + Playwright E2E
+
+Status: Complete
+
+Completed work:
+- Added skip-safe frontend E2E runner that exits cleanly when `@playwright/test` is not installed.
+- Added Playwright-ready E2E config and smoke specs for public pages, protected dashboard redirect, and protected admin redirect.
+- Excluded E2E specs from frontend TypeScript and Vitest until Playwright is installed.
+- Expanded frontend page tests to cover billing settings and admin dashboard.
+- Added v2 testing strategy and E2E testing documentation.
+
+Files changed:
+- `docs/README.md`
+- `docs/e2e-testing-guide.md`
+- `docs/testing-strategy-v2.md`
+- `frontend/e2e/smoke.spec.ts`
+- `frontend/package.json`
+- `frontend/playwright.config.mjs`
+- `frontend/scripts/run-e2e-if-installed.mjs`
+- `frontend/tests/pages.test.tsx`
+- `frontend/tsconfig.json`
+- `frontend/vitest.config.ts`
+- `PHASE_PROGRESS.md`
+
+Commands run:
+- `npm run build --prefix backend`
+- `npm test --prefix backend`
+- `npm run build --prefix frontend`
+- `npm test --prefix frontend`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `npm run build`
+- `npm test`
+- `npm run test:e2e --prefix frontend`
+- `npm run typecheck --if-present`
+- `npm run lint --if-present`
+
+Build/test result:
+- Passed.
+- Documentation link check passed for 246 markdown files.
+- Security safety check passed.
+- Root build passed.
+- Root tests passed: backend 18 tests and frontend 13 tests.
+- Backend build passed.
+- Backend tests passed: 18 tests.
+- Frontend build passed.
+- Frontend tests passed: 13 tests, with non-fatal Recharts jsdom zero-size warnings and a Vite CJS deprecation warning.
+- Frontend E2E command passed in skip-safe mode because `@playwright/test` is not installed.
+- Optional root `typecheck` and root `lint` checks were skipped cleanly because those scripts do not exist yet.
+
+Git safety result:
+- Passed.
+
+Blockers:
+- Real Playwright execution requires installing `@playwright/test` and browser binaries in an environment with network/tooling support.
+
+Next phase to start:
+- Phase 35: v2 performance + accessibility + UX polish.
