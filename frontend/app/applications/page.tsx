@@ -15,7 +15,7 @@ export default function ApplicationsPage() {
   const qc = useQueryClient();
   const apps = useQuery({ queryKey: ["applications"], queryFn: () => api.get<any[]>("/applications"), retry: false });
   const insights = useQuery({ queryKey: ["application-insights"], queryFn: () => api.get<any>("/applications/insights"), retry: false });
-  const create = useMutation({ mutationFn: (data: FormData) => api.post("/applications", { company: data.get("company"), role: data.get("role"), status: "Applied", applicationSource: data.get("source") }), onSuccess: () => qc.invalidateQueries({ queryKey: ["applications"] }) });
+  const create = useMutation({ mutationFn: (data: FormData) => api.post("/applications", { company: data.get("company"), role: data.get("role"), jobTitle: data.get("jobTitle"), status: "Applied", applicationSource: data.get("source"), recruiterName: data.get("recruiterName"), followUpDate: data.get("followUpDate") || undefined }), onSuccess: () => qc.invalidateQueries({ queryKey: ["applications"] }) });
   const summary = insights.data || {};
   return (
     <AppShell>
@@ -44,12 +44,15 @@ export default function ApplicationsPage() {
               event.preventDefault();
               create.mutate(new FormData(event.currentTarget));
             }}
-            className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]"
+            className="grid gap-3 md:grid-cols-3"
           >
             <Input aria-label="Company name" name="company" placeholder="Company" required />
-            <Input aria-label="Role title" name="role" placeholder="Role" required />
-            <Input aria-label="Application source" name="source" placeholder="Source" />
-            <Button type="submit" disabled={create.isPending} aria-busy={create.isPending}><Plus className="h-4 w-4" /> {create.isPending ? "Adding..." : "Add"}</Button>
+            <Input aria-label="Job title" name="jobTitle" placeholder="Job title" />
+            <Input aria-label="Role / dept" name="role" placeholder="Role / dept" required />
+            <Input aria-label="Application source" name="source" placeholder="Source (LinkedIn, referral...)" />
+            <Input aria-label="Recruiter name" name="recruiterName" placeholder="Recruiter name (optional)" />
+            <Input aria-label="Follow-up date" name="followUpDate" type="date" placeholder="Follow-up date" />
+            <Button type="submit" disabled={create.isPending} aria-busy={create.isPending} className="md:col-span-1"><Plus className="h-4 w-4" /> {create.isPending ? "Adding..." : "Add"}</Button>
           </form>
           {create.isError ? <p role="alert" className="mt-3 text-sm text-danger">{create.error instanceof Error ? create.error.message : "Could not add application."}</p> : null}
         </CardContent>
