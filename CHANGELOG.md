@@ -18,6 +18,12 @@ All notable changes to AI Job Copilot will be documented here.
 - Links to career vault, portfolio generator, and application kit.
 - Added 3 new Vitest tests for GitHub analyzer (total 41 passing).
 
+### Issue 25 — Accessibility and Performance Audit (v2 beta)
+- Created docs/accessibility-performance-audit.md: 22 pages reviewed for accessibility, responsive UX, loading/error states, and performance.
+- Documented: aria-labels on all icon-only buttons, role="alert" on error states, logical h1/h2/h3 hierarchy, text labels on all status badges.
+- Documented: static server components for blog/resources (no client JS), React Query caching, no unnecessary polling.
+- Known limitations documented: no Lighthouse CI, no axe-core in CI, mobile device testing recommended.
+
 - Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
 - Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
 - Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.
