@@ -24,6 +24,14 @@ All notable changes to AI Job Copilot will be documented here.
 - Documented: static server components for blog/resources (no client JS), React Query caching, no unnecessary polling.
 - Known limitations documented: no Lighthouse CI, no axe-core in CI, mobile device testing recommended.
 
+### Issue 26 — Notification Preferences (v2 beta)
+- Added /settings/notifications page with: job match alert controls (enabled/score/frequency), follow-up delay selector, interview reminder timing multi-select, stale application threshold, and channel toggles.
+- Connected to existing backend GET/PATCH /api/notifications/preferences endpoints.
+- Provider-ready notice for email (SENDGRID_API_KEY) and calendar (GOOGLE_CALENDAR_*) channels.
+- Updated settings main page link to point to /settings/notifications.
+- Created docs/notification-preferences.md with API reference and channel status table.
+- Added 3 new Vitest tests for notification preferences (total 44 passing).
+
 - Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
 - Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
 - Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.

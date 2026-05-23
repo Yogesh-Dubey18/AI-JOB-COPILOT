@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 const sections = [
   ["Account security", Lock, "Change password foundation, session review, and account safety checks.", ""],
-  ["Notifications", Bell, "Job digest, interview reminders, follow-up reminders, and product updates.", "/notifications"],
+  ["Notifications", Bell, "Job match alerts, follow-up reminders, interview reminders, stale application alerts, and channel preferences.", "/settings/notifications"],
   ["Integrations", Plug2, "View live status of AI, job board, payment, and auth provider integrations.", "/settings/integrations"],
   ["Billing", CreditCard, "Current plan, mock Stripe-ready checkout, invoices, and usage limits.", "/settings/billing"],
   ["Data export", Download, "Download your account, profile, resume, application, AI usage, and privacy data.", "/settings/privacy"],

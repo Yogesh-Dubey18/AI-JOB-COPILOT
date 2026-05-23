@@ -37,6 +37,7 @@ import ApplyAssistantPage from "@/app/apply-assistant/page";
 import BlogPage from "@/app/blog/page";
 import ResourcesPage from "@/app/resources/page";
 import GitHubAnalyzerPage from "@/app/github-analyzer/page";
+import NotificationPreferencesPage from "@/app/settings/notifications/page";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -337,5 +338,44 @@ describe("frontend pages", () => {
     const hrefs = links.map((l) => l.getAttribute("href"));
     expect(hrefs).toContain("/career-vault");
     expect(hrefs).toContain("/portfolio-generator");
+  });
+
+  it("notification preferences page renders controls", async () => {
+    mockApiResponse({ success: true, data: {
+      jobMatchAlertsEnabled: true, minimumMatchScore: 60,
+      jobAlertFrequency: "daily", followUpRemindersEnabled: true,
+      defaultFollowUpDelayDays: 5, interviewRemindersEnabled: true,
+      reminderTimings: ["24h before"], staleApplicationDays: 14,
+      staleApplicationRemindersEnabled: true, emailNotificationsEnabled: false,
+      calendarRemindersEnabled: false, dashboardNotificationsEnabled: true
+    }});
+    renderWithProviders(<NotificationPreferencesPage />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: /Notification preferences/i })).toBeInTheDocument());
+  });
+
+  it("notification preferences page shows provider-ready notice for email and calendar", async () => {
+    mockApiResponse({ success: true, data: {
+      jobMatchAlertsEnabled: true, minimumMatchScore: 60,
+      jobAlertFrequency: "daily", followUpRemindersEnabled: true,
+      defaultFollowUpDelayDays: 5, interviewRemindersEnabled: true,
+      reminderTimings: ["24h before"], staleApplicationDays: 14,
+      staleApplicationRemindersEnabled: true, emailNotificationsEnabled: false,
+      calendarRemindersEnabled: false, dashboardNotificationsEnabled: true
+    }});
+    const { container } = renderWithProviders(<NotificationPreferencesPage />);
+    await waitFor(() => expect(container.textContent).toMatch(/provider-ready/i), { timeout: 3000 });
+  });
+
+  it("notification preferences page has save button", async () => {
+    mockApiResponse({ success: true, data: {
+      jobMatchAlertsEnabled: true, minimumMatchScore: 60,
+      jobAlertFrequency: "daily", followUpRemindersEnabled: true,
+      defaultFollowUpDelayDays: 5, interviewRemindersEnabled: true,
+      reminderTimings: ["24h before"], staleApplicationDays: 14,
+      staleApplicationRemindersEnabled: true, emailNotificationsEnabled: false,
+      calendarRemindersEnabled: false, dashboardNotificationsEnabled: true
+    }});
+    renderWithProviders(<NotificationPreferencesPage />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save preferences/i })).toBeInTheDocument(), { timeout: 3000 });
   });
 });
