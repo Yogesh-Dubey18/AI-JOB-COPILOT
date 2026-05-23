@@ -40,6 +40,12 @@ All notable changes to AI Job Copilot will be documented here.
 - Created docs/localization-readiness.md with usage guide, known limitations, and future roadmap.
 - Added 8 new Vitest tests for i18n utilities (total 52 passing).
 
+### Issue 28 — Recruiter Portal Readiness (v2 beta)
+- Added /recruiters page with: hero + honest beta disclaimer, privacy-first commitments section, 6 recruiter feature cards with roadmap status, 6-phase roadmap, disabled interest form with clear "not live yet" label, candidate safety commitments.
+- No fake live recruiter claims anywhere. Submit button is disabled with clear message.
+- Created docs/recruiter-portal-roadmap.md covering privacy model, consent model, verification plan, anti-scam plan, backend requirements, and legal review checklist.
+- Added 6 new Vitest tests for recruiter portal (total 58 passing).
+
 - Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
 - Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
 - Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.

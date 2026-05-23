@@ -38,6 +38,7 @@ import BlogPage from "@/app/blog/page";
 import ResourcesPage from "@/app/resources/page";
 import GitHubAnalyzerPage from "@/app/github-analyzer/page";
 import NotificationPreferencesPage from "@/app/settings/notifications/page";
+import RecruiterPage from "@/app/recruiters/page";
 import { t, getStoredLanguage, setStoredLanguage, DEFAULT_LANGUAGE } from "@/lib/i18n";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
@@ -421,5 +422,42 @@ describe("i18n localization", () => {
     setStoredLanguage("hi");
     expect(getStoredLanguage()).toBe("hi");
     setStoredLanguage("en"); // reset
+  });
+});
+
+describe("recruiter portal", () => {
+  it("/recruiters page renders with privacy-first heading", () => {
+    const { container } = render(<RecruiterPage />);
+    expect(container.querySelector("h1")).toHaveTextContent(/Recruiter Portal/i);
+  });
+
+  it("/recruiters page shows beta status disclaimer", () => {
+    const { container } = render(<RecruiterPage />);
+    expect(container.textContent).toMatch(/No active recruiter marketplace/i);
+  });
+
+  it("/recruiters page shows privacy commitment section", () => {
+    const { container } = render(<RecruiterPage />);
+    expect(container.textContent).toMatch(/Candidate data is private/i);
+  });
+
+  it("/recruiters page has disabled interest form with not-live label", () => {
+    const { container } = render(<RecruiterPage />);
+    const submitBtn = container.querySelector("button[type=submit]");
+    expect(submitBtn).toBeInTheDocument();
+    expect(submitBtn).toBeDisabled();
+  });
+
+  it("/recruiters page has roadmap section", () => {
+    const { container } = render(<RecruiterPage />);
+    expect(container.textContent).toMatch(/Recruiter portal roadmap/i);
+  });
+
+  it("/recruiters page links to candidate privacy policy and register", () => {
+    const { container } = render(<RecruiterPage />);
+    const links = Array.from(container.querySelectorAll("a"));
+    const hrefs = links.map((l) => l.getAttribute("href"));
+    expect(hrefs).toContain("/privacy");
+    expect(hrefs).toContain("/register");
   });
 });
