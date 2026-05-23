@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
@@ -20,16 +22,17 @@ const KIT_SECTIONS: Array<[string, string]> = [
   ["tellMeAboutYourselfAnswer", "Tell me about yourself"]
 ];
 
-export default function ApplyAssistantPage() {
+function ApplyAssistantForm() {
+  const searchParams = useSearchParams();
+  const prefillJobId = searchParams.get("jobId") ?? "";
   const generate = useMutation({ mutationFn: (data: FormData) => api.post<any>("/ai/generate-application-kit", { jobId: data.get("jobId"), resumeVersionId: data.get("resumeVersionId") }) });
   const kit = generate.data || {};
   return (
-    <AppShell>
-      <PageHeading title="AI apply assistant" description="Generate a user-reviewable application kit: cover letter, HR email, LinkedIn, WhatsApp, referral, salary negotiation, and interview prep content." />
+    <>
       <div className="mb-5 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <p>Review and personalise every generated section before sending. AI output is a starting point \u2014 not a final message.</p>
+          <p>Review and personalise every generated section before sending. AI output is a starting point — not a final message.</p>
         </div>
       </div>
       <form
@@ -39,7 +42,7 @@ export default function ApplyAssistantPage() {
         }}
         className="mb-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
       >
-        <Input name="jobId" placeholder="Job ID" aria-label="Job ID" />
+        <Input name="jobId" placeholder="Job ID" aria-label="Job ID" defaultValue={prefillJobId} />
         <Input name="resumeVersionId" placeholder="Resume version ID" aria-label="Resume version ID" />
         <Button disabled={generate.isPending}><Sparkles className="h-4 w-4" /> {generate.isPending ? "Generating..." : "Generate kit"}</Button>
       </form>
@@ -53,6 +56,17 @@ export default function ApplyAssistantPage() {
           <CopyBlock key={key} title={label} value={kit[key] || "Generated content will appear here after you click Generate kit."} />
         ))}
       </div>
+    </>
+  );
+}
+
+export default function ApplyAssistantPage() {
+  return (
+    <AppShell>
+      <PageHeading title="AI apply assistant" description="Generate a user-reviewable application kit: cover letter, HR email, LinkedIn, WhatsApp, referral, salary negotiation, and interview prep content." />
+      <Suspense fallback={<div className="py-8 text-center text-sm text-muted-foreground">Loading apply assistant...</div>}>
+        <ApplyAssistantForm />
+      </Suspense>
     </AppShell>
   );
 }

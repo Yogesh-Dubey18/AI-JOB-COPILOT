@@ -166,7 +166,7 @@ describe("frontend pages", () => {
 
   it("exports page renders", () => {
     renderWithProviders(<PdfExportPage />);
-    expect(screen.getByRole("heading", { name: "PDF exports" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /PDF and DOCX exports/i })).toBeInTheDocument();
   });
 
   it("analytics page renders", () => {
