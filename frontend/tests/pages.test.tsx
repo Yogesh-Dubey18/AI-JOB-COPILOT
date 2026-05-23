@@ -20,6 +20,7 @@ import AnalyticsPage from "@/app/analytics/page";
 import NotificationsPage from "@/app/notifications/page";
 import BillingSettingsPage from "@/app/settings/billing/page";
 import PrivacySettingsPage from "@/app/settings/privacy/page";
+import IntegrationsSettingsPage from "@/app/settings/integrations/page";
 import PrivacyPage from "@/app/privacy/page";
 import PricingPage from "@/app/pricing/page";
 import TermsPage from "@/app/terms/page";
@@ -30,6 +31,9 @@ import PublicPortfolioPage from "@/app/u/[slug]/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
 import AdminFeedbackPage from "@/app/admin/feedback/page";
 import AdminMonitoringPage from "@/app/admin/monitoring/page";
+import GuidedWorkflowPage from "@/app/guided-workflow/page";
+import ContactsPage from "@/app/contacts/page";
+import ApplyAssistantPage from "@/app/apply-assistant/page";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -238,6 +242,31 @@ describe("frontend pages", () => {
   it("admin monitoring page renders", () => {
     renderWithProviders(<AdminMonitoringPage />);
     expect(screen.getByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
+  });
+
+  it("integrations settings page renders", () => {
+    renderWithProviders(<IntegrationsSettingsPage />);
+    expect(screen.getByRole("heading", { name: /Integrations/i })).toBeInTheDocument();
+    expect(screen.getByText(/Provider status is determined by backend/i)).toBeInTheDocument();
+  });
+
+  it("guided workflow page renders all steps", () => {
+    renderWithProviders(<GuidedWorkflowPage />);
+    expect(screen.getByRole("heading", { name: /Guided job-search workflow/i })).toBeInTheDocument();
+    expect(screen.getByText(/Step 01/i)).toBeInTheDocument();
+    expect(screen.getByText(/Upload & analyze your resume/i)).toBeInTheDocument();
+  });
+
+  it("recruiter contacts page renders", () => {
+    renderWithProviders(<ContactsPage />);
+    expect(screen.getByRole("heading", { name: /Recruiter contacts/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add contact/i })).toBeInTheDocument();
+  });
+
+  it("apply assistant page renders review disclaimer", () => {
+    renderWithProviders(<ApplyAssistantPage />);
+    expect(screen.getByText(/AI apply assistant/i)).toBeInTheDocument();
+    expect(screen.getByText(/Review and personalise every generated section/i)).toBeInTheDocument();
   });
 
   it("shared UX states expose accessible status and alert roles", () => {

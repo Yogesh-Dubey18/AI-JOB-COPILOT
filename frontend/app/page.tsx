@@ -120,6 +120,24 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      <section className="mx-auto max-w-7xl px-4 py-14">
+        <h2 className="text-2xl font-bold md:text-3xl">Frequently asked questions</h2>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {[
+            ["Does it auto-apply for me?", "No. Every generated message, cover letter, and application requires your explicit review and confirmation before use. Auto-apply without user control is intentionally disabled."],
+            ["Which job boards are connected?", "The platform has provider-ready integrations for LinkedIn, Indeed, Naukri, ZipRecruiter, and Dice. Live data requires approved API credentials configured by the operator. The daily curated feed is always active."],
+            ["How accurate is the ATS score?", "The score is a heuristic estimate based on keyword coverage, formatting, and section completeness. It is a useful guide for improvement, not a guarantee of recruiter shortlisting."],
+            ["Is it free to use?", "A free tier is available with limited AI credits and daily job matches. Pro and Elite plans offer higher limits. Billing is provider-ready and inactive until Stripe is fully configured."],
+            ["What happens to my resume data?", "Your resume is stored in your account and used only for the features you trigger. Enable anonymize mode in the analyzer to redact personal details before any AI provider receives your data."],
+            ["Can I use it outside India?", "Yes. While salary defaults are in INR and Indian job boards are prioritised, the platform works for any job market. Filter, search, and apply in any region."]
+          ].map(([q, a]) => (
+            <div key={String(q)} className="rounded-md border p-4">
+              <p className="font-semibold">{q}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
       <footer className="border-t px-4 py-8 text-center text-sm text-muted-foreground">AI Job Copilot - Job seeker first - No auto-apply without review</footer>
     </div>
   );

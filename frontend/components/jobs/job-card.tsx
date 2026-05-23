@@ -13,7 +13,7 @@ export function JobCard({ job }: { job: any }) {
             <h3 className="font-bold">{job.title}</h3>
             <p className="text-sm text-muted-foreground">{job.company} - {job.location} - {job.remoteType}</p>
           </div>
-          <Badge className="bg-primary/10 text-primary">AI match 88%</Badge>
+          {job.matchScore ? <Badge className="bg-primary/10 text-primary">AI match {job.matchScore}%</Badge> : null}
         </div>
         <div className="flex flex-wrap gap-2">{(job.skillsRequired || []).slice(0, 5).map((skill: string) => <Badge key={skill}>{skill}</Badge>)}</div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

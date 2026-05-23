@@ -17,6 +17,7 @@ export default function JobsPage() {
   const [jobType, setJobType] = useState("");
   const [trustMin, setTrustMin] = useState("");
   const [salaryMin, setSalaryMin] = useState("");
+  const [experience, setExperience] = useState("");
   const [sort, setSort] = useState("postedAt");
   const debounced = useDebounce(search);
   const query = useMemo(() => {
@@ -26,16 +27,17 @@ export default function JobsPage() {
     if (jobType) params.set("jobType", jobType);
     if (trustMin) params.set("trustMin", trustMin);
     if (salaryMin) params.set("salaryMin", salaryMin);
+    if (experience) params.set("experience", experience);
     if (sort) params.set("sort", sort);
     return params.toString();
-  }, [debounced, jobType, remoteType, salaryMin, sort, trustMin]);
+  }, [debounced, experience, jobType, remoteType, salaryMin, sort, trustMin]);
   const jobs = useQuery({ queryKey: ["jobs", query], queryFn: () => api.get<any>("/jobs" + (query ? "?" + query : "")), retry: false });
   const sources = useQuery({ queryKey: ["job-sources"], queryFn: () => api.get<any>("/jobs/sources"), retry: false });
   const items = jobs.data?.items || [];
   return (
     <AppShell>
       <PageHeading title="Jobs" description="Search, filter, save, analyze, and open official job links. AI match and trust score help you decide before applying." />
-      <div className="mb-5 grid gap-3 rounded-md border bg-card p-3 lg:grid-cols-[1fr_150px_150px_150px_150px_150px]">
+      <div className="mb-5 grid gap-3 rounded-md border bg-card p-3 lg:grid-cols-[1fr_130px_130px_130px_130px_130px_130px]">
         <div className="flex items-center gap-2 rounded-md border bg-background px-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input aria-label="Search jobs" className="border-0 focus:ring-0" placeholder="Search role, company, skill, location" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -50,6 +52,15 @@ export default function JobsPage() {
           <option value="">Any type</option>
           <option value="Full-time">Full-time</option>
           <option value="Internship">Internship</option>
+          <option value="Contract">Contract</option>
+          <option value="Part-time">Part-time</option>
+        </select>
+        <select aria-label="Experience level filter" className="h-10 rounded-md border bg-background px-3 text-sm" value={experience} onChange={(event) => setExperience(event.target.value)}>
+          <option value="">Any experience</option>
+          <option value="fresher">Fresher / 0-1 yr</option>
+          <option value="junior">Junior / 1-3 yrs</option>
+          <option value="mid">Mid / 3-5 yrs</option>
+          <option value="senior">Senior / 5+ yrs</option>
         </select>
         <select aria-label="Minimum trust score filter" className="h-10 rounded-md border bg-background px-3 text-sm" value={trustMin} onChange={(event) => setTrustMin(event.target.value)}>
           <option value="">Any trust</option>
@@ -62,6 +73,7 @@ export default function JobsPage() {
           <option value="300000">3 LPA+</option>
           <option value="600000">6 LPA+</option>
           <option value="900000">9 LPA+</option>
+          <option value="1500000">15 LPA+</option>
         </select>
         <select aria-label="Sort jobs" className="h-10 rounded-md border bg-background px-3 text-sm" value={sort} onChange={(event) => setSort(event.target.value)}>
           <option value="postedAt">Newest</option>

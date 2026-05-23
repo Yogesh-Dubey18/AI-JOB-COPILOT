@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { ReactNode } from "react";
-import { BarChart3, Bell, Bot, BriefcaseBusiness, Download, FileText, Gauge, Home, Layers, MessageSquare, MessageSquarePlus, Settings, ShieldAlert, UserRound, Wrench } from "lucide-react";
+import { BarChart3, Bell, Bot, BriefcaseBusiness, Download, FileText, Gauge, Home, Layers, MessageSquare, MessageSquarePlus, Route, Settings, ShieldAlert, UserRound, Users2, Wrench } from "lucide-react";
 
 const nav = [
   ["/dashboard", Home, "Dashboard"],
+  ["/guided-workflow", Route, "Workflow"],
   ["/resume/analyzer", FileText, "Resume"],
   ["/jobs", BriefcaseBusiness, "Jobs"],
   ["/applications", Layers, "Applications"],
   ["/interviews", MessageSquare, "Interviews"],
+  ["/contacts", Users2, "Contacts"],
   ["/pdf-export", Download, "Exports"],
   ["/skill-gap", Wrench, "Skills"],
   ["/career-mentor-chat", Bot, "Mentor"],
