@@ -36,6 +36,7 @@ import ContactsPage from "@/app/contacts/page";
 import ApplyAssistantPage from "@/app/apply-assistant/page";
 import BlogPage from "@/app/blog/page";
 import ResourcesPage from "@/app/resources/page";
+import GitHubAnalyzerPage from "@/app/github-analyzer/page";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -314,5 +315,27 @@ describe("frontend pages", () => {
     const hrefs = links.map((l) => l.getAttribute("href"));
     expect(hrefs).toContain("/resume/analyzer");
     expect(hrefs).toContain("/resources");
+  });
+
+  it("github analyzer page renders form and provider-ready notice", () => {
+    renderWithProviders(<GitHubAnalyzerPage />);
+    expect(screen.getByRole("heading", { name: /GitHub project analyzer/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/GitHub repo URL/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Project title/i)).toBeInTheDocument();
+    expect(screen.getByText(/GitHub API — provider-ready/i)).toBeInTheDocument();
+  });
+
+  it("github analyzer page has readme and deployment checklists", () => {
+    renderWithProviders(<GitHubAnalyzerPage />);
+    expect(screen.getAllByText(/README quality/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Deployment readiness/i).length).toBeGreaterThan(0);
+  });
+
+  it("github analyzer page links to career vault and portfolio generator", () => {
+    const { container } = renderWithProviders(<GitHubAnalyzerPage />);
+    const links = Array.from(container.querySelectorAll("a"));
+    const hrefs = links.map((l) => l.getAttribute("href"));
+    expect(hrefs).toContain("/career-vault");
+    expect(hrefs).toContain("/portfolio-generator");
   });
 });

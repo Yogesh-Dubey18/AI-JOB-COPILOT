@@ -10,6 +10,14 @@ All notable changes to AI Job Copilot will be documented here.
 - Both pages are static (no API calls), fully server-rendered with Next.js metadata for SEO.
 - Added 5 new Vitest tests for blog/resources pages (total 38 passing).
 
+### Issue 24 — GitHub Project Analyzer (v2 beta)
+- Added /github-analyzer page with repo URL + manual input form.
+- Self-assessment checklists: README quality, code structure, deployment readiness.
+- AI-powered resume bullet generation, portfolio case study, interview talking points, improvement suggestions (all provider-ready via /ai/github-analyzer).
+- Honest "GitHub API — provider-ready" notice — requires GITHUB_TOKEN in backend .env.
+- Links to career vault, portfolio generator, and application kit.
+- Added 3 new Vitest tests for GitHub analyzer (total 41 passing).
+
 - Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
 - Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
 - Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.
