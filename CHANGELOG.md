@@ -46,6 +46,12 @@ All notable changes to AI Job Copilot will be documented here.
 - Created docs/recruiter-portal-roadmap.md covering privacy model, consent model, verification plan, anti-scam plan, backend requirements, and legal review checklist.
 - Added 6 new Vitest tests for recruiter portal (total 58 passing).
 
+### Issue 29 — Production Monitoring Readiness (v2 beta)
+- Created docs/monitoring-observability-readiness.md covering: backend /health endpoint status, frontend error boundaries, Sentry provider-ready setup instructions (DSN not configured), uptime monitoring recommended tools (UptimeRobot, Better Stack), alerting plan, provider health status table.
+- Documented manual smoke-test checklist for every production deploy.
+- Known limitations documented: no Sentry DSN, no uptime monitoring, no structured JSON logging.
+- No fake monitoring claims — all live vs provider-ready items clearly labelled.
+
 - Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
 - Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
 - Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.
