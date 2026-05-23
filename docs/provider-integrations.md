@@ -1,64 +1,219 @@
 # Provider Integrations
 
-AI Job Copilot is provider-ready, but live external integrations must be enabled only with approved credentials and terms-compliant access.
+AI Job Copilot is provider-ready. Live external integrations must be enabled only with approved credentials and terms-compliant access. The **UI status page** is available at `/settings/integrations` in the app.
+
+> **Safety rule**: Do not mark any provider as Live in code or docs unless real env vars are set and the connection is tested. Keep honest provider-ready status until then.
+
+---
+
+## Integration Status Overview
+
+| Provider | Category | Status | Key Feature Unlocked |
+|----------|----------|--------|----------------------|
+| OpenAI / Gemini AI | AI | Provider-ready | ATS analysis, cover letter, mock interview, chat |
+| MongoDB Atlas | Database | Required | All data persistence |
+| LinkedIn Jobs API | Job Boards | Provider-ready | Live job listings |
+| Indeed Publisher | Job Boards | Provider-ready | Live job feed |
+| Naukri API | Job Boards | Provider-ready | India-centric job feed |
+| ZipRecruiter | Job Boards | Provider-ready | US job listings |
+| Dice API | Job Boards | Provider-ready | Tech-focused job listings |
+| Google OAuth | Auth | Provider-ready | One-click sign-in |
+| SendGrid / SMTP | Notifications | Provider-ready | Email alerts and reminders |
+| Stripe | Payments | Provider-ready | Subscriptions, invoicing |
+| AWS S3 / R2 | Storage | Provider-ready | Resume file storage |
+| Google Calendar | Calendar | Provider-ready | Interview reminders |
+| Coursera / Udemy | Courses | Provider-ready | Skill gap course links |
+| GitHub API | Dev Tools | Provider-ready | Project analyzer |
+| Chrome Extension | Browser | Provider-ready | Job capture from boards |
+
+---
+
+## AI Provider
+
+Resume analysis, cover letter generation, mock interview, career mentor chat, and skill roadmap use AI provider calls.
+
+**Status**: Provider-ready. Falls back to structured mock output when key is missing.
+
+**Required env vars (backend .env)**:
+```
+OPENAI_API_KEY=
+# OR
+GEMINI_API_KEY=
+AI_PROVIDER=openai   # or gemini
+```
+
+**Setup steps**:
+1. Create an account at [platform.openai.com](https://platform.openai.com) or [aistudio.google.com](https://aistudio.google.com).
+2. Generate an API key.
+3. Add it to `backend/.env`.
+4. Set `AI_PROVIDER` to `openai` or `gemini`.
+5. Restart the backend.
+
+**Safety note**: Raw prompts and API keys are never logged. Resume content is optionally anonymized before AI requests (controlled by `anonymizeForAnalysis` toggle).
+
+---
+
+## Database
+
+MongoDB Atlas is required for all data persistence. The backend will fail to start without a valid connection string.
+
+**Required env vars**:
+```
+MONGODB_URI=mongodb+srv://...
+```
+
+**Setup steps**:
+1. Create a free cluster at [mongodb.com/atlas](https://mongodb.com/atlas).
+2. Add a database user.
+3. Allow your IP or set `0.0.0.0/0` for Render.
+4. Copy the connection string and set `MONGODB_URI`.
+
+---
 
 ## Job Boards
 
-The backend exposes `GET /api/jobs/sources` to show configured local sources and external provider readiness for LinkedIn, Indeed, ZipRecruiter, Dice, and Naukri.
+The backend exposes `GET /api/jobs/sources` to show configured local sources and external provider readiness.
 
-Rules:
-
+**Rules**:
 - Use official APIs, partner feeds, CSV imports, or user-provided official company career URLs.
 - Do not scrape protected job boards or bypass terms of service.
 - Do not auto-apply or auto-message recruiters without explicit user review.
 
-Required placeholders:
+**Required env vars**:
+```
+LINKEDIN_CLIENT_ID=
+LINKEDIN_CLIENT_SECRET=
+LINKEDIN_REDIRECT_URI=
+INDEED_API_KEY=
+ZIPRECRUITER_API_KEY=
+DICE_API_KEY=
+NAUKRI_API_KEY=
+```
 
-- `LINKEDIN_CLIENT_ID`
-- `LINKEDIN_CLIENT_SECRET`
-- `LINKEDIN_REDIRECT_URI`
-- `INDEED_API_KEY`
-- `ZIPRECRUITER_API_KEY`
-- `DICE_API_KEY`
-- `NAUKRI_API_KEY`
+**Setup steps per board**:
 
-## Resume Import And Storage
+- **LinkedIn**: Apply for [LinkedIn Jobs API](https://developer.linkedin.com) partner access. May take weeks for approval.
+- **Indeed**: Sign up at [indeed.com/publisher](https://www.indeed.com/publisher). Set publisher ID.
+- **Naukri**: Contact Naukri partner team for API access.
+- **ZipRecruiter**: Apply at [ziprecruiter.com/api](https://www.ziprecruiter.com/api).
+- **Dice**: Contact Dice for feed/API credentials.
 
-Resume upload supports PDF, DOCX, and TXT with safe local fallback parsing. Production deployments should move uploaded files from local disk to an approved object store.
+---
 
-Required placeholders:
+## Auth Providers
 
-- `STORAGE_PROVIDER`
-- `S3_BUCKET`
-- `S3_REGION`
-- `S3_ACCESS_KEY_ID`
-- `S3_SECRET_ACCESS_KEY`
+**Google OAuth**
 
-Bias-mitigation support:
+```
+GOOGLE_OAUTH_CLIENT_ID=
+GOOGLE_OAUTH_CLIENT_SECRET=
+GOOGLE_OAUTH_REDIRECT_URI=
+```
 
-- The upload flow can generate an anonymized parsed preview.
-- The analyzer can redact name, email, phone, and links before sending content to AI providers.
-- The local ATS heuristic still checks resume completeness without logging secrets or raw prompts.
+Setup: Create OAuth 2.0 credentials at [console.cloud.google.com](https://console.cloud.google.com). Add authorized redirect URIs.
+
+**Safety note**: Only request `openid`, `email`, and `profile` scopes. Never store OAuth tokens in logs.
+
+---
+
+## Email / Notifications
+
+Transactional emails for follow-up reminders, interview alerts, and account actions.
+
+```
+SENDGRID_API_KEY=
+EMAIL_FROM=noreply@yourdomain.com
+# OR use generic SMTP:
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+```
+
+**Setup**: Create a [SendGrid](https://sendgrid.com) account, verify sender domain, generate API key.
+
+---
+
+## Payments / Billing
+
+Stripe is used for subscription billing, plan enforcement, and invoices.
+
+```
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PUBLISHABLE_KEY=
+```
+
+**Setup steps**:
+1. Create a [Stripe](https://stripe.com) account.
+2. Add `STRIPE_SECRET_KEY` from your dashboard.
+3. Create a webhook endpoint pointing to `/api/billing/webhook`.
+4. Add `STRIPE_WEBHOOK_SECRET` from the webhook config.
+5. No real billing activates until these are set.
+
+**Safety note**: Never commit Stripe keys. Never log payment amounts or card details.
+
+---
+
+## File Storage
+
+Resume files should move from local disk to an approved object store in production.
+
+```
+STORAGE_PROVIDER=local   # or s3 or r2
+S3_BUCKET=
+S3_REGION=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+```
+
+---
+
+## Calendar
+
+Google Calendar integration for interview reminders (provider-ready).
+
+```
+GOOGLE_CALENDAR_CLIENT_ID=
+GOOGLE_CALENDAR_CLIENT_SECRET=
+```
+
+---
+
+## Resume Import And Anonymization
+
+- Upload supports PDF, DOCX, and TXT.
+- The analyzer can redact name, email, phone, and links before AI calls (`anonymizeForAnalysis` toggle).
+- The local ATS heuristic checks completeness without logging raw content.
+
+---
 
 ## Learning Resources
 
 Skill-gap plans work with mock/provider-ready AI fallback. External course metadata should be added only through approved APIs.
 
-Required placeholders:
+```
+COURSE_PROVIDER=mock   # or coursera or udemy
+COURSERA_API_KEY=
+UDEMY_CLIENT_ID=
+UDEMY_CLIENT_SECRET=
+```
 
-- `COURSE_PROVIDER`
-- `COURSERA_API_KEY`
-- `UDEMY_CLIENT_ID`
-- `UDEMY_CLIENT_SECRET`
+---
 
-## OAuth
+## Chrome Extension
 
-Google and LinkedIn OAuth are placeholder-ready. Do not request broad scopes. Only request data needed for authentication or user-approved profile import.
+The browser extension captures job details from job board pages (provider-ready). No scraping of restricted pages.
 
-Required placeholders:
+- Status: Provider-ready
+- Requires: Backend running locally or at production URL
+- Session bridging requires the user to be logged in to the app
 
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`
-- `LINKEDIN_CLIENT_ID`
-- `LINKEDIN_CLIENT_SECRET`
+---
 
+## UI Status Page
+
+The in-app **Integrations & Provider Status** page is available at:
+`/settings/integrations`
+
+It shows live vs provider-ready status, required env vars, and setup steps for each provider.
