@@ -52,6 +52,14 @@ All notable changes to AI Job Copilot will be documented here.
 - Known limitations documented: no Sentry DSN, no uptime monitoring, no structured JSON logging.
 - No fake monitoring claims — all live vs provider-ready items clearly labelled.
 
+### Issue 30 — Final Real Provider Activation Runbook (v2 beta)
+- Created docs/provider-activation-runbook.md: comprehensive 10-provider activation guide.
+- Covers: MongoDB Atlas, OpenAI/Gemini, Google OAuth, Stripe, LinkedIn, Indeed, SendGrid, AWS S3, GitHub API, Naukri.
+- Includes: backend .env template, step-by-step activation per provider, Vercel env vars table.
+- Pre-launch security/backend/frontend/monitoring/legal checklist.
+- Emergency rollback plan and provider support contacts.
+- No fake "live" claims — all providers clearly marked as provider-ready until credentials are set.
+
 - Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
 - Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
 - Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.
