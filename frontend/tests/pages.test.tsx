@@ -38,6 +38,7 @@ import BlogPage from "@/app/blog/page";
 import ResourcesPage from "@/app/resources/page";
 import GitHubAnalyzerPage from "@/app/github-analyzer/page";
 import NotificationPreferencesPage from "@/app/settings/notifications/page";
+import { t, getStoredLanguage, setStoredLanguage, DEFAULT_LANGUAGE } from "@/lib/i18n";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -377,5 +378,48 @@ describe("frontend pages", () => {
     }});
     renderWithProviders(<NotificationPreferencesPage />);
     await waitFor(() => expect(screen.getByRole("button", { name: /Save preferences/i })).toBeInTheDocument(), { timeout: 3000 });
+  });
+});
+
+describe("i18n localization", () => {
+  it("returns English by default", () => {
+    expect(DEFAULT_LANGUAGE).toBe("en");
+  });
+
+  it("t() returns correct English string", () => {
+    expect(t("nav.dashboard", "en")).toBe("Dashboard");
+  });
+
+  it("t() returns correct Hindi string", () => {
+    const hindi = t("nav.dashboard", "hi");
+    // Hindi translation should be defined and non-empty
+    expect(hindi).toBeTruthy();
+    // Hindi nav.dashboard should not be same as English (it's in Devanagari)
+    expect(hindi).not.toBe("Dashboard");
+  });
+
+  it("t() returns Hinglish string", () => {
+    expect(t("hero.cta.primary", "hinglish")).toBe("Free mein shuru karo");
+  });
+
+  it("t() returns AI review disclaimer for all languages", () => {
+    expect(t("disclaimer.aiReview", "en")).toMatch(/AI output should be reviewed/i);
+    expect(t("disclaimer.aiReview", "hi")).toMatch(/AI/);
+    expect(t("disclaimer.aiReview", "hinglish")).toMatch(/AI/);
+  });
+
+  it("t() returns no-auto-apply disclaimer for English", () => {
+    expect(t("disclaimer.noAutoApply", "en")).toMatch(/never auto-appl/i);
+  });
+
+  it("getStoredLanguage returns default when localStorage is empty", () => {
+    localStorage.clear();
+    expect(getStoredLanguage()).toBe("en");
+  });
+
+  it("setStoredLanguage stores and getStoredLanguage retrieves it", () => {
+    setStoredLanguage("hi");
+    expect(getStoredLanguage()).toBe("hi");
+    setStoredLanguage("en"); // reset
   });
 });

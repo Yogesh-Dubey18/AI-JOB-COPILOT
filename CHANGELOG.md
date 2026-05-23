@@ -32,6 +32,14 @@ All notable changes to AI Job Copilot will be documented here.
 - Created docs/notification-preferences.md with API reference and channel status table.
 - Added 3 new Vitest tests for notification preferences (total 44 passing).
 
+### Issue 27 — Localization Readiness (v2 beta)
+- Created frontend/lib/i18n.ts with translation dictionary for English, Hindi, and Hinglish (50+ keys).
+- Keys cover: navigation, hero, auth, dashboard, resume, jobs, application kit, tracker stages, provider status, and AI disclaimers.
+- Provides t(key, lang) helper with English fallback, getStoredLanguage() and setStoredLanguage() localStorage utilities.
+- Created frontend/components/shared/language-selector.tsx — accessible dropdown component.
+- Created docs/localization-readiness.md with usage guide, known limitations, and future roadmap.
+- Added 8 new Vitest tests for i18n utilities (total 52 passing).
+
 - Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
 - Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
 - Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.
