@@ -65,3 +65,18 @@ This is an engineering checklist, not legal or compliance advice.
 - Add account deletion/export flows.
 - Add formal incident response and retention policies.
 - Add provider-backed monitoring and alerting.
+
+## V2 Beta Security Status
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Auth (bcrypt + JWT) | ✅ Implemented | 12-round bcrypt, 7-day JWT |
+| Secrets management | ✅ Clean | `check:security` passes |
+| CORS | ✅ Configured | Restricted to frontend origin |
+| Input validation | ⚠️ Partial | Zod on key routes; expand coverage |
+| Rate limiting | ⚠️ Missing | Add before public launch |
+| File upload MIME check | ⚠️ Partial | Extension checked; MIME not |
+| Dependency audit | ⚠️ Not run | Run `npm audit` before launch |
+| AI safety rules | ✅ Enforced | No auto-apply, no invented content |
+| Data isolation (userId) | ✅ Implemented | All user data filtered by userId |
+| HTTPS | ✅ Enforced | Vercel + Render enforce HTTPS |

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ReactNode } from "react";
-import { Archive, BarChart3, Bell, Bot, BriefcaseBusiness, Building2, Download, FileText, Gauge, Home, Layers, MessageSquare, MessageSquarePlus, Route, Settings, ShieldAlert, UserRound, Users2, Wrench } from "lucide-react";
+import { Archive, BarChart3, Bell, Bot, BriefcaseBusiness, Building2, Download, FileText, Gauge, Globe2, Home, Layers, Linkedin, MessageSquare, MessageSquarePlus, Route, Settings, ShieldAlert, UserRound, Users2, Wrench } from "lucide-react";
 
 const nav = [
   ["/dashboard", Home, "Dashboard"],
@@ -13,6 +13,8 @@ const nav = [
   ["/company-research", Building2, "Companies"],
   ["/answer-vault", Archive, "Answers"],
   ["/career-vault", Archive, "Career vault"],
+  ["/portfolio-generator", Globe2, "Portfolio"],
+  ["/linkedin-optimizer", Linkedin, "LinkedIn"],
   ["/pdf-export", Download, "Exports"],
   ["/skill-gap", Wrench, "Skills"],
   ["/career-mentor-chat", Bot, "Mentor"],
