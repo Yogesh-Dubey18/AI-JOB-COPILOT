@@ -4,6 +4,12 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### Issue 23 — SEO Resource Hub (v2 beta)
+- Added /blog page with 10 SEO-optimized career guide cards (ATS resume, STAR method, salary negotiation, fullstack roadmap, scam alerts, LinkedIn, React/Node.js/MERN questions, fresher guide, AI workflow).
+- Added /resources page with career resource hub: featured guides, 5 category sections, copy-ready templates, and internal CTA links.
+- Both pages are static (no API calls), fully server-rendered with Next.js metadata for SEO.
+- Added 5 new Vitest tests for blog/resources pages (total 38 passing).
+
 - Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
 - Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
 - Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.

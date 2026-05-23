@@ -34,6 +34,8 @@ import AdminMonitoringPage from "@/app/admin/monitoring/page";
 import GuidedWorkflowPage from "@/app/guided-workflow/page";
 import ContactsPage from "@/app/contacts/page";
 import ApplyAssistantPage from "@/app/apply-assistant/page";
+import BlogPage from "@/app/blog/page";
+import ResourcesPage from "@/app/resources/page";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -279,5 +281,38 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Loading test/i)).toBeInTheDocument();
     expect(screen.getByText(/Empty test/i)).toBeInTheDocument();
     expect(screen.getByText(/Error test/i)).toBeInTheDocument();
+  });
+
+  it("resources page renders hero and featured guides", () => {
+    const { container } = render(<ResourcesPage />);
+    expect(container.querySelector("h1")).toHaveTextContent(/Career Resource Hub/i);
+    expect(container.querySelector("main")).toBeInTheDocument();
+  });
+
+  it("resources page contains internal CTA links to workflow and resume", () => {
+    const { container } = render(<ResourcesPage />);
+    const links = Array.from(container.querySelectorAll("a"));
+    const hrefs = links.map((l) => l.getAttribute("href"));
+    expect(hrefs).toContain("/resume/analyzer");
+    expect(hrefs).toContain("/guided-workflow");
+  });
+
+  it("resources page shows AI review privacy disclaimer", () => {
+    const { container } = render(<ResourcesPage />);
+    expect(container.textContent).toMatch(/AI output should be reviewed before applying/i);
+  });
+
+  it("blog page renders heading and guide cards", () => {
+    const { container } = render(<BlogPage />);
+    expect(container.querySelector("h1")).toHaveTextContent(/job search guides/i);
+    expect(container.textContent).toMatch(/ATS-Friendly Resume/i);
+  });
+
+  it("blog page CTA links to resume analyzer and resources", () => {
+    const { container } = render(<BlogPage />);
+    const links = Array.from(container.querySelectorAll("a"));
+    const hrefs = links.map((l) => l.getAttribute("href"));
+    expect(hrefs).toContain("/resume/analyzer");
+    expect(hrefs).toContain("/resources");
   });
 });
