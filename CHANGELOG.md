@@ -4,7 +4,18 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
-- Added authenticated in-app feedback submission, admin feedback triage, issue draft generation, feedback docs, and tests.
+- Added v2 beta gap audit covering 40 feature areas with real status, gaps, and recommended next issues.
+- Added provider/integration status UI at /settings/integrations showing live vs provider-ready state for 8 external services.
+- Added guided job-search workflow page at /guided-workflow with 7 connected steps and actionable tips.
+- Added recruiter CRM contacts page at /contacts with add/list/notes/LinkedIn URL tracking.
+- Improved /jobs page with experience level, contract, part-time filters and 15 LPA+ salary tier.
+- Improved apply assistant with human-readable section labels, review disclaimer, error handling.
+- Expanded about page with 6 value cards, phase development timeline, and honest disclaimer section.
+- Updated features page with all 12 features linked to real routes with Try it buttons.
+- Added FAQ section to landing page covering 6 common questions.
+- Fixed hardcoded 88% AI match badge in job-card — now uses real matchScore from API.
+- Added Workflow and Contacts nav items to sidebar.
+- Added 4 new frontend tests (total 33 passing).
 - Added commercial readiness audit, legal/business templates, pricing disclaimers, and professional placeholder updates for privacy and terms pages.
 - Added final recruiter, investor-style, product storytelling, demo, walkthrough, FAQ, and presentation package documentation.
 - Added final archive closure, START_HERE navigation, master handoff v2, owner checklist, issue-based roadmap, and stop condition documentation.

@@ -285,6 +285,7 @@
 
 ## v2 Planning
 
+- [v2 Beta Gap Audit](v2-beta-gap-audit.md)
 - [v2 Production Roadmap](v2-production-roadmap.md)
 - [v2 Priority Matrix](v2-priority-matrix.md)
 - [v2 Technical Architecture](v2-technical-architecture.md)
