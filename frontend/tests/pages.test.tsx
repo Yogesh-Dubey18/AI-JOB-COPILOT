@@ -103,8 +103,13 @@ describe("frontend pages", () => {
     await user.type(screen.getByLabelText(/^Password$/i), "Password123!");
     await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Login" }));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [url, options] = fetchMock.mock.calls[0];
+    // The auth-form pings /health on mount, then calls /auth/login on submit.
+    // Wait until the login endpoint has been called (at least 2 total fetches).
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/auth/login"))).toBe(true)
+    );
+    const loginCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/auth/login"))!;
+    const [url, options] = loginCall;
     expect(String(url)).toMatch(/\/api\/auth\/login$/);
     expect(options).toMatchObject({ method: "POST", credentials: "include" });
     expect(JSON.parse(String(options.body))).toEqual({ email: "asha@example.com", password: "Password123!" });

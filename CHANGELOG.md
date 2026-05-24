@@ -4,6 +4,17 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.1-patch — Auth Cold-Start UX Fix (2026-05-24, commit 6505ed8)
+
+- **Fixed:** Login/register form showed confusing `"Demo-safe notice: the backend auth service is currently unavailable. Check NEXT_PUBLIC_API_URL and try again. No credentials were saved here."` during Render free-tier cold start.
+- **New:** Friendly `"🔄 Server is waking up…"` message explains the 30–60 second start delay.
+- **New:** 30-second auto-retry countdown that automatically re-submits the form after the server wakes up.
+- **New:** "Try again now" manual retry button.
+- **New:** Background `/health` ping on auth form mount to trigger Render cold-start wake-up before the user clicks Login.
+- **Maintained:** "Continue in Demo Mode" fallback for exploring the app without a real account.
+- **Removed:** All instances of `NEXT_PUBLIC_API_URL` and `Demo-safe notice` strings from user-facing error messages.
+- **Updated test:** `frontend/tests/pages.test.tsx` login submit test updated to account for the `/health` ping fired on mount.
+
 ### Issue 23 — SEO Resource Hub (v2 beta)
 - Added /blog page with 10 SEO-optimized career guide cards (ATS resume, STAR method, salary negotiation, fullstack roadmap, scam alerts, LinkedIn, React/Node.js/MERN questions, fresher guide, AI workflow).
 - Added /resources page with career resource hub: featured guides, 5 category sections, copy-ready templates, and internal CTA links.
