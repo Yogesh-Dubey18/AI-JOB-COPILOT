@@ -148,7 +148,7 @@ export default function RecruitersPage() {
             <Info className="mr-1 inline h-3.5 w-3.5" />
             This form does not create an active recruiter account. It registers your interest only. No candidate data will be shared.
           </div>
-          <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <label htmlFor="company-name" className="mb-1 block text-sm font-medium">Company name</label>

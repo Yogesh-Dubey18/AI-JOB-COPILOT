@@ -72,7 +72,29 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             <Input placeholder="At least 8 characters" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} {...form.register("password" as never)} />
           </label>
           {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
-          {notice ? <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100" role="status">{notice}</p> : null}
+          {notice ? (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100" role="status">
+              <p>{notice}</p>
+              {notice.includes("Demo-safe notice") && (
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-white hover:bg-amber-100 text-amber-900 border-amber-400"
+                    onClick={() => {
+                      persistAuthSession({
+                        accessToken: "mock-demo-token",
+                        user: { id: "demo-user", fullName: "Demo User", email: "demo@example.com", role: "job_seeker" }
+                      });
+                      router.push("/dashboard");
+                    }}
+                  >
+                    Continue in Demo Mode (Local Mock Session)
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : null}
           <Button className="w-full" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Please wait..." : mode === "login" ? "Login" : "Register"}
           </Button>

@@ -92,7 +92,7 @@ FRONTEND_URL=https://ai-job-copilot-frontend.vercel.app
 2. Create a free M0 cluster (or paid tier for production)
 3. Go to Database → Connect → Drivers → Copy connection string
 4. Replace `<password>` with the database user password
-5. Set `MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/ai-job-copilot?retryWrites=true&w=majority` in backend `.env`
+5. Set `MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/ai-job-copilot?retryWrites=true&w=majority` in backend `.env`
 6. Go to Security → Network Access → Add IP: `0.0.0.0/0` (or Render/Vercel IP ranges)
 7. Restart backend. `GET /health` should return `{ db: "connected" }`
 
