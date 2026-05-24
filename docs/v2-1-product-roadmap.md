@@ -15,42 +15,38 @@ We classify roadmap items based on the following priorities:
 
 ## 🚀 P0 Milestone: Release Hardening & Verification (Milestone 1)
 
-These issues are required to transition the application from a "provider-ready" beta sandbox to a secure, stable production SaaS.
+These issues are required to transition the application from a "provider-ready" beta sandbox to a secure, stable production SaaS. Based on the first Open Beta feedback loop, the priorities are ordered as follows:
 
-### 1. Real Provider Activation
-- **Description:** Replace fallback mock services with live integrations for OpenAI/Gemini, SendGrid, and Google OAuth.
-- **Effort Estimate:** Medium (1–2 days configuration/testing)
-- **Risk:** High billing spikes if rate limits are not enforced.
-- **Dependencies:** Developer/partner approvals from third-party services.
-- **Provider Needs:** API credentials, verified domains, OAuth consents.
+### 1. P0-1: Storage & Upload Hardening
+- **Description:** Move resume file uploads from the ephemeral local server disk to a secure private AWS S3 or Cloudflare R2 bucket. Implement server-side binary signature (magic number) verification for `%PDF` and `PK..` headers to reject executable payloads.
+- **Effort Estimate:** Medium (2 days)
+- **Risk:** Intermittent upload failures if endpoint permissions are misconfigured.
+- **Dependencies:** Private AWS / R2 bucket access credentials.
 - **Recommended Order:** 1
 
-### 2. Real E2E Tests Verification
-- **Description:** Install Playwright, build test scenarios for login, resume uploads, and tracker board changes, and integrate into the CI/CD pipeline.
-- **Effort Estimate:** High (3–4 days)
-- **Risk:** Flaky UI test executions in headless CI runners.
-- **Dependencies:** Stable local database seed configuration.
+### 2. P0-2: Google OAuth Activation
+- **Description:** Transition the disabled "Continue with Google" placeholder button into a functional login flow. Configure real OAuth consent scopes and client credentials in the Google Cloud Console.
+- **Effort Estimate:** Medium (1 day)
+- **Risk:** User login failure if redirect URIs clash in production.
+- **Dependencies:** Google Cloud Console developer account setup.
 - **Recommended Order:** 2
 
-### 3. PDF/DOCX Export Hardening
-- **Description:** Standardize page-break handling, CSS layout rendering, and special characters support when exporting tailored resumes.
-- **Effort Estimate:** Medium (2 days)
-- **Risk:** Layout overflows or truncated text on some PDF viewers.
-- **Dependencies:** None.
+### 3. P0-3: Playwright E2E Verification
+- **Description:** Install Playwright, build test scenarios covering user registration, login, ATS resume parsing, and tracker state changes, and integrate checks into the CI/CD pipeline.
+- **Effort Estimate:** High (3 days)
+- **Risk:** Headless browser execution delays or flaky test runners.
+- **Dependencies:** Stable local database seeds.
 - **Recommended Order:** 3
 
-### 4. Storage Hardening
-- **Description:** Implement strict file type validation (checking server-side magic numbers, not just MIME/extensions) and move upload storage from disk to S3/R2.
-- **Effort Estimate:** Medium (2 days)
-- **Risk:** Executable file upload vulnerabilities if sanitization fails.
-- **Dependencies:** AWS / Cloudflare S3 account credentials.
+### 4. Provider Key Activation (AI, Email)
+- **Description:** Replace sandbox mock clients with live API integrations for OpenAI/Gemini and SendGrid.
+- **Effort Estimate:** Medium (1-2 days)
+- **Dependencies:** Provider account configurations and billing alerts.
 - **Recommended Order:** 4
 
 ### 5. Auth/Session Audit
-- **Description:** Conduct security audit on JWT signature algorithm, cookie attributes (`Secure`, `HttpOnly`, `SameSite`), and implement token blocklisting for logouts.
+- **Description:** Conduct security audit on JWT signature algorithms and session cookies.
 - **Effort Estimate:** Medium (2 days)
-- **Risk:** Token hijacking if session storage is compromised on client.
-- **Dependencies:** None.
 - **Recommended Order:** 5
 
 ---

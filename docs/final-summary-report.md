@@ -69,10 +69,10 @@ All checker scripts and code compilers compile and pass:
 
 ## 🎯 6. Launch Decision & Next Actions
 
-- **Launch Decision:** **Open Beta Launch Active with Better Stack Monitoring** (v2.0.4).
+- **Launch Decision:** **Open Beta Active & P0 Upload Hardening Sprint Planning** (v2.0.5).
 - **Next Recommended Manual Actions:**
-  1. Follow the guidelines in the [Open Beta Launch Execution](open-beta-launch-execution.md) plan.
-  2. Better Stack uptime monitors are active. Monitor alert logs for any cold-start recover patterns.
-  3. Maintain validation checks as scheduled in the [Open Beta 24-Hour Monitoring Plan](open-beta-24h-monitoring-plan.md).
-  4. Log incoming tester submissions in the [Open Beta Feedback Intake Log](open-beta-feedback-intake-log.md).
-- **Next Recommended Engineering Roadmap:** Follow the [v2.1 Product Roadmap](v2-1-product-roadmap.md) to migrate storage to S3, finalize Google OAuth configurations, and run Playwright E2E tests.
+  1. Real Open Beta feedback (OBF-01) has been received; no major user-flow blockers were found.
+  2. Follow the [Open Beta Feedback Summary](open-beta-feedback-summary.md) for launch decisions.
+  3. Better Stack uptime monitors are active. Triage any alert patterns.
+  4. Prepare execution for the [P0 Upload Hardening Sprint Plan](p0-upload-hardening-sprint-plan.md).
+- **Next Recommended Engineering Roadmap:** Execute the storage migration to S3/R2 and magic number validation as outlined in the sprint plan, followed by Google OAuth and Playwright E2E.

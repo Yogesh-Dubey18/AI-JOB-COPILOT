@@ -10,8 +10,7 @@ This log is used to capture, triage, and track all real feedback, bug reports, a
 ## 📥 Feedback Log Table
 
 | Feedback ID | Date | User Type | Route/Page | Feedback Type | Severity | Summary | Steps to Reproduce | Expected Result | Actual Result | Status | Next Action |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| *None* | | | | | | *(No feedback received yet)* | | | | | |
+| OBF-01 | 2026-05-24 | Beta Tester (Job Seeker) | Global / Multiple | UX / Workflow / Security | P3 (Roadmap P0) | Open beta core flows are working; upload security hardening should be next | N/A (General walkthrough) | N/A | Successful walkthrough | Accepted | Plan upload hardening sprint |
 
 ---
 

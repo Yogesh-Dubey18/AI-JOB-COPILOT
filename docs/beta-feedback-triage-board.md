@@ -49,3 +49,16 @@ Open beta is now **unlocked** (all verification checks passed):
 - [x] Manual retest: /blog links have correct labels
 - [x] Manual retest: landing trust badge visible
 - [x] Manual retest: no console errors, no secret leaks
+
+---
+
+## Open Beta Backlog & Hardening Roadmap
+
+The following tasks are prioritized for the next sprint based on initial open beta tester feedback:
+
+| Ticket ID | Priority | Feature / Feature Area | Assigned | Status |
+|---|---|---|---|---|
+| **OB-P0-01** | 🔴 P0 | Upload hardening with S3/R2 and magic number validation | Security / Backend | 🔄 Triaged / Accepted |
+| **OB-P1-02** | 🟡 P1 | Google OAuth activation (configuring real credentials) | Auth / Frontend | ⏳ Triaged |
+| **OB-P1-03** | 🟡 P1 | Playwright E2E pipeline browser tests | Testing / CI-CD | ⏳ Triaged |
+| **OB-P2-04** | 🔵 P2 | Continue collecting real user feedback | Analytics / Product | 🔄 Active |

@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.5 — Open Beta Feedback & Hardening Plan (2026-05-24)
+
+- **Feedback intake**: Logged first anonymized tester feedback (`OBF-01`) showing successful walkthroughs across signup, logins, ATS checking, and tracking flows.
+- **Roadmap updates**: Updated priority matrix to transition upload security hardening (S3/R2 storage migration and magic number validation) as the next P0-1 task.
+- **Sprint plan**: Created `docs/p0-upload-hardening-sprint-plan.md` defining the architecture, binary signature checks, limitations, and S3 client endpoints.
+- **Triage and summary**: Updated feedback triage board and added `docs/open-beta-feedback-summary.md` detailing tester responses and next actions.
+
 ### v2.0.4 — Live Uptime Monitoring Active (2026-05-24)
 
 - **Uptime Monitoring**: Manually configured Better Stack monitors for Backend Health (`https://ai-job-copilot-backend-l6ut.onrender.com/health`) and Frontend (`https://ai-job-copilot-frontend.vercel.app`), both verifying HTTP status 200. Added cold-start timeout alerts context.
