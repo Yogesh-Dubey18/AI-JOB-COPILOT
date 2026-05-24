@@ -4,6 +4,14 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.3 — Open Beta Launch Execution (2026-05-24)
+
+- **Launch documentation**: Created `docs/open-beta-launch-execution.md` containing launch checklists, route HTTP response verification, disclaimers, and rollback procedures.
+- **Monitoring plan**: Created `docs/open-beta-24h-monitoring-plan.md` setting up health check intervals, route verification, severity SLAs, and 24h/72h/7d checklists.
+- **Feedback intake**: Created `docs/open-beta-feedback-intake-log.md` with template headers to log real user issues (no fake entries).
+- **Launch announcements**: Created `docs/open-beta-announcement-final.md` with ready-to-copy social media, WhatsApp, and email pitch templates with appropriate beta limitations and disclaimers.
+- **Live verification**: Executed automated live route smoke test, validating HTTP status code responses (200 for public pages, 307 redirect to login for gated pages).
+
 ### v2.0.2 — Beta UX Feedback Fix Sprint (2026-05-24)
 
 Real beta tester audit identified 11 UX/copy/navigation issues. All high and medium priority issues are fixed in this release.
