@@ -27,5 +27,5 @@ The **AI Job Copilot** codebase is **READY FOR PUBLIC BETA**.
 ## 🚀 Recommended Launch Strategy
 
 1. **Self-Service Deploy:** Deploy the frontend to Vercel and the backend to Render using the configuration steps outlined in the [manual-dashboard-provider-setup-checklist.md](manual-dashboard-provider-setup-checklist.md).
-2. **First Wave Testers:** Invite 5–10 beta testers to run through the guided job-search workflow using the outreach scripts in the [beta-tester-invite-kit.md](../docs/beta-tester-invite-kit.md).
+2. **First Wave Testers:** Invite 5–10 beta testers to run through the guided job-search workflow using the outreach scripts in the [beta-tester-invite-kit.md](beta-tester-invite-kit.md).
 3. **Warm-Up Ping:** Configure an external uptime monitor (such as UptimeRobot or Better Stack) to ping the backend `/health` endpoint every 5 minutes to avoid cold-start delays on Render free tier.
