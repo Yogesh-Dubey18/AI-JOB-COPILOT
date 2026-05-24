@@ -65,12 +65,13 @@ AI Job Copilot v2 beta is a realistic, honest SaaS-level job-search copilot. All
 |-------|--------|
 | `npm run check:git-safety` | ✅ Passed |
 | `npm run check:security` | ✅ Passed |
-| `npm run check:docs` | ✅ Passed (326+ files) |
+| `npm run check:docs` | ✅ Passed (334 markdown files) |
 | Frontend build (`next build`) | ✅ Clean — no errors |
-| Frontend tests (Vitest) | ✅ 33/33 passing |
+| Frontend tests (Vitest) | ✅ 58/58 passing |
 | Backend build (TypeScript) | ✅ Clean |
 | Backend tests | ✅ 25/25 passing |
-| Chrome extension build | ✅ Passes |
+| Chrome extension build & test | ✅ Passed (2/2 passing) |
+| E2E test execution check | ✅ Passed (skipped since Playwright not installed) |
 | No secrets in repo | ✅ Confirmed |
 | No `.env` in repo | ✅ Confirmed |
 
@@ -103,7 +104,17 @@ AI Job Copilot v2 beta is a realistic, honest SaaS-level job-search copilot. All
 | `2a22d19` | Add tracker CRM, answer vault, career vault, interview prep 2.0 |
 | `289332e` | Add company research and salary readiness page |
 | `8c8e656` | Upgrade skill gap roadmap page |
-| `+latest` | Portfolio nav, LinkedIn optimizer, privacy docs, readiness report |
+| `0efdb7e` | Portfolio nav, LinkedIn optimizer, privacy docs, readiness report |
+| `1b400ec` | Add SEO resource hub (Issue 23) |
+| `2f1b01e` | Add GitHub project analyzer (Issue 24) |
+| `1af3994` | Improve accessibility and performance readiness (Issue 25) |
+| `7d381c9` | Add notification preferences (Issue 26) |
+| `a5be217` | Add localization readiness (Issue 27) |
+| `f62bda7` | Add recruiter portal readiness (Issue 28) |
+| `4974716` | Add production monitoring readiness (Issue 29) |
+| `30eb34a` | Add real provider activation runbook (Issue 30) |
+| `a0143ea` | Fix backend auth service unavailable notice and static page build timeouts |
+| `52ca72f` | Verify Issues 0-30 completion status and add status matrix |
 
 ---
 
