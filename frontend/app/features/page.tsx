@@ -87,7 +87,7 @@ export default function FeaturesPage() {
                 <div className="mt-4">
                   <Link href={item.href}>
                     <Button variant="outline">
-                      Try it <ArrowRight className="h-3.5 w-3.5" />
+                      Try it — login required <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
                 </div>

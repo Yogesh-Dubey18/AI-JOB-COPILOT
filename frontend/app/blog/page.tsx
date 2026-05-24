@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Career Blog | AI Job Copilot",
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   }
 };
 
+// Fix 6: Added publishedDate, honest linkLabel, fixed salary-negotiation link destination
 const POSTS = [
   {
     slug: "ats-friendly-resume-guide-2025",
@@ -21,7 +22,11 @@ const POSTS = [
     category: "Resume",
     readTime: "7 min",
     tags: ["ats", "resume", "job search"],
-    link: "/resources"
+    link: "/resources",
+    linkLabel: "View resource",
+    requiresLogin: false,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "star-method-behavioral-interview",
@@ -30,7 +35,11 @@ const POSTS = [
     category: "Interview",
     readTime: "9 min",
     tags: ["interview", "star method", "hr round"],
-    link: "/resources"
+    link: "/resources",
+    linkLabel: "View resource",
+    requiresLogin: false,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "salary-negotiation-for-freshers",
@@ -39,7 +48,12 @@ const POSTS = [
     category: "Salary",
     readTime: "6 min",
     tags: ["salary", "negotiation", "fresher"],
-    link: "/company-research"
+    // Fix 6: Corrected link from /company-research to /resources
+    link: "/resources",
+    linkLabel: "View resource",
+    requiresLogin: false,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "full-stack-developer-roadmap-2025",
@@ -48,7 +62,11 @@ const POSTS = [
     category: "Roadmap",
     readTime: "12 min",
     tags: ["full stack", "roadmap", "mern", "web development"],
-    link: "/skill-gap"
+    link: "/skill-gap",
+    linkLabel: "Open Skill Gap tool — login required",
+    requiresLogin: true,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "job-scam-red-flags",
@@ -57,7 +75,11 @@ const POSTS = [
     category: "Safety",
     readTime: "5 min",
     tags: ["scam", "safety", "fake jobs"],
-    link: "/job-scam-detector"
+    link: "/job-scam-detector",
+    linkLabel: "Open Scam Detector — login required",
+    requiresLogin: true,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "linkedin-profile-optimization",
@@ -66,7 +88,11 @@ const POSTS = [
     category: "LinkedIn",
     readTime: "8 min",
     tags: ["linkedin", "networking", "personal branding"],
-    link: "/linkedin-optimizer"
+    link: "/linkedin-optimizer",
+    linkLabel: "Open LinkedIn Optimizer — login required",
+    requiresLogin: true,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "react-interview-questions-2025",
@@ -75,7 +101,11 @@ const POSTS = [
     category: "Interview",
     readTime: "15 min",
     tags: ["react", "interview", "frontend"],
-    link: "/answer-vault"
+    link: "/answer-vault",
+    linkLabel: "Open Answer Vault — login required",
+    requiresLogin: true,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "nodejs-interview-questions",
@@ -84,7 +114,11 @@ const POSTS = [
     category: "Interview",
     readTime: "14 min",
     tags: ["node.js", "backend", "interview"],
-    link: "/answer-vault"
+    link: "/answer-vault",
+    linkLabel: "Open Answer Vault — login required",
+    requiresLogin: true,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "fresher-job-application-guide",
@@ -93,7 +127,11 @@ const POSTS = [
     category: "Job Search",
     readTime: "10 min",
     tags: ["fresher", "job application", "strategy"],
-    link: "/guided-workflow"
+    link: "/guided-workflow",
+    linkLabel: "Open Guided Workflow — login required",
+    requiresLogin: true,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   },
   {
     slug: "ai-job-search-workflow",
@@ -102,7 +140,11 @@ const POSTS = [
     category: "Product",
     readTime: "5 min",
     tags: ["ai", "job search", "workflow", "copilot"],
-    link: "/guided-workflow"
+    link: "/guided-workflow",
+    linkLabel: "Open Guided Workflow — login required",
+    requiresLogin: true,
+    publishedDate: "Beta guide",
+    author: "AI Job Copilot Team"
   }
 ];
 
@@ -143,12 +185,14 @@ export default function BlogPage() {
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span className={`rounded px-2 py-0.5 text-xs font-semibold ${CATEGORY_COLORS[featured.category] || ""}`}>{featured.category}</span>
               <span className="text-xs text-muted-foreground">{featured.readTime} read</span>
+              <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">{featured.publishedDate}</span>
+              <span className="text-xs text-muted-foreground">· {featured.author}</span>
             </div>
             <h3 className="mb-3 text-xl font-bold md:text-2xl">{featured.title}</h3>
             <p className="mb-4 text-sm text-muted-foreground md:text-base">{featured.summary}</p>
             <div className="flex flex-wrap items-center gap-3">
               <Link href={featured.link} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
-                Read guide <ArrowRight className="h-4 w-4" />
+                {featured.linkLabel} <ArrowRight className="h-4 w-4" />
               </Link>
               <div className="flex flex-wrap gap-1">
                 {featured.tags.map((t) => (
@@ -168,13 +212,20 @@ export default function BlogPage() {
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className={`rounded px-2 py-0.5 text-xs font-semibold ${CATEGORY_COLORS[post.category] || ""}`}>{post.category}</span>
                   <span className="text-xs text-muted-foreground">{post.readTime} read</span>
+                  <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">{post.publishedDate}</span>
                 </div>
-                <h3 className="mb-2 text-sm font-bold leading-snug">{post.title}</h3>
+                <h3 className="mb-1 text-sm font-bold leading-snug">{post.title}</h3>
+                <p className="mb-1 text-xs text-muted-foreground">By {post.author}</p>
                 <p className="mb-3 flex-1 text-xs text-muted-foreground">{post.summary}</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href={post.link} className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
-                    Read guide <ArrowRight className="h-3 w-3" />
+                    {post.linkLabel} <ArrowRight className="h-3 w-3" />
                   </Link>
+                  {post.requiresLogin && (
+                    <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                      <Lock className="h-3 w-3" /> Free account required
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

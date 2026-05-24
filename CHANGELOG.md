@@ -4,6 +4,24 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.2 — Beta UX Feedback Fix Sprint (2026-05-24)
+
+Real beta tester audit identified 11 UX/copy/navigation issues. All high and medium priority issues are fixed in this release.
+
+- **Fix 1 — Login:** Added "Forgot password?" link below the password field, linking to `/auth/forgot-password`. The route already existed.
+- **Fix 2 — Register:** Confirmed Full Name field already present in register mode. No change required. Documented.
+- **Fix 3 — Landing:** Replaced 5 duplicate feature comparison card descriptions with unique, honest one-liners per feature (Resume AI, Job matching, Application tracker, Interview preparation, Portfolio generator).
+- **Fix 4 — Landing:** Expanded "How it works" cards with descriptions and icons (Upload, BarChart2, Wrench, CheckCircle2). Each step now explains its value.
+- **Fix 5 — Landing hero:** Renamed CTA from misleading "Upload resume and see match score" to honest "Start free — upload resume and see your ATS score" which matches the `/register` destination.
+- **Fix 6 — Blog:** Fixed salary negotiation guide link from `/company-research` (wrong) to `/resources`. Replaced all "Read guide" labels with honest context-aware labels: "View resource" for static content, "Open tool — login required" for auth-gated features. Added "Beta guide" date label and "AI Job Copilot Team" author attribution to all posts. Added lock icon badge for auth-gated links.
+- **Fix 7 — Pricing:** Renamed "Review plan" button to "Get notified when {plan} launches" (disabled; billing is inactive in beta). Added Billing FAQ note explaining no charge, no subscription, and no cancellation required during beta.
+- **Fix 8 — Feedback page:** Added page-specific metadata: `title: "Feedback | AI Job Copilot"` and beta-context description. Browser tab now shows the correct page name.
+- **Fix 9 — Features:** Updated all "Try it" button labels to "Try it — login required" to clearly signal auth-protected routes before the user clicks. Middleware protection unchanged.
+- **Fix 10 — Google OAuth:** Added a disabled, visually distinct "Continue with Google — coming soon" button to the auth form (login and register modes). Includes tooltip and sub-label explaining it is provider-ready and not yet active. No fake OAuth flow added.
+- **Fix 11 — Trust signals:** Added honest "Private beta · No auto-apply without your review · Review-first AI" badge to the hero section. No fake tester counts, no fake testimonials, no fake metrics.
+- **Tests:** Added assertions for Forgot password link, Full Name field, disabled Google OAuth button in login and register test cases.
+- **Docs:** Created `docs/real-beta-feedback-fix-plan.md` with fix status, deferred items, and manual retest checklist.
+
 ### v2.0.1-patch — Auth Cold-Start UX Fix (2026-05-24, commit 6505ed8)
 
 - **Fixed:** Login/register form showed confusing `"Demo-safe notice: the backend auth service is currently unavailable. Check NEXT_PUBLIC_API_URL and try again. No credentials were saved here."` during Render free-tier cold start.

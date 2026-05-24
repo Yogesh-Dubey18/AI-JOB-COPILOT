@@ -71,12 +71,24 @@ describe("frontend pages", () => {
     renderWithProviders(<LoginPage />);
     expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Create an account/i })).toHaveAttribute("href", "/register");
+    // Fix 1: Forgot password link must be visible in login mode
+    const forgotLink = screen.getByRole("link", { name: /Forgot password/i });
+    expect(forgotLink).toBeInTheDocument();
+    expect(forgotLink).toHaveAttribute("href", "/auth/forgot-password");
+    // Fix 10: Google OAuth placeholder button must be disabled (not clickable)
+    const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
+    expect(googleBtn).toBeDisabled();
   });
 
   it("register page renders", () => {
     renderWithProviders(<RegisterPage />);
     expect(screen.getByText(/Create your account/i)).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Login" }).every((link) => link.getAttribute("href") === "/login")).toBe(true);
+    // Fix 2: Full Name field must be present in register mode
+    expect(screen.getByPlaceholderText(/Asha Developer/i)).toBeInTheDocument();
+    // Fix 10: Google OAuth placeholder button must be disabled in register mode too
+    const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
+    expect(googleBtn).toBeDisabled();
   });
 
   it("top-level login and register routes render", () => {

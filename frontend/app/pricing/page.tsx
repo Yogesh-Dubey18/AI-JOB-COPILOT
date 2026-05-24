@@ -27,7 +27,7 @@ export default function PricingPage() {
                     <li key={feature} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />{feature}</li>
                   ))}
                 </ul>
-                <Button className="w-full" variant={plan.id === "pro" ? "primary" : "outline"}>Review plan</Button>
+                <Button className="w-full" variant={plan.id === "pro" ? "primary" : "outline"} disabled title="Billing is not active in beta. Get notified when paid plans launch.">Get notified when {plan.name} launches</Button>
               </CardContent>
             </Card>
           ))}
@@ -36,6 +36,7 @@ export default function PricingPage() {
           <p className="font-semibold text-foreground">Commercial readiness note</p>
           <p className="mt-2">No real billing is active in this demo. Configure Stripe keys, webhooks, tax settings, invoices, cancellation handling, refund policy, and support ownership before charging users.</p>
           <p className="mt-2">AI Job Copilot does not guarantee interviews, offers, salary, selection, or employment. Users must review all AI-generated content before using it.</p>
+          <p className="mt-2">Billing FAQ: There is no active subscription, no charge, and no cancellation required during beta. Paid plans will only activate after Stripe, refund policy, tax handling, and legal review are complete.</p>
         </div>
       </main>
     </div>

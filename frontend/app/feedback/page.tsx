@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { FeedbackForm } from "@/components/feedback/feedback-form";
 import { PublicNav } from "@/components/layout/public-nav";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Feedback | AI Job Copilot",
+  description: "Share bugs, UX issues, feature requests, or workflow friction with the AI Job Copilot beta team. Your feedback helps improve the platform for all job seekers."
+};
 
 export default function FeedbackPage() {
   return (
