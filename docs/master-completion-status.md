@@ -88,18 +88,18 @@ This document tracks the completion details, associated commits, routes, files, 
 | **Naukri Feed** | 🔄 Provider-ready | Provider-ready only | `NAUKRI_API_KEY` | Mock regional feed fallback |
 | **GitHub API** | 🔄 Provider-ready | Provider-ready only | `GITHUB_ACCESS_TOKEN` | Public repositories parser fallback |
 | **Sentry Monitoring** | 🔄 Provider-ready | Provider-ready only | `SENTRY_DSN` | Global error boundary logs fallback |
-| **Uptime Monitoring**| 🔄 Provider-ready | Provider-ready only | N/A | Mock uptime status rendering |
+| **Uptime Monitoring**| ✅ Live | Complete | N/A | Better Stack configured and active for frontend and backend |
 
 ---
 
 ## 5. Verification & Feedback Status
 - **Live Verification Status:** ✅ Complete (Health checks pass, production public routes tested).
-- **Beta Feedback Status:** ✅ Complete (Open Beta Launch active and monitored under v2.0.3).
+- **Beta Feedback Status:** ✅ Complete (Open Beta Launch active and monitored under v2.0.4).
 
 ---
 
 ## 6. Latest Commit Evidence
-- **Latest Commit Hash:** `0278a3f5a1196ce22a10688ea56f9a99fe424045` (Push status: Pushed to `origin/main`).
+- **Latest Commit Hash:** `94498071bc8813ecff8da7509d3b841a12bc2016` (Push status: Pushed to `origin/main`).
 
 ---
 

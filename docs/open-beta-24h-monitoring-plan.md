@@ -6,16 +6,18 @@ To ensure maximum stability during the open beta launch phase, the following mon
 
 ## 📅 Monitoring Schedules
 
-### 1. Backend Health Check
-* **Frequency:** Every 15 minutes (or 5 minutes if using an automated external uptime monitor).
+### 1. Backend Health Check (Configured)
+* **Monitor Provider:** Better Stack
 * **Endpoint:** `https://ai-job-copilot-backend-l6ut.onrender.com/health`
-* **Check Method:** Automated monitor (e.g. UptimeRobot, Cronitor, or manual check). Must verify that `"status": "ok"` and `"success": true` are returned.
-* **Cold-Start Buffer:** Render web services sleep after 15 minutes of inactivity. First load can take up to 60 seconds; monitor timeout should be set to at least 60 seconds to prevent false alarms.
+* **Method:** GET
+* **Expected Status:** 200 OK
+* **Render Cold Start Note:** The backend may show an initial timeout alert due to Render's free-tier cold start sleep state, but the monitor will automatically recover once the container fully boots (takes ~50-60 seconds).
 
-### 2. Frontend Route Check
-* **Frequency:** Daily at 09:00 UTC and 21:00 UTC.
-* **Target Routes:** `/`, `/login`, `/register`, `/features`, `/pricing`, `/blog`, `/feedback`, `/resources`, `/recruiters`.
-* **Check Method:** HTTP request verifying response code is `200 OK` and size is > 5KB.
+### 2. Frontend Route Check (Configured)
+* **Monitor Provider:** Better Stack
+* **Endpoint:** `https://ai-job-copilot-frontend.vercel.app`
+* **Method:** GET
+* **Expected Status:** 200 OK
 
 ### 3. Authentication & Auth flow Checks
 * **Frequency:** Every 12 hours.
@@ -45,7 +47,7 @@ Issues identified during monitoring will be classified as follows:
 ## 📋 Post-Launch Review Checklists
 
 ### 24-Hour Review Checklist (Day 1)
-- [ ] Check UptimeRobot status logs for backend/frontend (ensure no downtime spikes).
+- [ ] Check Better Stack status logs for backend/frontend (ensure no downtime spikes).
 - [ ] Pull Render backend server logs to verify no unhandled promise rejections or database connection dropouts.
 - [ ] Inspect feedback database collections for new entries from the `/feedback` form.
 - [ ] Check support channels for initial onboarding complaints or login issues.

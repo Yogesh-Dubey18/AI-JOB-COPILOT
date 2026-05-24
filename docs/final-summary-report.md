@@ -69,9 +69,10 @@ All checker scripts and code compilers compile and pass:
 
 ## 🎯 6. Launch Decision & Next Actions
 
-- **Launch Decision:** **Open Beta Launch Execution & 24-Hour Monitoring Active** (v2.0.3).
+- **Launch Decision:** **Open Beta Launch Active with Better Stack Monitoring** (v2.0.4).
 - **Next Recommended Manual Actions:**
   1. Follow the guidelines in the [Open Beta Launch Execution](open-beta-launch-execution.md) plan.
-  2. Maintain the daily/weekly validation scripts in the [Open Beta 24-Hour Monitoring Plan](open-beta-24h-monitoring-plan.md).
-  3. Log any incoming beta user submissions in the [Open Beta Feedback Intake Log](open-beta-feedback-intake-log.md).
+  2. Better Stack uptime monitors are active. Monitor alert logs for any cold-start recover patterns.
+  3. Maintain validation checks as scheduled in the [Open Beta 24-Hour Monitoring Plan](open-beta-24h-monitoring-plan.md).
+  4. Log incoming tester submissions in the [Open Beta Feedback Intake Log](open-beta-feedback-intake-log.md).
 - **Next Recommended Engineering Roadmap:** Follow the [v2.1 Product Roadmap](v2-1-product-roadmap.md) to migrate storage to S3, finalize Google OAuth configurations, and run Playwright E2E tests.

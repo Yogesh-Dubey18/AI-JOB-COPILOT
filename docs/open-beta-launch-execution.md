@@ -16,6 +16,7 @@
 - [x] Render backend service fully responsive (successfully booted from cold start).
 - [x] Vercel frontend fully deployed and operational.
 - [x] Direct live route smoke checking completed with expected HTTP status responses.
+- [x] Better Stack uptime monitoring manually configured and active (monitoring backend /health and frontend pages, both expecting HTTP 200).
 - [x] Open Beta Gate marked as unlocked on the feedback triage board.
 - [x] Support, feedback, monitoring, and announcement channels verified and ready.
 

@@ -4,6 +4,11 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.4 — Live Uptime Monitoring Active (2026-05-24)
+
+- **Uptime Monitoring**: Manually configured Better Stack monitors for Backend Health (`https://ai-job-copilot-backend-l6ut.onrender.com/health`) and Frontend (`https://ai-job-copilot-frontend.vercel.app`), both verifying HTTP status 200. Added cold-start timeout alerts context.
+- **Documentation**: Updated monitoring plan, launch execution, master status matrix, and summary report to verify that uptime monitoring is active and the open beta launch can proceed.
+
 ### v2.0.3 — Open Beta Launch Execution (2026-05-24)
 
 - **Launch documentation**: Created `docs/open-beta-launch-execution.md` containing launch checklists, route HTTP response verification, disclaimers, and rollback procedures.
