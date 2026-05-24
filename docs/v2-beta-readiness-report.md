@@ -114,7 +114,14 @@ AI Job Copilot v2 beta is a realistic, honest SaaS-level job-search copilot. All
 | `4974716` | Add production monitoring readiness (Issue 29) |
 | `30eb34a` | Add real provider activation runbook (Issue 30) |
 | `a0143ea` | Fix backend auth service unavailable notice and static page build timeouts |
-| `52ca72f` | Verify Issues 0-30 completion status and add status matrix |
+| `52ca72f` | Stage A: Verify Issues 0-30 completion status and add status matrix |
+| `52bdeb1` | Stage B: Record live production smoke test results |
+| `b4bb391` | Stage C: Update provider activation readiness and checklists |
+| `5192367` | Stage D: Add final production audit report, release readiness, checklist |
+| `50d127e` | Stage E: Prepare v2 beta release notes, draft, and release checklist |
+| `96679f2` | Stage F: Create beta launch, outreach, and feedback collection materials |
+| `d93dd88` | Stage G: Establish beta outreach and feedback triage action plan |
+| `abc0009` | Step 1: Verify project completion status and matrix |
 
 ---
 
