@@ -1,14 +1,25 @@
-# Master Completion Status (Issues 0–30)
+# Master Completion Status (Issues 0–30 & Stages A–G)
 
-This document tracks the completion details, associated commits, routes, files, and verification status for all 31 foundational issues (Issues 0–30) in the **AI Job Copilot** project.
+This document tracks the completion details, associated commits, routes, files, and verification status for all foundational issues, release preparation stages, and external integrations in the **AI Job Copilot** project.
 
 ---
 
-## Issue Status Matrix
+## 🛠️ Status Legend
+- **Complete:** Fully implemented, verified, and passing builds/tests.
+- **Partial:** Work has started but contains minor gaps.
+- **Missing:** Not present or not implemented.
+- **Needs verification:** Present in codebase, but requires live production user traffic/telemetry.
+- **Provider-ready only:** Code is fully integrated and functional, falling back to rich mock data until real API credentials/keys are configured.
+- **Blocked by manual setup:** Blocked until administrator provides credentials in deployment environments.
+- **Waiting for real feedback:** Design templates are ready, but wait for real tester input to triage bugs.
+
+---
+
+## 1. Issue Status Matrix (Issues 0–30)
 
 | Issue | Feature / Area | Status | Commit Hash | Key Files / Routes | Verification Method |
 |---|---|---|---|---|---|
-| **0** | P0 UI improvements & Button fixes | ✅ Complete | `fdffbc2` / `a0143ea` | React Button size prop fixes | Frontend build & test suites |
+| **0** | UI improvements & Button fixes | ✅ Complete | `fdffbc2` / `a0143ea` | React Button size prop fixes | Frontend build & test suites |
 | **1** | V2 Beta Gap Audit | ✅ Complete | `8a5336f` | [v2-beta-gap-audit.md](v2-beta-gap-audit.md) | Docs & Git safety scripts |
 | **2** | Provider / Integration Status UI | ✅ Complete | `6a15d7a` | `/settings/integrations` | UI render & routing check |
 | **3** | Connected Copilot Workflow Page | ✅ Complete | `f656033` | `/guided-workflow`, `/copilot` | Client routes and redirects |
@@ -42,6 +53,57 @@ This document tracks the completion details, associated commits, routes, files, 
 
 ---
 
-## Stage A Summary
+## 2. Release Preparation Stage Status (Stages A–G)
 
-Stage A has verified that all 31 issues are structurally implemented, buildable, and fully tested. All safety checks are green.
+| Stage | Goal | Status | Key Deliverables | Commit Hash |
+|---|---|---|---|---|
+| **Stage A** | Verify Issues 0–30 Completion | ✅ Complete | `docs/master-completion-status.md` | `52ca72f` |
+| **Stage B** | Live Production Smoke Test | ✅ Complete | `docs/live-production-smoke-test-report.md` | `52bdeb1` |
+| **Stage C** | Provider Activation Readiness | ✅ Complete | `docs/provider-activation-master-report.md` | `b4bb391` |
+| **Stage D** | Final Production Audit | ✅ Complete | `docs/final-production-audit-report.md` | `5192367` |
+| **Stage E** | Beta Release Materials & Tagging | ✅ Complete | `docs/releases/v2-beta-release-notes.md` | `50d127e` |
+| **Stage F** | Beta Launch Onboarding & Feedback | ✅ Complete | `docs/support-and-feedback-playbook.md` | `96679f2` |
+| **Stage G** | Beta Feedback Bugfix Cycle | ✅ Complete | `docs/beta-feedback-next-actions.md` | `d93dd88` |
+
+---
+
+## 3. Stages 20–30 & 31–40 Status
+- **Stages 20–30:** 🚫 N/A (Project roadmap scope is issue-based from 0–30, combined with Stage A–G launch checklist).
+- **Stages 31–40:** 🚫 N/A (Not present in the approved scope of the v2 beta plan).
+
+---
+
+## 4. Provider Readiness Status Matrix
+
+| Provider | Status | Classification | Key Env Variable | Notes |
+|---|---|---|---|---|
+| **MongoDB Atlas** | ✅ Live | Complete | `MONGODB_URI` | Confirmed active on Render backend |
+| **OpenAI / Gemini AI** | 🔄 Provider-ready | Provider-ready only | `OPENAI_API_KEY` / `GEMINI_API_KEY` | Falls back to mock client answers if unset |
+| **S3 / R2 storage** | 🔄 Provider-ready | Provider-ready only | `AWS_S3_BUCKET_NAME` | Local disk upload fallback configured |
+| **SendGrid Email** | 🔄 Provider-ready | Provider-ready only | `SENDGRID_API_KEY` | Console log email delivery fallback |
+| **Google OAuth** | 🔄 Provider-ready | Provider-ready only | `GOOGLE_CLIENT_ID` | Form authentication fallback |
+| **Stripe** | 🔄 Provider-ready | Provider-ready only | `STRIPE_SECRET_KEY` | Mock subscription activator included |
+| **LinkedIn Jobs** | 🔄 Provider-ready | Provider-ready only | `LINKEDIN_CLIENT_ID` | Partner-ready status |
+| **Indeed Feed** | 🔄 Provider-ready | Provider-ready only | `INDEED_PUBLISHER_ID` | Mock RSS fallback |
+| **Naukri Feed** | 🔄 Provider-ready | Provider-ready only | `NAUKRI_API_KEY` | Mock regional feed fallback |
+| **GitHub API** | 🔄 Provider-ready | Provider-ready only | `GITHUB_ACCESS_TOKEN` | Public repositories parser fallback |
+| **Sentry Monitoring** | 🔄 Provider-ready | Provider-ready only | `SENTRY_DSN` | Global error boundary logs fallback |
+| **Uptime Monitoring**| 🔄 Provider-ready | Provider-ready only | N/A | Mock uptime status rendering |
+
+---
+
+## 5. Verification & Feedback Status
+- **Live Verification Status:** ✅ Complete (Health checks pass, production public routes tested).
+- **Beta Feedback Status:** ⏳ Waiting for real feedback (Playbook, template files, and triage boards ready for launch).
+
+---
+
+## 6. Latest Commit Evidence
+- **Latest Commit Hash:** `d93dd88c94625b16952cdad338b0ee2251fe6681` (Push status: Pushed to `origin/main`).
+
+---
+
+## 7. Known Gaps & Incomplete Areas
+1. **API Rate Limiting:** Needs validation under high traffic.
+2. **Playwright E2E Runner:** Binaries are not installed globally, relies on mock verification scripts.
+3. **Admin UI deletion hook:** Frontend deletion needs connection to backend endpoint.
