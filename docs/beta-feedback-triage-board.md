@@ -38,14 +38,14 @@
 
 ## Open Beta Gate
 
-Open beta remains gated until:
+Open beta is now **unlocked** (all verification checks passed):
 
-- [ ] Deploy v2.0.2 verified live on Vercel
-- [ ] Manual retest: /login has Forgot password link
-- [ ] Manual retest: /register has Full Name field visible
-- [ ] Manual retest: /features shows "login required"
-- [ ] Manual retest: /pricing shows "Get notified" CTA
-- [ ] Manual retest: /feedback browser tab shows "Feedback | AI Job Copilot"
-- [ ] Manual retest: /blog links have correct labels
-- [ ] Manual retest: landing trust badge visible
-- [ ] Manual retest: no console errors, no secret leaks
+- [x] Deploy v2.0.2 verified live on Vercel
+- [x] Manual retest: /login has Forgot password link
+- [x] Manual retest: /register has Full Name field visible
+- [x] Manual retest: /features shows "login required"
+- [x] Manual retest: /pricing shows "Get notified" CTA
+- [x] Manual retest: /feedback browser tab shows "Feedback | AI Job Copilot"
+- [x] Manual retest: /blog links have correct labels
+- [x] Manual retest: landing trust badge visible
+- [x] Manual retest: no console errors, no secret leaks
