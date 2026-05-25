@@ -435,4 +435,33 @@ describe("AI Job Copilot API", () => {
     const list3 = await agent.get("/api/company-research").expect(200);
     expect(list3.body.data).toEqual([]);
   });
+
+  it("saves, lists, and deletes answer vault records", async () => {
+    const agent = await authAgent();
+    // 1. Initially empty
+    const list1 = await agent.get("/api/answer-vault").expect(200);
+    expect(list1.body.data).toEqual([]);
+
+    // 2. Save an answer vault record
+    const saveRes = await agent.post("/api/answer-vault").send({
+      question: "Tell me about a time you resolved a conflict on your team.",
+      answer: "I used the STAR method to describe how I sat down with the other engineer, listened to their perspective, and proposed a compromised architecture that satisfied both requirements.",
+      category: "Behavioral",
+      tags: ["conflict", "teamwork"]
+    }).expect(201);
+    expect(saveRes.body.data.question).toBe("Tell me about a time you resolved a conflict on your team.");
+    expect(saveRes.body.data.tags).toContain("conflict");
+
+    // 3. List contains the saved record
+    const list2 = await agent.get("/api/answer-vault").expect(200);
+    expect(list2.body.data.length).toBe(1);
+    expect(list2.body.data[0].question).toBe("Tell me about a time you resolved a conflict on your team.");
+
+    // 4. Delete the record
+    await agent.delete(`/api/answer-vault/${saveRes.body.data._id}`).expect(200);
+
+    // 5. Empty again
+    const list3 = await agent.get("/api/answer-vault").expect(200);
+    expect(list3.body.data).toEqual([]);
+  });
 });

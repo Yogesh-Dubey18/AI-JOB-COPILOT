@@ -29,7 +29,8 @@ export type CollectionName =
   | "usageEvents"
   | "auditLogs"
   | "feedback"
-  | "companyResearch";
+  | "companyResearch"
+  | "answerVault";
 
 export type StoredRecord = Record<string, any> & {
   _id: string;
@@ -66,7 +67,8 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   usageEvents: [],
   auditLogs: [],
   feedback: [],
-  companyResearch: []
+  companyResearch: [],
+  answerVault: []
 };
 
 export function makeId() {

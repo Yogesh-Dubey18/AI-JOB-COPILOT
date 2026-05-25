@@ -25,6 +25,7 @@ import portfolioRoutes from "./routes/portfolio.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import resumeRoutes from "./routes/resume.routes.js";
 import companyResearchRoutes from "./routes/company-research.routes.js";
+import answerVaultRoutes from "./routes/answer-vault.routes.js";
 import { getProviderStatus } from "./services/provider-status.service.js";
 import { getSystemHealth } from "./services/system-health.service.js";
 import { asyncHandler } from "./utils/asyncHandler.js";
@@ -85,6 +86,7 @@ app.use("/api/privacy", privacyRoutes);
 app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/company-research", companyResearchRoutes);
+app.use("/api/answer-vault", answerVaultRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

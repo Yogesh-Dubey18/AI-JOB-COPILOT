@@ -4,6 +4,14 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.14 — Connected Answer Vault & Predefined Templates (2026-05-25)
+
+- **Answer Vault Schema & Model**: Created the Mongoose schema for `AnswerVault` with indexing on `userId` and `category`.
+- **Validation, Service & Routes**: Implemented Zod validation schema, service handlers, and routes `/api/answer-vault` (GET, POST, DELETE) registered in the Express router with access control.
+- **Frontend Tabbed Layout**: Built a tabbed dashboard on the `/answer-vault` page enabling users to toggle between custom vault answers and quick templates.
+- **Predefined Behavioral & Negotiation Templates**: Added interactive templates with placeholder values (e.g. `[Target Role]`, `[Company Name]`, `[Years]`, `[Salary Min]`, `[Salary Max]`) that can be edited in real-time and copied or saved directly to the database vault.
+- **Verification**: Verified endpoint functionality in integration tests (`api.test.ts`) and mock interactions in page unit tests (`pages.test.tsx`). All 97 tests passed.
+
 ### v2.0.13 — Company Research Fix (2026-05-25)
 
 - **Company Research Schema & Model**: Created the Mongoose schema for `CompanyResearch` with indexing on `userId`.

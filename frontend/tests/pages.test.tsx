@@ -40,6 +40,7 @@ import GitHubAnalyzerPage from "@/app/github-analyzer/page";
 import NotificationPreferencesPage from "@/app/settings/notifications/page";
 import RecruiterPage from "@/app/recruiters/page";
 import CompanyResearchPage from "@/app/company-research/page";
+import AnswerVaultPage from "@/app/answer-vault/page";
 import { t, getStoredLanguage, setStoredLanguage, DEFAULT_LANGUAGE } from "@/lib/i18n";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
@@ -394,6 +395,34 @@ describe("frontend pages", () => {
     expect(screen.getByRole("heading", { name: /Company research & salary readiness/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Salary answer templates/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Save company research/i })).toBeInTheDocument();
+  });
+
+  it("answer vault page renders tabs and handles template customization", async () => {
+    const user = userEvent.setup();
+    mockApiResponse([]);
+    renderWithProviders(<AnswerVaultPage />);
+
+    // 1. Check title and main heading
+    expect(screen.getByRole("heading", { name: /Answer vault & templates/i })).toBeInTheDocument();
+
+    // 2. Check form is visible on active "My Saved Answers" tab
+    expect(screen.getByRole("heading", { name: /Add custom answer/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save answer/i })).toBeInTheDocument();
+
+    // 3. Switch to Negotiation & Behavioral Templates tab
+    const templatesTabBtn = screen.getByRole("button", { name: /Negotiation & Behavioral Templates/i });
+    expect(templatesTabBtn).toBeInTheDocument();
+    await user.click(templatesTabBtn);
+
+    // 4. Ensure placeholders customization card is rendered
+    expect(screen.getByText(/Customize Placeholders/i)).toBeInTheDocument();
+    
+    // 5. Ensure predefined templates are displayed
+    expect(screen.getByRole("heading", { name: /Behavioral Templates/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Salary Templates/i })).toBeInTheDocument();
+
+    // 6. Ensure buttons to copy and save predefined templates are present
+    expect(screen.getByRole("button", { name: /Copy Tell me about yourself \(STAR format\)/i })).toBeInTheDocument();
   });
 
   it("shared UX states expose accessible status and alert roles", () => {
