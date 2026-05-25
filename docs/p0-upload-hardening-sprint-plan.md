@@ -58,18 +58,20 @@ AWS_S3_ENDPOINT=https://your-r2-account-id.r2.cloudflarestorage.com
 
 ---
 
-## 🚀 Migration & Verification Plan
+## 🚀 Migration & Verification Plan [COMPLETED]
 
-### Phase 1: Local Development Mock S3
-1. Set up a local S3 simulator (such as `minio`) in testing environment or mock S3 client calls that verify streaming actions without needing real AWS credentials in local tests.
-2. Implement binary magic number checks on the upload router route.
+### Phase 1: Local Development Magic Numbers & PDF Parser [COMPLETED]
+- Integrated strict binary magic-number checks in `backend/src/services/file-validation.service.ts` for PDF (`%PDF`) and DOCX (`PK\x03\x04`), and binary content sanitization for TXT.
+- Upgraded PDF parser to use the native `pdf-parse` (v2.x ESM) library for high-accuracy local text parsing.
+- Implemented automatic unlinking of invalid temporary uploads from local disk.
 
-### Phase 2: Test Suite Additions
-- Write unit tests in `backend/tests/upload.test.ts` to assert:
-  - File size > 5MB is rejected with `413 Payload Too Large`.
-  - File with `.pdf` extension but containing plain text instead of `%PDF` hex signature is rejected with `422 Unprocessable Entity`.
-  - Valid PDF / DOCX files return `201 Created` and successfully populate S3 client mock dispatch logs.
+### Phase 2: Test Suite Additions [COMPLETED]
+- Wrote integration tests in `backend/tests/api.test.ts` verifying:
+  - Rejection of fake PDF resumes (bad magic numbers) with HTTP 400.
+  - Rejection of executable files (starting with MZ/ELF) with HTTP 400.
+  - Rejection of oversized (> 5MB) resume files with HTTP 400 (mapped from Multer error).
 
 ### Phase 3: Rollback Plan
 * **Trigger:** If S3 connection timeouts or access denials break the resume upload flow for > 15 minutes.
 * **Protocol:** Revert storage client configuration to the local disk writer fallback branch. Keep the binary magic number validation checks active as they do not depend on S3 connectivity.
+

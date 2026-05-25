@@ -1,10 +1,32 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { anonymizeParsedResume, extractResumeTextDetailed, parseResumeText } from "./resume-parser.service.js";
+import { validateResumeBuffer } from "./file-validation.service.js";
 
 export async function uploadResume(userId: string, file: Express.Multer.File, isBaseResume = true, options: { anonymizePreview?: boolean } = {}) {
   if (!file) throw new ApiError(400, "Resume file is required");
+
+  // Read file buffer for validation
+  let buffer: Buffer;
+  try {
+    buffer = await fs.readFile(file.path);
+  } catch (err) {
+    throw new ApiError(500, "Failed to read uploaded file");
+  }
+
+  // Validate the file buffer (magic numbers, sizes, executables)
+  try {
+    validateResumeBuffer(buffer, file.originalname, file.mimetype);
+  } catch (err) {
+    // Delete file from disk if validation fails
+    try {
+      await fs.unlink(file.path);
+    } catch (_) {}
+    throw err;
+  }
+
   const parsed = await extractResumeTextDetailed(file.path, file.mimetype);
   const parsedData = parseResumeText(parsed.text);
   const anonymizedPreview = options.anonymizePreview ? anonymizeParsedResume(parsedData, parsed.text) : null;

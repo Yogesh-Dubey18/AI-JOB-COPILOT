@@ -182,13 +182,15 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Career operating system/i)).toBeInTheDocument();
   });
 
-  it("resume upload page renders", () => {
+  it("resume upload page renders with upload guide", () => {
     renderWithProviders(<ResumeUploadPage />);
-    expect(screen.getByText(/Resume upload/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Resume upload", level: 1 })).toBeInTheDocument();
     expect(screen.getByText(/Generate anonymized preview/i)).toBeInTheDocument();
     expect(screen.getByText(/LinkedIn import/i)).toBeInTheDocument();
+    // Phase 4: Resume upload guide
+    expect(screen.getByTestId("upload-guide")).toBeInTheDocument();
+    expect(screen.getByText(/Only PDF and DOCX files/i)).toBeInTheDocument();
   });
-
   it("resume analyzer page renders", () => {
     renderWithProviders(<ResumeAnalyzerPage />);
     expect(screen.getByText(/AI resume ATS analyzer/i)).toBeInTheDocument();

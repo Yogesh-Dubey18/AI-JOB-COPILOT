@@ -84,6 +84,21 @@ export default function ResumeUploadPage() {
             </div>
           </CardContent>
         </Card>
+        <Card className="mt-4" data-testid="upload-guide">
+          <CardHeader>
+            <CardTitle>Resume Upload Guide</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>To ensure high-accuracy parsing and best ATS matching results, please follow these guidelines:</p>
+            <ul className="list-disc pl-5 space-y-1.5 leading-relaxed">
+              <li><strong>Supported Formats:</strong> Only PDF and DOCX files are officially supported.</li>
+              <li><strong>File Size Limit:</strong> Maximum allowed file size is 5MB.</li>
+              <li><strong>Use Text-Based PDFs:</strong> Do not upload image-only or scanned PDFs. The parser extracts text content directly.</li>
+              <li><strong>Recommended Sections:</strong> Ensure your resume explicitly includes: <em>Summary, Skills, Projects, Experience, Education,</em> and <em>Links</em> (GitHub/LinkedIn).</li>
+              <li><strong>Anonymize/Redact Mode:</strong> Enabling this mode redacts personally identifiable information (name, email, phone, links) in the preview. It protects your privacy when sharing resumes with external AI APIs.</li>
+            </ul>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader><CardTitle>Parsed preview</CardTitle></CardHeader>
           <CardContent className="space-y-3">

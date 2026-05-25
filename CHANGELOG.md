@@ -4,6 +4,14 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.9 — Resume Upload Hardening and Guide (2026-05-25)
+
+- **Magic Number File Hardening**: Implemented strict hex header checking (`%PDF` for PDFs and `PK\x03\x04` for DOCXs) to prevent arbitrary code execution via extension spoofing.
+- **Malware and Executable Rejection**: Automatically block common executable binary signatures (MZ/ELF) and unlink temporary upload files from local disk on validation failure.
+- **PDF Parser Upgrade**: Integrated typescript ESM library `pdf-parse` (v2.x) to extract high-accuracy text on backend, with safety fallbacks on parsing failures.
+- **Upload Guide UI**: Rendered a guide box on the upload page detailing format rules, 5MB limits, text-based PDF guidelines, recommended sections, and anonymization options.
+- **Verification**: Added backend integration test cases for fake PDFs, executables, and size limits, and frontend test cases for guide UI.
+
 ### v2.0.8 — Password Guidance and Validation Alignment (2026-05-25)
 
 - **Backend Password Validation Synchronized**: Configured frontend `validators.ts` to require password complexity constraints matching the backend (minimum 8, maximum 128 characters, at least one uppercase letter, one lowercase letter, and one number).

@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { PDFParse } from "pdf-parse";
 import { technicalKeywordBank } from "./ats-scoring.service.js";
 
 const knownSkills = technicalKeywordBank;
@@ -109,11 +110,34 @@ export function anonymizeResumeRecord<T extends Record<string, any>>(resume: T) 
   };
 }
 
+async function parsePdfText(filePath: string): Promise<ParserResult> {
+  try {
+    const buffer = await fs.readFile(filePath);
+    const uint8 = new Uint8Array(buffer);
+    const parser = new PDFParse(uint8);
+    const result = await parser.getText();
+    const text = cleanText(result.text);
+    return {
+      text,
+      parser: "plain-text",
+      quality: "high",
+      warnings: [],
+      wordCount: countWords(text)
+    };
+  } catch (err) {
+    return parseBinaryFallback(
+      filePath,
+      "pdf-fallback",
+      "PDF parser failed. Safe local fallback extraction was used."
+    );
+  }
+}
+
 export async function extractResumeTextDetailed(filePath: string, fileType: string): Promise<ParserResult> {
   const detectedType = detectFileType(filePath, fileType);
   if (detectedType === "text/plain") return parsePlainText(filePath);
   if (detectedType === "application/pdf") {
-    return parseBinaryFallback(filePath, "pdf-fallback", "PDF parsing is using safe local fallback extraction. Add a dedicated PDF parser package for higher production accuracy.");
+    return parsePdfText(filePath);
   }
   if (detectedType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
     return parseBinaryFallback(filePath, "docx-fallback", "DOCX parsing is using safe local fallback extraction. Add a dedicated DOCX parser package for higher production accuracy.");

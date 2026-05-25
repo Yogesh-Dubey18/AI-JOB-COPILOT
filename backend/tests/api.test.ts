@@ -86,6 +86,29 @@ describe("AI Job Copilot API", () => {
     expect(analysis.body.data.atsBreakdown.total).toBeGreaterThan(0);
   });
 
+  it("rejects fake PDF resume uploads with bad magic numbers", async () => {
+    const agent = await authAgent();
+    await agent.post("/api/resumes/upload")
+      .attach("resume", Buffer.from("Not a real PDF file!"), "fake.pdf")
+      .expect(400);
+  });
+
+  it("rejects executable file structures in uploads", async () => {
+    const agent = await authAgent();
+    const exeBuffer = Buffer.concat([Buffer.from("MZ"), Buffer.from("blah blah")]);
+    await agent.post("/api/resumes/upload")
+      .attach("resume", exeBuffer, "resume.pdf")
+      .expect(400);
+  });
+
+  it("rejects oversized resume uploads", async () => {
+    const agent = await authAgent();
+    const largeBuffer = Buffer.alloc(5.1 * 1024 * 1024);
+    await agent.post("/api/resumes/upload")
+      .attach("resume", largeBuffer, "large.txt")
+      .expect(400);
+  });
+
   it("lists jobs and matches fallback", async () => {
     const agent = await authAgent();
     const upload = await agent.post("/api/resumes/upload").attach("resume", Buffer.from("React Node.js MongoDB"), "resume.txt");
