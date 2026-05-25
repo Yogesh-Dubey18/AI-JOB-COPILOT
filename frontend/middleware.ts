@@ -1,6 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const protectedRoutes = ["/dashboard", "/onboarding", "/profile", "/resume", "/jobs", "/daily-job-feed", "/apply-assistant", "/applications", "/interviews", "/skill-gap", "/learning-roadmap", "/portfolio-generator", "/job-scam-detector", "/career-mentor-chat", "/analytics", "/settings", "/admin"];
+const protectedRoutes = [
+  "/dashboard",
+  "/onboarding",
+  "/profile",
+  "/resume",
+  "/jobs",
+  "/daily-job-feed",
+  "/apply-assistant",
+  "/application-kit",
+  "/applications",
+  "/interviews",
+  "/skill-gap",
+  "/learning-roadmap",
+  "/portfolio-generator",
+  "/job-scam-detector",
+  "/career-mentor-chat",
+  "/analytics",
+  "/settings",
+  "/admin",
+  "/company-research",
+  "/answer-vault",
+  "/career-vault",
+  "/guided-workflow",
+  "/pdf-export",
+  "/contacts",
+  "/linkedin-optimizer",
+  "/github-analyzer",
+  "/notifications"
+];
 
 export function middleware(req: NextRequest) {
   const isProtected = protectedRoutes.some((route) => req.nextUrl.pathname.startsWith(route));

@@ -37,6 +37,26 @@ Recommended next implementation prompt is stored in [Connected Workflow Next Act
 
 ---
 
+## 🟢 Connected Cockpit Workflows Stabilization Sprint (2026-05-25)
+
+A complete stabilization sprint was executed to implement security protections, complete missing database schemas and routes, and connect all disjointed cockpit flows.
+
+Key changes and features verified:
+- **Auth Persistence Interceptor**: Cookie durations extended to 7 days and client-side 401 refresh token interceptor implemented in `api.ts`.
+- **Google OAuth Integration**: Configuration checking endpoints added, and Google login form buttons toggled live/coming-soon automatically.
+- **Password Guidance & Validation**: Front/backend validations aligned, criteria boxes and helper messages added.
+- **Magic Number Validation**: Strict hex signature checking (`%PDF` and `PK`) for uploads to prevent executable/malware spoofing.
+- **Connected Resume & PDF Exports**: Suggestion checklist added, tailored previews linked to search context and Next.js suspense query params.
+- **Company Research Fix**: Models, routes, and services for `/api/company-research` fully mapped and tested.
+- **Connected Answer & Career Vaults**: CRUD operations and templating placeholders integrated on `/answer-vault` and `/career-vault`.
+- **Dynamic Guided Workflow**: Collection counts queried in real-time to compute user progress checkboxes.
+- **Connected Jobs Feed Matching**: Resolved matching overlap scores, fit/missing skills list, Track App and Save Job actions.
+- **Portfolio PDF Generation**: Mapped Generate PDF and Download PDF action flows with local storage warnings.
+- **Private Route Protection**: Expanded Next.js middleware protection matcher to cover all 9 missing authenticated app paths.
+- **Verification**: Fully verified local typescript compiles, frontend Next.js builds, backend tests (32/32 green), and frontend tests (67/67 green) successfully.
+
+---
+
 ## 🟢 1. Completed Steps
 - **Step 1:** Verified completeness and generated the [Master Completion Status Matrix](master-completion-status.md).
 - **Step 2:** Verified live deployments and updated the [Live Smoke Test Report](live-production-smoke-test-report.md) & [Runbook](live-smoke-test-runbook.md).
