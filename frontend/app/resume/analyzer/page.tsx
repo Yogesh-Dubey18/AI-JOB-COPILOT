@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
 import { Button } from "@/components/ui/button";
@@ -16,12 +17,41 @@ export default function ResumeAnalyzerPage() {
   const [targetRole, setTargetRole] = useState("Full Stack Developer");
   const [jobDescription, setJobDescription] = useState("");
   const [anonymizeForAnalysis, setAnonymizeForAnalysis] = useState(false);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
+
   const resumes = useQuery({ queryKey: ["resumes"], queryFn: () => api.get<any[]>("/resumes"), retry: false });
   const analyze = useMutation({ mutationFn: () => api.post<any>("/resumes/" + resumeId + "/analyze", { targetRole, jobDescription, anonymizeForAnalysis }) });
   const result = analyze.data;
   const breakdown = result?.atsBreakdown || {};
   const keywordCoverage = result?.keywordCoverage;
   const jobCoverage = result?.jobDescriptionCoverage;
+
+  const improve = useMutation({
+    mutationFn: () => api.post<any>("/resumes/" + resumeId + "/improve", { targetRole })
+  });
+
+  useEffect(() => {
+    if (result?.improvementSuggestions) {
+      setSelectedSuggestions(result.improvementSuggestions);
+    } else {
+      setSelectedSuggestions([]);
+    }
+  }, [result]);
+
+  const toggleSuggestion = (suggestion: string) => {
+    setSelectedSuggestions((prev) =>
+      prev.includes(suggestion)
+        ? prev.filter((s) => s !== suggestion)
+        : [...prev, suggestion]
+    );
+  };
+
+  const selectAllSuggestions = () => {
+    if (result?.improvementSuggestions) {
+      setSelectedSuggestions(result.improvementSuggestions);
+    }
+  };
+
   return (
     <AppShell>
       <PageHeading title="AI resume ATS analyzer" description="Select a resume and target role to get ATS score, section scores, strengths, weaknesses, missing keywords, recruiter view, and improvement suggestions." />
@@ -56,6 +86,11 @@ export default function ResumeAnalyzerPage() {
           <CardContent className="space-y-4">
             <div className="text-4xl font-black">{result?.atsScore || 0}</div>
             <Progress value={result?.atsScore || 0} />
+
+            <div className="rounded-md border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-900 mt-2 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200" data-testid="ats-disclaimer">
+              <p>⚠️ <strong>Disclaimer:</strong> The ATS score is a heuristic estimate to help you find gaps; it is not a guarantee of employer systems acceptance. AI-generated suggestions and tailored drafts must be manually reviewed and verified by you before applying.</p>
+            </div>
+
             {keywordCoverage ? (
               <div className="rounded-md border p-3">
                 <p className="text-sm font-semibold">Role keyword coverage</p>
@@ -100,6 +135,101 @@ export default function ResumeAnalyzerPage() {
             <div className="grid gap-3 md:grid-cols-2">
               {["strengths", "weaknesses", "missingKeywords", "improvementSuggestions"].map((key) => <div key={key} className="rounded-md border p-3"><p className="font-semibold">{key}</p><ul className="mt-2 list-inside list-disc text-sm text-muted-foreground">{(result?.[key] || []).map((item: string) => <li key={item}>{item}</li>)}</ul></div>)}
             </div>
+
+            {result ? (
+              <div className="rounded-md border p-4 space-y-4" data-testid="suggestions-checklist">
+                <p className="font-bold text-base">Gap Improvement Action Center</p>
+                <p className="text-sm text-muted-foreground">Select the ATS recommendations you want to apply to your tailored resume draft:</p>
+                <div className="space-y-2">
+                  {(result.improvementSuggestions || []).map((suggestion: string, idx: number) => {
+                    const isSelected = selectedSuggestions.includes(suggestion);
+                    return (
+                      <label key={idx} className="flex items-start gap-3 rounded border p-2.5 text-sm hover:bg-muted/50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={isSelected}
+                          onChange={() => toggleSuggestion(suggestion)}
+                        />
+                        <span>{suggestion}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={selectAllSuggestions}
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    type="button"
+                    data-testid="apply-suggestions-button"
+                    disabled={improve.isPending || selectedSuggestions.length === 0}
+                    onClick={() => improve.mutate()}
+                  >
+                    {improve.isPending ? "Applying..." : "Apply Checked Suggestions"}
+                  </Button>
+                </div>
+                {improve.isError ? (
+                  <p className="text-sm text-danger" role="alert">
+                    {improve.error instanceof Error ? improve.error.message : "Failed to apply improvements."}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {improve.data ? (
+              <div className="rounded-md border border-emerald-300 bg-emerald-50/10 p-4 space-y-4" data-testid="draft-preview">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <p className="font-bold text-base text-emerald-800 dark:text-emerald-300">Tailored Resume Draft Preview</p>
+                  <span className="rounded bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                    Draft Score: {improve.data.atsScore}%
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Updated Summary</p>
+                  <p className="text-sm rounded border bg-muted/40 p-3 leading-relaxed">{improve.data.content?.summary}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Updated Skills</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(improve.data.content?.skills || []).map((skill: string) => (
+                      <span key={skill} className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{skill}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Improved Projects / Bullets</p>
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                    {(improve.data.content?.projects || []).map((project: string, i: number) => (
+                      <li key={i}>{project}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5 pt-3 border-t">
+                  <Link href={`/pdf-export?versionId=${improve.data._id}`}>
+                    <Button type="button">
+                      Generate Updated Resume PDF
+                    </Button>
+                  </Link>
+                  <Link href={`/jobs?fromResume=${resumeId}&role=${encodeURIComponent(targetRole)}`}>
+                    <Button variant="outline" data-testid="discover-jobs-button">
+                      Discover Matching Jobs
+                    </Button>
+                  </Link>
+                  <Link href="/guided-workflow">
+                    <Button variant="ghost">
+                      Continue to Application Workflow
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+
             {(result?.parserWarnings || []).length ? <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"><AlertTriangle className="h-4 w-4 shrink-0" /><p>{result.parserWarnings.join(" ")}</p></div> : null}
             <p className="text-sm text-muted-foreground">{result?.recruiterView || "Run an analysis to see recruiter view."}</p>
           </CardContent>

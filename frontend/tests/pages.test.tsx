@@ -198,6 +198,54 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Anonymize personal details/i)).toBeInTheDocument();
   });
 
+  it("resume analyzer page renders disclaimers and suggestions after analysis", async () => {
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (String(url).includes("/resumes") && !String(url).includes("/analyze") && !String(url).includes("/improve")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => [{ _id: "resume-1", fileName: "resume.pdf" }]
+        });
+      }
+      if (String(url).includes("/analyze")) {
+        return Promise.resolve({
+          ok: true,
+          status: 201,
+          headers: new Headers(),
+          json: async () => ({
+            atsScore: 85,
+            privacyMode: "standard",
+            atsBreakdown: { contactInformation: 10, skillsMatch: 20, experienceProjectQuality: 20, keywords: 15, formatting: 10, actionVerbs: 10, total: 85 },
+            improvementSuggestions: ["Add Docker keywords", "Improve project metrics"],
+            recruiterView: "Recruiter feedback here."
+          })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({})
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    renderWithProviders(<ResumeAnalyzerPage />);
+
+    await waitFor(() => expect(screen.getByText("resume.pdf")).toBeInTheDocument());
+    await user.selectOptions(screen.getByRole("combobox"), "resume-1");
+    await user.click(screen.getByRole("button", { name: /Analyze resume/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("ats-disclaimer")).toBeInTheDocument();
+      expect(screen.getByTestId("suggestions-checklist")).toBeInTheDocument();
+      expect(screen.getAllByText("Add Docker keywords")[0]).toBeInTheDocument();
+      expect(screen.getByTestId("apply-suggestions-button")).toBeInTheDocument();
+    });
+  });
+
   it("job listing page renders", () => {
     renderWithProviders(<JobsPage />);
     expect(screen.getByRole("heading", { name: "Jobs" })).toBeInTheDocument();

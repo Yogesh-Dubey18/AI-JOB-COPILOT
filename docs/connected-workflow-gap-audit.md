@@ -52,5 +52,6 @@ This gap audit evaluates the current end-to-end user workflow connectivity, rout
 1. **Phase 1: Fix Auth Persistence [COMPLETED]** - Extended `ajc_session` cookie to 7 days, added client-side 401 retry interceptor on refresh tokens.
 2. **Phase 2: Google OAuth [COMPLETED]** - Added Google OAuth status endpoints and toggled UI sign-in button availability dynamically.
 3. **Phase 3: Password Guide [COMPLETED]** - Synced frontend validators with backend password complexity, added guidance boxes, login notes, and field validation errors.
-4. **Phase 4: Magic Numbers & PDF Parser** - Integrate PDF signature checks (`25 50 44 46`) and DOCX check (`50 4B 03 04`). Add a dedicated PDF parsing library (like `pdf-parse` or similar) to backend.
-5. **Phases 5-13: Connected Workflows & Routes** - Register missing backend `/api/company-research` routes/model, fix Answer Vault/Career routes, build resume tailoring and ATS-friendly PDF download, and integrate guided workflows.
+4. **Phase 4: Magic Numbers & PDF Parser [COMPLETED]** - Integrated hex magic-number check and installed `pdf-parse` for text extraction, added upload guide card on the frontend.
+5. **Phase 5: Connected Resume Analysis [COMPLETED]** - Built interactive checklist and tailor draft preview sections under resume analyzer.
+6. **Phases 6-13: Connected Workflows & Routes** - Register missing backend `/api/company-research` routes/model, fix Answer Vault/Career routes, build resume tailoring and ATS-friendly PDF download, and integrate guided workflows.
