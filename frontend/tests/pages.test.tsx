@@ -337,9 +337,73 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Privacy and data/i)).toBeInTheDocument();
   });
 
-  it("portfolio generator page renders", () => {
+  it("portfolio generator page renders warning banner, preview card, and triggers PDF export", async () => {
+    const fetchMock = vi.fn().mockImplementation((url) => {
+      if (String(url).includes("/portfolios")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => [
+            {
+              _id: "portfolio-1",
+              slug: "test-developer",
+              displayName: "Test Developer",
+              headline: "Full Stack Dev",
+              theme: "classic",
+              isPublished: true,
+              skills: ["React", "Node.js"]
+            }
+          ]
+        });
+      }
+      if (String(url).includes("/exports/portfolio")) {
+        return Promise.resolve({
+          ok: true,
+          status: 201,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              fileUrl: "/uploads/exports/Candidate_Portfolio.pdf",
+              fileName: "Candidate_Portfolio.pdf"
+            }
+          })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({})
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
     renderWithProviders(<PortfolioGeneratorPage />);
+
+    // 1. Heading and warning banner
     expect(screen.getByRole("heading", { name: "Portfolio generator" })).toBeInTheDocument();
+    expect(screen.getByTestId("storage-warning")).toBeInTheDocument();
+    expect(screen.getByText(/Storage & Access Notice/i)).toBeInTheDocument();
+
+    // 2. Render portfolio preview
+    await waitFor(() => {
+      expect(screen.getByText("test-developer")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Generate Portfolio PDF/i })).toBeInTheDocument();
+    });
+
+    // 3. Trigger PDF export
+    await user.click(screen.getByRole("button", { name: /Generate Portfolio PDF/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /Download PDF/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Download PDF/i })).toHaveAttribute(
+        "href",
+        "http://localhost:5000/uploads/exports/Candidate_Portfolio.pdf"
+      );
+    });
   });
 
   it("public portfolio page renders loading state", () => {

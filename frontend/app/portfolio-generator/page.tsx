@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Eye, FileJson, Globe2, Palette, Sparkles } from "lucide-react";
+import { AlertCircle, Copy, Download, Eye, FileJson, Globe2, Palette, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+
+const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, "");
+
+function fileHref(fileUrl: string) {
+  return fileUrl?.startsWith("http") ? fileUrl : `${backendOrigin}${fileUrl}`;
+}
 
 type PortfolioForm = {
   slug: string;
@@ -67,6 +73,12 @@ export default function PortfolioGeneratorPage() {
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
     }
   });
+  const generatePdf = useMutation({
+    mutationFn: (portfolioId: string) => api.post<any>(`/exports/portfolio/${portfolioId}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdf-exports"] });
+    }
+  });
   const items = portfolios.data || [];
   const latest = generate.data || items[0];
 
@@ -84,6 +96,15 @@ export default function PortfolioGeneratorPage() {
   return (
     <AppShell>
       <PageHeading title="Portfolio generator" description="Create a recruiter-safe public profile with publish controls, themes, and exportable content." />
+      <div className="mb-5 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200" data-testid="storage-warning">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-semibold">Storage & Access Notice</p>
+            <p className="mt-1 text-xs">Currently running in development/local storage fallback. Generated portfolios and PDFs are written to local uploads, which means they are publicly accessible via their direct URLs and may be deleted when the server restarts. Secure AWS S3/R2 storage is provider-ready and will be activated in the production environment.</p>
+          </div>
+        </div>
+      </div>
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4" />Builder</CardTitle></CardHeader>
@@ -145,6 +166,25 @@ export default function PortfolioGeneratorPage() {
                   <Button variant="outline" onClick={() => copyPublicUrl(latest.publicProfile?.slug || latest.slug)}><Copy className="h-4 w-4" />Copy link</Button>
                   <Link href={`/u/${latest.publicProfile?.slug || latest.slug}`} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-semibold hover:bg-muted"><Eye className="h-4 w-4" />View</Link>
                   <Button variant="outline" onClick={() => setExportJson(latest)}><FileJson className="h-4 w-4" />Export JSON</Button>
+                  <Button
+                    variant="outline"
+                    disabled={generatePdf.isPending}
+                    onClick={() => generatePdf.mutate(latest._id || latest.id)}
+                    aria-label="Generate Portfolio PDF"
+                  >
+                    {generatePdf.isPending ? "Generating PDF..." : "Generate PDF"}
+                  </Button>
+                  {generatePdf.data?.fileUrl && (
+                    <a
+                      href={fileHref(generatePdf.data.fileUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-emerald-50/50 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
+                      aria-label="Download PDF"
+                    >
+                      <Download className="h-4 w-4" /> Download PDF
+                    </a>
+                  )}
                 </div>
               </>
             ) : (

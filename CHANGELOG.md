@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.18 — Portfolio PDF Export & Storage Status Warnings (2026-05-25)
+
+- **Portfolio PDF Export Action**: Added "Generate PDF" action on `/portfolio-generator` linked directly to the backend PDF generator service.
+- **Dynamic Download Access**: Rendered dynamic "Download PDF" links with proper backend URL path mapping to download exports.
+- **Durable Storage Warning Banner**: Implemented warning banners detailing local fallback/dev storage vs live secure S3/R2 storage environments.
+- **Verification**: Wrote comprehensive unit tests covering warnings, preview rendering, and export PDF mutation flows. All 99 tests pass.
+
 ### v2.0.17 — Connected Jobs Feed & Context Match (2026-05-25)
 
 - **Resume-to-Job Matching**: Implemented query parameter context `fromResume` resolution on the `/jobs` page to dynamically calculate overlap match scores, highlight strong fit skills, and detail missing skill gaps.
