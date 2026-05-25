@@ -371,11 +371,13 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Provider status is determined by backend/i)).toBeInTheDocument();
   });
 
-  it("guided workflow page renders all steps", () => {
+  it("guided workflow page renders all steps and computes progress dynamically", () => {
+    mockApiResponse([]);
     renderWithProviders(<GuidedWorkflowPage />);
     expect(screen.getByRole("heading", { name: /Guided job-search workflow/i })).toBeInTheDocument();
     expect(screen.getByText(/Step 01/i)).toBeInTheDocument();
     expect(screen.getByText(/Upload & analyze your resume/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 of 7 steps completed/i)).toBeInTheDocument();
   });
 
   it("recruiter contacts page renders", () => {

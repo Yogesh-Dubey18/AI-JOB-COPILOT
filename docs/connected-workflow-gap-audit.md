@@ -58,4 +58,5 @@ This gap audit evaluates the current end-to-end user workflow connectivity, rout
 7. **Phase 7: Company Research Fix [COMPLETED]** - Created Mongoose model, service, routes, and tests for `/api/company-research`.
 8. **Phase 8: Connected Answer Vault & Predefined Templates [COMPLETED]** - Created model, service, routes, and tests on the backend, and tabbed template-fill customization UI on the frontend.
 9. **Phase 9: Career Vault / OS Page [COMPLETED]** - Created Mongoose model, service, routes, and tests on the backend to persist user profile elements, and verified frontend page.
-10. **Phases 10-13: Connected Workflows & Routes** - Integrate guided workflows, and final polish.
+10. **Phase 10: Connected Guided Workflows [COMPLETED]** - Dynamic progress checks connected to resumes, applications, interviews, profile, and answer-vault queries.
+11. **Phases 11-13: Connected Workflows & Routes** - Connecting resume analytics directly to job discovery and tracking, and final polish.

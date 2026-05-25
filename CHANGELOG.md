@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.16 — Connected Guided Workflows (2026-05-25)
+
+- **Dynamic Progress Calculation**: Refactored `/guided-workflow` frontend page to query real user data (resumes, applications, interviews, profile, answer vault).
+- **Interactive Checklists**: Updated step indicators from static copy to dynamic progress labels showing counts (e.g. `Completed (3 resumes)`, `Completed (profile skills configured)`) and completion tick-icons.
+- **Overall Progress Indicator**: Rendered an overall progress card displaying step status and a visual progress completion bar.
+- **Verification**: Updated unit tests to mock fetch responses and verify progress rendering. All 99 tests passed.
+
 ### v2.0.15 — Career Vault Model and Routes (2026-05-25)
 
 - **Career Vault Schema & Model**: Created the Mongoose schema for `CareerVault` to store structured work history, achievements, education, projects, certifications, and skills.
