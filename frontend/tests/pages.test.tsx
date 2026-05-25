@@ -397,6 +397,38 @@ describe("frontend pages", () => {
     renderWithProviders(<NotificationPreferencesPage />);
     await waitFor(() => expect(screen.getByRole("button", { name: /Save preferences/i })).toBeInTheDocument(), { timeout: 3000 });
   });
+
+  it("api client automatically refreshes token on 401 and retries original request", async () => {
+    const { api } = await import("@/lib/api");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        json: async () => ({ success: false, message: "Unauthorized" })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({ success: true, data: { accessToken: "new-access-token", user: { id: "user-1", fullName: "Asha Dev", email: "asha@example.com", role: "job_seeker" } } })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => ({ success: true, data: { result: "success-data" } })
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await api.get<{ result: string }>("/resumes");
+    expect(result).toEqual({ result: "success-data" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[0][0]).toContain("/resumes");
+    expect(fetchMock.mock.calls[1][0]).toContain("/auth/refresh");
+    expect(fetchMock.mock.calls[2][0]).toContain("/resumes");
+    expect(window.sessionStorage.getItem("ajc_access_token")).toBe("new-access-token");
+  });
 });
 
 describe("i18n localization", () => {

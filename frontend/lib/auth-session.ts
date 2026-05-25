@@ -35,9 +35,10 @@ function getJwtMaxAgeSeconds(token: string) {
   }
 }
 
-function setSessionCookie(accessToken: string) {
+function setSessionCookie(accessToken?: string) {
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${SESSION_COOKIE}=1; Path=/; Max-Age=${getJwtMaxAgeSeconds(accessToken)}; SameSite=Lax${secure}`;
+  const maxAge = 7 * 24 * 60 * 60; // 7 days (matching refresh token)
+  document.cookie = `${SESSION_COOKIE}=1; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
 }
 
 export function getStoredAccessToken() {

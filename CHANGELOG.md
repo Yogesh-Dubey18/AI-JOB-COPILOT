@@ -4,6 +4,12 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.6 — Connected Workflow Auth Persistence (2026-05-25)
+
+- **Auth Persistence**: Extended `ajc_session` frontend cookie duration to 7 days, matching the backend refresh token cookie lifespan, and implemented automatic token refresh client-side interceptor on 401 response in `api.ts` to solve the repeated login redirect loop.
+- **Gap Audit**: Created `docs/connected-workflow-gap-audit.md` documenting route, auth, and CRM workflow gaps.
+- **Verification & Tests**: Added unit tests in `frontend/tests/pages.test.tsx` verifying the token refresh interceptor. Verified all 59 frontend tests and 25 backend tests passing, compiling cleanly.
+
 ### v2.0.5 — Open Beta Feedback & Hardening Plan (2026-05-24)
 
 - **Feedback intake**: Logged first anonymized tester feedback (`OBF-01`) showing successful walkthroughs across signup, logins, ATS checking, and tracking flows.
