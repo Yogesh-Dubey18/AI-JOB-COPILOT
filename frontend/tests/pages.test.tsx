@@ -429,6 +429,30 @@ describe("frontend pages", () => {
     expect(fetchMock.mock.calls[2][0]).toContain("/resumes");
     expect(window.sessionStorage.getItem("ajc_access_token")).toBe("new-access-token");
   });
+
+  it("google oauth button is disabled when provider is not configured", async () => {
+    mockApiResponse({
+      success: true,
+      data: { google: { configured: false } }
+    });
+    renderWithProviders(<LoginPage />);
+    await waitFor(() => {
+      const googleBtn = screen.getByRole("button", { name: /Continue with Google — coming soon/i });
+      expect(googleBtn).toBeDisabled();
+    });
+  });
+
+  it("google oauth button is enabled when provider is configured", async () => {
+    mockApiResponse({
+      success: true,
+      data: { google: { configured: true } }
+    });
+    renderWithProviders(<LoginPage />);
+    await waitFor(() => {
+      const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
+      expect(googleBtn).not.toBeDisabled();
+    });
+  });
 });
 
 describe("i18n localization", () => {

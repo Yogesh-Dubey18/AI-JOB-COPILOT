@@ -39,7 +39,10 @@ export const env = {
   STRIPE_PRICE_PREMIUM: process.env.STRIPE_PRICE_PREMIUM || "",
   LOG_LEVEL: process.env.LOG_LEVEL || "info",
   MONITORING_PROVIDER: process.env.MONITORING_PROVIDER || "noop",
-  SENTRY_DSN: process.env.SENTRY_DSN || ""
+  SENTRY_DSN: process.env.SENTRY_DSN || "",
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || ""
 };
 
 export const isProduction = env.NODE_ENV === "production";

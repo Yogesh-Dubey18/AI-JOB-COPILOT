@@ -110,3 +110,51 @@ export async function forgotPassword(email: string) {
 export async function resetPassword(_token: string, password: string) {
   return { reset: Boolean(password), message: "Password reset flow is ready for email-token persistence in production." };
 }
+
+export async function upsertGoogleUser(profile: { email: string; fullName: string; id: string; avatarUrl?: string }) {
+  let user = await findOneRecord("users", { email: profile.email.toLowerCase() });
+  if (!user) {
+    const dummyPassword = Math.random().toString(36) + "A1!";
+    const passwordHash = await bcrypt.hash(dummyPassword, passwordHashRounds);
+    user = await createRecord("users", {
+      fullName: profile.fullName,
+      email: profile.email.toLowerCase(),
+      passwordHash,
+      role: "job_seeker",
+      isEmailVerified: true,
+      failedLoginAttempts: 0,
+      googleId: profile.id,
+      avatarUrl: profile.avatarUrl,
+      passwordChangedAt: new Date()
+    });
+    await createRecord("profiles", {
+      userId: user._id,
+      headline: "",
+      education: [],
+      targetRoles: [],
+      experienceLevel: "fresher",
+      totalExperienceYears: 0,
+      skills: [],
+      softSkills: [],
+      preferredLocations: [],
+      preferredJobTypes: [],
+      profileCompletenessScore: computeProfileCompleteness({})
+    });
+  } else {
+    await updateRecord("users", String(user._id), {
+      googleId: profile.id,
+      avatarUrl: profile.avatarUrl || user.avatarUrl,
+      isEmailVerified: true
+    });
+  }
+  const tokens = signTokens(user);
+  await updateRecord("users", String(user._id), { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, passwordHashRounds), lastLoginAt: new Date() });
+  return { user: sanitize({ ...user, lastLoginAt: new Date() }), ...tokens };
+}
+
+export async function disconnectGoogle(userId: string) {
+  const user = await findRecordById("users", userId);
+  if (!user) throw new ApiError(404, "User not found");
+  await updateRecord("users", userId, { googleId: undefined });
+  return { ok: true };
+}

@@ -4,6 +4,14 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.7 — Google OAuth Provider-Ready Integration (2026-05-25)
+
+- **Google OAuth Status Check**: Implemented `/api/auth/providers/status` endpoint to query configured status of Google Client variables.
+- **Backend Redirect Routes**: Created `/api/auth/google`, `/api/auth/google/callback` and `/api/auth/google/disconnect` route handlers. Callback exchanges Google code for user profile info, upserts standard candidate DB user, sets secure cookies, and redirects with token.
+- **Frontend Dynamic Login Button**: Configured frontend `auth-form.tsx` to call status check on mount and automatically enable/disable the Google button depending on backend environment variables configuration (rendering "coming soon" when unset). Added OAuth token parsing and re-hydration on mount.
+- **Settings Page Integration**: Integrated Google OAuth and other providers with `/jobs/sources` backend readiness checks, displaying status dynamically on integrations page.
+- **Documentation**: Wrote `docs/google-oauth-activation.md` details setup, consent, URIs, env placement, and fallback policies.
+
 ### v2.0.6 — Connected Workflow Auth Persistence (2026-05-25)
 
 - **Auth Persistence**: Extended `ajc_session` frontend cookie duration to 7 days, matching the backend refresh token cookie lifespan, and implemented automatic token refresh client-side interceptor on 401 response in `api.ts` to solve the repeated login redirect loop.

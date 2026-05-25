@@ -9,6 +9,7 @@ const UserSchema = new Schema(
     avatarUrl: String,
     role: { type: String, enum: ["job_seeker", "admin"], default: "job_seeker", index: true },
     isEmailVerified: { type: Boolean, default: false },
+    googleId: { type: String, sparse: true, index: true },
     refreshTokenHash: String,
     failedLoginAttempts: { type: Number, default: 0 },
     lockedUntil: Date,

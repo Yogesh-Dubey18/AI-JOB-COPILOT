@@ -58,7 +58,7 @@ All checker scripts and code compilers compile and pass:
 | **OpenAI / Gemini** | 🔄 Provider-ready | Fallback to regex parser and static response blocks |
 | **AWS S3 / R2** | 🔄 Provider-ready | Fallback to local uploads directory |
 | **SendGrid Email** | 🔄 Provider-ready | Fallback to console logs |
-| **Google OAuth** | 🔄 Provider-ready | Fallback to standard email/password authentication |
+| **Google OAuth** | 🔄 Provider-ready | Active/Live-if-configured. Fallback to standard email/password if env keys are missing. |
 | **Stripe Billing** | 🔄 Provider-ready | Fallback to mock subscription bypass activation button |
 | **LinkedIn Jobs** | 🔄 Provider-ready | Fallback to seeded MongoDB job database |
 | **Indeed / Naukri** | 🔄 Provider-ready | Fallback to seeded MongoDB job database |

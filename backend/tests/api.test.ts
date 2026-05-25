@@ -363,4 +363,18 @@ describe("AI Job Copilot API", () => {
     const agent = await authAgent();
     await agent.post("/api/ai/chat").send({ message: "x".repeat(30_000) }).expect(422);
   });
+
+  it("exposes provider status and handles Google OAuth redirect checks when unconfigured", async () => {
+    const statusRes = await request(app).get("/api/auth/providers/status").expect(200);
+    expect(statusRes.body.success).toBe(true);
+    expect(statusRes.body.data.google.configured).toBe(false);
+    expect(statusRes.body.data.google.status).toBe("ready");
+
+    const googleRes = await request(app).get("/api/auth/google").expect(400);
+    expect(googleRes.body.success).toBe(false);
+    expect(googleRes.body.message).toMatch(/credentials not configured/i);
+
+    const callbackRes = await request(app).get("/api/auth/google/callback?code=mockcode").expect(400);
+    expect(callbackRes.body.success).toBe(false);
+  });
 });

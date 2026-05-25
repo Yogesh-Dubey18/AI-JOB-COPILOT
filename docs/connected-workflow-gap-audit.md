@@ -42,7 +42,7 @@ This gap audit evaluates the current end-to-end user workflow connectivity, rout
 ---
 
 ## 📡 Provider-Ready vs. Live Provider Status
-* **Google OAuth:** Provider-ready but disabled. Needs live backend endpoints (`/auth/google`, `/auth/google/callback`) active only if Google client ID/secret are in `.env`.
+* **Google OAuth:** Complete. Real Google OAuth callback routes are active, and forms dynamically enable/disable based on env variables backend checks.
 * **S3/R2 Cloud Storage:** Provider-ready. Uses local disk storage by default. Needs magic number binary checks (`%PDF` and `PK` ZIP) and AWS SDK clients.
 * **AI Engine (OpenAI/Gemini):** Fallbacks are mock-based if credentials are unset.
 

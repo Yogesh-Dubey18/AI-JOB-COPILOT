@@ -100,6 +100,61 @@ export const externalJobProviders: ExternalJobProviderConfig[] = [
     capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
     policy: "Use approved partner integration only. Do not scrape protected listings.",
     notes: "India-focused source placeholder for approved integrations."
+  },
+  {
+    id: "google_oauth",
+    name: "Google OAuth",
+    type: "api-provider",
+    trustBaseline: 100,
+    requiresReview: false,
+    envVars: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use Google OAuth Console credentials only.",
+    notes: "One-click authentication provider."
+  },
+  {
+    id: "openai",
+    name: "OpenAI / Gemini AI",
+    type: "api-provider",
+    trustBaseline: 100,
+    requiresReview: false,
+    envVars: ["OPENAI_API_KEY"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use API keys from OpenAI or Google AI Studio.",
+    notes: "AI integration status."
+  },
+  {
+    id: "mongodb",
+    name: "MongoDB Atlas",
+    type: "api-provider",
+    trustBaseline: 100,
+    requiresReview: false,
+    envVars: ["MONGO_URI"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use MongoDB connection URI.",
+    notes: "Primary database config."
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    type: "api-provider",
+    trustBaseline: 100,
+    requiresReview: false,
+    envVars: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use Stripe API keys.",
+    notes: "Subscription billing."
+  },
+  {
+    id: "sendgrid",
+    name: "SendGrid / Email",
+    type: "api-provider",
+    trustBaseline: 100,
+    requiresReview: false,
+    envVars: ["SENDGRID_API_KEY"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use SendGrid API key.",
+    notes: "Transactional emails."
   }
 ];
 
@@ -107,13 +162,19 @@ export function listJobSourceReadiness() {
   return {
     localSources: curatedJobSources,
     externalProviders: externalJobProviders.map((provider) => {
-      const configuredVars = provider.envVars.filter((name) => Boolean(process.env[name]));
+      let isLive = false;
+      if (provider.id === "openai") {
+        isLive = Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+      } else {
+        isLive = provider.envVars.every((name) => Boolean(process.env[name]));
+      }
       return {
         ...provider,
-        configured: configuredVars.length === provider.envVars.length,
-        configuredVars,
+        isLive,
+        configured: isLive,
+        configuredVars: provider.envVars.filter((name) => Boolean(process.env[name])),
         missingVars: provider.envVars.filter((name) => !process.env[name]),
-        status: configuredVars.length === provider.envVars.length ? "configured_requires_review" : "not_configured"
+        status: isLive ? "configured_requires_review" : "not_configured"
       };
     }),
     safetyRules: [
