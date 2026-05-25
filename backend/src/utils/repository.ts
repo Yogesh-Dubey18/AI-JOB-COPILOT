@@ -28,6 +28,7 @@ import { SubscriptionModel } from "../models/Subscription.js";
 import { UsageEventModel } from "../models/UsageEvent.js";
 import { AuditLogModel } from "../models/AuditLog.js";
 import { FeedbackModel } from "../models/Feedback.js";
+import { CompanyResearchModel } from "../models/CompanyResearch.js";
 import { CollectionName, StoredRecord, makeId, memory } from "./memoryStore.js";
 
 const modelMap: Record<CollectionName, Model<any>> = {
@@ -58,7 +59,8 @@ const modelMap: Record<CollectionName, Model<any>> = {
   subscriptions: SubscriptionModel,
   usageEvents: UsageEventModel,
   auditLogs: AuditLogModel,
-  feedback: FeedbackModel
+  feedback: FeedbackModel,
+  companyResearch: CompanyResearchModel
 };
 
 function clone<T>(value: T): T {

@@ -55,4 +55,5 @@ This gap audit evaluates the current end-to-end user workflow connectivity, rout
 4. **Phase 4: Magic Numbers & PDF Parser [COMPLETED]** - Integrated hex magic-number check and installed `pdf-parse` for text extraction, added upload guide card on the frontend.
 5. **Phase 5: Connected Resume Analysis [COMPLETED]** - Built interactive checklist and tailor draft preview sections under resume analyzer.
 6. **Phase 6: PDF Generation & Pre-fill [COMPLETED]** - Refactored PDF export page to pre-fill inputs from URL search parameters and enabled direct navigation from the resume analyzer draft.
-7. **Phases 7-13: Connected Workflows & Routes** - Register missing backend `/api/company-research` routes/model, fix Answer Vault/Career routes, and integrate guided workflows.
+7. **Phase 7: Company Research Fix [COMPLETED]** - Created Mongoose model, service, routes, and tests for `/api/company-research`.
+8. **Phases 8-13: Connected Workflows & Routes** - Fix Answer Vault/Career routes, and integrate guided workflows.

@@ -39,6 +39,7 @@ import ResourcesPage from "@/app/resources/page";
 import GitHubAnalyzerPage from "@/app/github-analyzer/page";
 import NotificationPreferencesPage from "@/app/settings/notifications/page";
 import RecruiterPage from "@/app/recruiters/page";
+import CompanyResearchPage from "@/app/company-research/page";
 import { t, getStoredLanguage, setStoredLanguage, DEFAULT_LANGUAGE } from "@/lib/i18n";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
@@ -385,6 +386,14 @@ describe("frontend pages", () => {
     renderWithProviders(<ApplyAssistantPage />);
     expect(screen.getByText(/AI apply assistant/i)).toBeInTheDocument();
     expect(screen.getByText(/Review and personalise every generated section/i)).toBeInTheDocument();
+  });
+
+  it("company research page renders salary templates and add form", () => {
+    mockApiResponse([]);
+    renderWithProviders(<CompanyResearchPage />);
+    expect(screen.getByRole("heading", { name: /Company research & salary readiness/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Salary answer templates/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save company research/i })).toBeInTheDocument();
   });
 
   it("shared UX states expose accessible status and alert roles", () => {

@@ -400,4 +400,39 @@ describe("AI Job Copilot API", () => {
     const callbackRes = await request(app).get("/api/auth/google/callback?code=mockcode").expect(400);
     expect(callbackRes.body.success).toBe(false);
   });
+
+  it("saves, lists, and deletes company research records", async () => {
+    const agent = await authAgent();
+    // 1. Initially empty
+    const list1 = await agent.get("/api/company-research").expect(200);
+    expect(list1.body.data).toEqual([]);
+
+    // 2. Save a company research record
+    const saveRes = await agent.post("/api/company-research").send({
+      companyName: "Google",
+      industry: "Technology",
+      techStack: ["React", "TypeScript", "Node.js", "Go"],
+      culture: "Engineering-driven",
+      glassdoorRating: 4.5,
+      salaryRangeMin: 120000,
+      salaryRangeMax: 200000,
+      careerPageUrl: "https://careers.google.com",
+      interviewProcess: "Resume screen, technical phone screen, onsite rounds",
+      notes: "Google is my dream target company."
+    }).expect(201);
+    expect(saveRes.body.data.companyName).toBe("Google");
+    expect(saveRes.body.data.techStack).toContain("TypeScript");
+
+    // 3. List contains the saved record
+    const list2 = await agent.get("/api/company-research").expect(200);
+    expect(list2.body.data.length).toBe(1);
+    expect(list2.body.data[0].companyName).toBe("Google");
+
+    // 4. Delete the record
+    await agent.delete(`/api/company-research/${saveRes.body.data._id}`).expect(200);
+
+    // 5. Empty again
+    const list3 = await agent.get("/api/company-research").expect(200);
+    expect(list3.body.data).toEqual([]);
+  });
 });

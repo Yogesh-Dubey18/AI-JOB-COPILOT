@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.13 — Company Research Fix (2026-05-25)
+
+- **Company Research Schema & Model**: Created the Mongoose schema for `CompanyResearch` with indexing on `userId`.
+- **Validation and Service Layer**: Implemented request body validation and service wrapper for creating, deleting, and retrieving company research documents.
+- **REST Endpoints**: Registered `/api/company-research` in the Express router with access controls.
+- **Verification**: Verified endpoint functionality in integration tests (`api.test.ts`) and rendered verification in page unit tests (`pages.test.tsx`). All 95 tests passed.
+
 ### v2.0.12 — Connected PDF Generation and Parameter Pre-fill (2026-05-25)
 
 - **Search Parameter Pre-fill**: Updated the frontend PDF export page (`frontend/app/pdf-export/page.tsx`) to retrieve URL search parameters (like `versionId`, `resumeId`, `tailoredResumeId`, `applicationKitId`, `portfolioId`, and `interviewId`) and automatically populate corresponding input fields.
