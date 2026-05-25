@@ -62,3 +62,21 @@ The following tasks are prioritized for the next sprint based on initial open be
 | **OB-P1-02** | 🟡 P1 | Google OAuth activation (configuring real credentials) | Auth / Frontend | ⏳ Triaged |
 | **OB-P1-03** | 🟡 P1 | Playwright E2E pipeline browser tests | Testing / CI-CD | ⏳ Triaged |
 | **OB-P2-04** | 🔵 P2 | Continue collecting real user feedback | Analytics / Product | 🔄 Active |
+---
+
+## 2026-05-25 Full Audit Backlog
+
+The full website/codebase audit added the following stabilization items. These are planning items only; no feature implementation was performed during the audit.
+
+| Ticket ID | Priority | Feature / Feature Area | Assigned | Status |
+|---|---|---|---|---|
+| **AUD-P0-01** | P0 | Remove fake-looking authenticated analytics/dashboard defaults | Analytics / Frontend | Triaged |
+| **AUD-P0-02** | P0 | Protect all private app routes in middleware and tests | Auth / Frontend | Triaged |
+| **AUD-P0-03** | P0 | Add backend APIs for company research, answer vault, career vault, and contacts | Backend / Workflow | Triaged |
+| **AUD-P0-04** | P0 | Fix GitHub analyzer API mismatch | AI / Backend | Triaged |
+| **AUD-P0-05** | P0 | Move resume/PDF storage from public local uploads to private S3/R2 signed URLs | Security / Storage | Triaged |
+| **AUD-P0-06** | P0 | Harden Google OAuth callback before live activation | Auth / Security | Triaged |
+| **AUD-P1-07** | P1 | Connect resume, job, application kit, and tracker workflows with selectors | Product / Frontend | Triaged |
+| **AUD-P1-08** | P1 | Preserve apply URL and job snapshot in tracker records | Backend / Tracker | Triaged |
+| **AUD-P1-09** | P1 | Enable real Playwright E2E instead of skip-safe placeholder | Testing / CI-CD | Triaged |
+| **AUD-P1-10** | P1 | Wire forgot/reset password and email verification | Auth / Email | Triaged |

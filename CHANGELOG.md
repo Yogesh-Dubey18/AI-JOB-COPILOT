@@ -4,6 +4,14 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.11 - Full Website Feature Audit and SaaS Upgrade Planning (2026-05-25)
+
+- **Full Route and Feature Audit**: Added `docs/full-website-feature-audit.md` covering live status, route-by-route behavior, feature inventory, broken workflows, provider honesty, UX/mobile/accessibility, security/privacy, performance/reliability, testing, and SaaS realism.
+- **Advanced Improvement Roadmap**: Added `docs/advanced-feature-improvement-roadmap.md` with P0/P1/P2/P3 recommendations, effort, risk, provider dependencies, and exact implementation format for each proposed improvement.
+- **Realistic SaaS Upgrade Plan**: Added `docs/realistic-saas-upgrade-plan.md` distinguishing live, mock/fallback, provider-ready, not configured, and manual setup areas without exposing secrets.
+- **Connected Workflow Next Actions**: Added `docs/connected-workflow-next-actions.md` defining the recommended first fixes, next sprint, what not to do, verification checklist, and next implementation prompt.
+- **Existing Docs Updated**: Updated final summary, v2.1 roadmap, and beta feedback triage board to reflect the audit findings and stabilization-first order.
+
 ### v2.0.10 — Connected Resume Analysis Workflow (2026-05-25)
 
 - **Gap Improvement Action Center**: Added interactive checkboxes and checklist panel mapping ATS recommendations directly to tailor actions.

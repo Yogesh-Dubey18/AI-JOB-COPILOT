@@ -4,6 +4,39 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-25 Full Website Audit Addendum
+
+A complete website and codebase audit was completed as a documentation-only pass. No product features were implemented and no application code was intentionally changed.
+
+New audit/planning docs:
+
+- [Full Website Feature Audit](full-website-feature-audit.md)
+- [Advanced Feature Improvement Roadmap](advanced-feature-improvement-roadmap.md)
+- [Realistic SaaS Upgrade Plan](realistic-saas-upgrade-plan.md)
+- [Connected Workflow Next Actions](connected-workflow-next-actions.md)
+
+Current live status verified during the audit:
+
+- Frontend URL returns HTTP 200.
+- Backend `/health` returns `success: true` and `status: ok`.
+- Backend `/ready` reports MongoDB connected in `mongodb` mode.
+- Backend `/status` reports AI as `mock`, billing as `mock`, email as `mock`, calendar as `mock`, and monitoring as `noop`.
+- Better Stack uptime monitoring remains documented as manually active, but it was not verified through a Better Stack API from this workspace.
+
+Top audit blockers before production SaaS:
+
+1. Remove fake-looking authenticated analytics defaults.
+2. Protect all private app routes consistently.
+3. Add missing backend APIs for company research, answer vault, career vault, and contacts.
+4. Fix the GitHub analyzer frontend/backend endpoint mismatch.
+5. Move resume and PDF exports from public local `/uploads` to private S3/R2 signed URLs.
+6. Fix Google OAuth token transport before enabling real credentials.
+7. Activate real E2E browser tests instead of skip-safe placeholder behavior.
+
+Recommended next implementation prompt is stored in [Connected Workflow Next Actions](connected-workflow-next-actions.md).
+
+---
+
 ## 🟢 1. Completed Steps
 - **Step 1:** Verified completeness and generated the [Master Completion Status Matrix](master-completion-status.md).
 - **Step 2:** Verified live deployments and updated the [Live Smoke Test Report](live-production-smoke-test-report.md) & [Runbook](live-smoke-test-runbook.md).

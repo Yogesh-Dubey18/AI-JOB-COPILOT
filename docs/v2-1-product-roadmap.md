@@ -4,6 +4,32 @@ This document outlines the engineering priorities, effort estimates, technical r
 
 ---
 
+## 2026-05-25 Audit Refresh
+
+The full website/codebase audit produced a stricter stabilization order than the earlier provider-first roadmap. The next work should prioritize truthfulness, route integrity, missing API completion, and privacy hardening before additional broad product expansion.
+
+New audit docs:
+
+- [Full Website Feature Audit](full-website-feature-audit.md)
+- [Advanced Feature Improvement Roadmap](advanced-feature-improvement-roadmap.md)
+- [Realistic SaaS Upgrade Plan](realistic-saas-upgrade-plan.md)
+- [Connected Workflow Next Actions](connected-workflow-next-actions.md)
+
+Updated highest-priority order:
+
+1. Remove fake-looking authenticated analytics/dashboard defaults.
+2. Protect every private app route consistently.
+3. Add missing backend APIs for company research, answer vault, career vault, and contacts.
+4. Fix the GitHub analyzer frontend/backend API mismatch.
+5. Move resumes and exports to private S3/R2 storage with signed URLs.
+6. Harden Google OAuth callback token handling before activation.
+7. Replace raw-ID workflows with connected selectors from resume to jobs to kit to tracker.
+8. Activate real Playwright E2E coverage in CI.
+
+Provider activation remains important, but provider keys should be enabled only after the route/workflow/security blockers above are fixed and verified.
+
+---
+
 ## 🎯 Prioritization Framework
 
 We classify roadmap items based on the following priorities:
