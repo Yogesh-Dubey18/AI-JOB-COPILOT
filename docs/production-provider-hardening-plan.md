@@ -19,7 +19,7 @@ AI Job Copilot abstracts resume uploads and generated PDFs using a unified stora
    - Temporary signed URLs are generated dynamically on-the-fly with a default 15-minute TTL (Time To Live).
 
 ### Configuration Variables
-Set the following keys in your backend `.env` to enable cloud storage:
+Set the following keys in your backend environment to enable cloud storage:
 ```ini
 STORAGE_PROVIDER=s3   # s3 or r2
 STORAGE_BUCKET_NAME=your-bucket-name
@@ -41,7 +41,7 @@ STORAGE_SIGNED_URL_TTL_SECONDS=900
 
 ### Flow Overview
 1. **Forgot Request**: Candidates request recovery by entering their email address.
-2. **Account Enumeration Defense**: The server always returns `{ success: true, message: "If the account exists..." }`, preventing bots from scanning registered emails.
+2. **Account Enumeration Defense**: The server always returns `{ success: true, message: "If the account exists..." }`, preventing bots from scanning registered emails. Timing analysis is mitigated via artificial random delays on invalid emails.
 3. **Secure Tokens**: The server generates a random 32-byte hex token, hashes it using SHA-256 before saving to Mongoose (`passwordResetTokenHash`), sets `passwordResetExpires` (1 hour limit), and sends the link.
 4. **Validation**: During reset, the incoming token is hashed and matched. If found and unexpired, the new password is validated against registering schemas and updated.
 
@@ -61,50 +61,66 @@ SMTP_USER=postmaster@yourdomain.com
 SMTP_PASS=your-smtp-password
 ```
 
----
+### Setup Steps
 
-## 🔐 3. Google OAuth Manual Activation Checklist
+#### SendGrid Setup
+1. **Create Account**: Register a free/paid account on [SendGrid](https://sendgrid.com).
+2. **Sender Authentication**: Set up Single Sender Verification or Domain Authentication under Settings $\to$ Sender Authentication.
+3. **Generate API Key**: Go to Settings $\to$ API Keys, click "Create API Key" with full or restricted Mail Send access.
+4. **Add Env Variable**: Save the generated key as `SENDGRID_API_KEY` on your backend.
+5. **Set Sender**: Set `EMAIL_FROM` matching your verified SendGrid sender address/domain.
 
-Google OAuth sign-in remains disabled inside Candidate Auth forms unless Google OAuth variables are set.
-
-### Activation Checklist
-1. **Google Cloud Console Setup**:
-   - Create a project on the [Google Cloud Console](https://console.cloud.google.com).
-   - Configure the OAuth Consent Screen (External, specify support emails, add scopes `email` and `profile`).
-2. **Client Credentials**:
-   - Go to Credentials $\to$ Create Credentials $\to$ OAuth client ID (Web application).
-   - Add Authorized JavaScript Origins:
-     - Development: `http://localhost:3000`, `http://localhost:5000`
-     - Production: `https://ai-job-copilot-frontend.vercel.app`, `https://ai-job-copilot-backend-l6ut.onrender.com`
-   - Add Authorized Redirect URIs:
-     - Development: `http://localhost:5000/api/auth/google/callback`
-     - Production: `https://ai-job-copilot-backend-l6ut.onrender.com/api/auth/google/callback`
-3. **Environment Setup**:
-   - Save client credentials to backend variables:
-     ```ini
-     GOOGLE_CLIENT_ID=your-google-client-id
-     GOOGLE_CLIENT_SECRET=your-google-client-secret
-     GOOGLE_REDIRECT_URI=https://ai-job-copilot-backend-l6ut.onrender.com/api/auth/google/callback
-     ```
-   - Restart the server. The Google OAuth button will automatically transition from disabled "coming soon" to active.
+#### SMTP Setup
+1. **SMTP Details**: Obtain SMTP Server Host, Port (587 or 465), Username, and Password from your email client provider (e.g. Mailgun, SES, Sendinblue, Gmail App Password).
+2. **Add Env Variables**: Add `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` to the backend variables.
+3. **Set Sender**: Set `EMAIL_FROM` representing the correct sender identity.
 
 ---
 
-## 🚨 4. Rollback and Disaster Recovery
+## 🚀 3. Environment Placement on Render
+To deploy these environment variables to the live backend hosted on Render:
+1. Log in to the [Render Dashboard](https://dashboard.render.com).
+2. Select your **Web Service** corresponding to the backend service (`ai-job-copilot-backend`).
+3. Click on the **Environment** tab on the left navigation menu.
+4. Click **Add Environment Variable** to add the placeholders and values:
+   - `EMAIL_PROVIDER`
+   - `SENDGRID_API_KEY`
+   - `EMAIL_FROM`
+   - `SMTP_HOST`
+   - `SMTP_PORT`
+   - `SMTP_USER`
+   - `SMTP_PASS`
+   - `CLIENT_URL` (points to the frontend Vercel URL)
+5. Click **Save Changes**. Render will automatically trigger a new zero-downtime rolling deployment with the new configurations loaded.
 
-If storage or auth providers encounter failures in production:
-1. **Storage Failure**:
-   - Set `STORAGE_PROVIDER=local` on the host.
-   - Restart backend service. Multer uploads and PDF exports will resume local directory storage immediately.
-2. **Email Failures**:
-   - Reset `EMAIL_PROVIDER=mock`.
-   - All password reset token links will be written to standard console stdout logs for manual administrator copying.
+---
+
+## 🛠️ 4. Fallback and Disaster Recovery
+
+### Provider-ready Fallback Behavior
+* **Local Fallback**: When `EMAIL_PROVIDER=mock` or API keys are missing/not configured:
+  - Safe disclaimers are shown on the frontend.
+  - Reset links containing the raw token are printed directly to backend `stdout` logs for manual copying by administrators.
+  - In development environments (`NODE_ENV` is not `production`), the API response returns the reset token in a helper payload field so local developers can test the recovery flow instantly.
+  - Timing analysis is prevented by running synthetic random delays for non-existing users.
+* **No Secret Leaking**: Plaintext passwords and raw reset tokens are never saved to the database. Only SHA-256 hashed tokens are stored.
+
+### Rollback Plan
+If email or storage services experience outages:
+1. **Email Failure**: Set `EMAIL_PROVIDER=mock` in backend configuration and redeploy/restart. Service defaults to local console logging.
+2. **Storage Failure**: Set `STORAGE_PROVIDER=local` in backend configuration. Uploads and exports revert to the local uploads directory.
 
 ---
 
 ## 🔬 5. Testing Verification Checklist
 
-Run these validation commands prior to tags or release promotions:
-1. **Local fallback checks**: Run backend tests to verify filesystem reads/writes.
-2. **Signature checks**: Verify that non-PDF payloads are rejected during resume upload validation.
-3. **Security audit**: Ensure no keys or raw passwords are saved in files, logs, or response buffers.
+Prior to launching Phase B to production, execute the following checklist:
+- [x] **Generic Response Test**: Verify `/auth/forgot-password` returns same generic message for existing/non-existing emails.
+- [x] **Timing Attack Defense**: Confirm delays prevent bots from guessing valid account addresses.
+- [x] **No Token Exposure**: Verify `/forgot-password` does not expose the reset token in production mode responses.
+- [x] **Hashed Storage**: Verify only SHA-256 hashed tokens exist in Mongoose records.
+- [x] **Validation Rules**: Ensure passwords under 8 characters, missing uppercase, lowercase, or digits are rejected during reset.
+- [x] **Invalid/Expired Rejection**: Verify expired and invalid tokens fail with 400 Bad Request error.
+- [x] **Token Invalidation**: Confirm reset token fields are cleared in MongoDB upon successful update.
+- [x] **Mock Fallback**: Verify missing keys default to mock logs and do not crash the service.
+- [x] **Build & Test Success**: Run `npm run ci:verify` and confirm all tests compile and pass.

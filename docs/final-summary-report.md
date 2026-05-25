@@ -148,3 +148,14 @@ Completed Phase A Storage Hardening updates:
 - **Secure File Validation:** Aligned magic number validation with S3/R2 direct uploads to block arbitrary binary/executable uploads.
 - **Provider Status Honesty:** Added storage configuration checking inside the provider status API endpoint.
 
+---
+
+## ✉️ Production-Hardening Password Recovery Sprint (Phase B) (2026-05-25)
+
+Completed Phase B Password Recovery updates:
+- **Forgot/Reset Flow Security**: Hardened backend authentication to support secure account recovery. Generates a random 32-byte hex recovery token, stores only its SHA-256 hash in Mongoose, enforces a strict 1-hour expiration time, and invalidates the token fields immediately on successful reset.
+- **Enumeration Attack Defense**: The forgot password endpoint returns a generic success message regardless of user existence. Implements randomized timeline delay simulation for non-existing email queries to prevent timing analysis scanning.
+- **SendGrid & SMTP Email Abstraction**: Upgraded the email service to support direct HTTP API delivery (via native fetch) for SendGrid and secure nodemailer SMTP transport when configured.
+- **Provider Status Badging**: Refactored the `/providers/status` and `/jobs/sources` backend endpoints to honestly return provider statuses as `"live"`, `"ready"` (placeholders configured but values empty), or `"not_configured"`.
+- **Frontend Form UX**: Rewrote the Forgot Password page to check provider status and display non-scary fallback notices. Added a password requirement checklist on the Reset Password page. Wrapped parameter-driven forms in Next.js Suspense boundaries to fix static build generation checks.
+- **Automated Tests**: Wrote comprehensive vitest tests for forgot/reset recover behaviors (generic response, token hashing, expiration, invalid tokens, weak passwords, and session updates) in backend and page rendering in frontend, achieving 100% test success.

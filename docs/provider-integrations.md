@@ -121,19 +121,54 @@ Setup: Create OAuth 2.0 credentials at [console.cloud.google.com](https://consol
 
 ## Email / Notifications
 
-Transactional emails for follow-up reminders, interview alerts, and account actions.
+Transactional emails for account recovery (forgot/reset password) and interview alerts.
 
-```
-SENDGRID_API_KEY=
+**Status**: Provider-ready. Enabled dynamically in `/settings/integrations` and recovery forms. Falls back gracefully to standard console logging in mock/dev mode.
+
+**Required env vars**:
+```ini
+EMAIL_PROVIDER=sendgrid   # or smtp
 EMAIL_FROM=noreply@yourdomain.com
-# OR use generic SMTP:
+SENDGRID_API_KEY=
+# OR use SMTP:
 SMTP_HOST=
 SMTP_PORT=
 SMTP_USER=
 SMTP_PASS=
 ```
 
-**Setup**: Create a [SendGrid](https://sendgrid.com) account, verify sender domain, generate API key.
+**SendGrid Setup**:
+1. Sign up on [SendGrid](https://sendgrid.com).
+2. Authenticate your domain or verify single sender under Settings $\to$ Sender Authentication.
+3. Generate an API Key under Settings $\to$ API Keys.
+4. Set `EMAIL_PROVIDER=sendgrid` and configure `SENDGRID_API_KEY` on Render or in `.env`.
+5. Set `EMAIL_FROM` to match your verified SendGrid sender.
+
+**SMTP Setup**:
+1. Obtain server host, port (587 or 465), user, and password from your SMTP provider.
+2. Set `EMAIL_PROVIDER=smtp`.
+3. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` in your environment.
+4. Set `EMAIL_FROM` with your sender name and email.
+
+**Render Environment Placement**:
+1. Navigate to Render Dashboard $\to$ select backend service.
+2. Select **Environment** tab $\to$ click **Add Environment Variable**.
+3. Add variable keys (`EMAIL_PROVIDER`, `SENDGRID_API_KEY`, etc.).
+4. Click **Save Changes** to redeploy service with environment active.
+
+**Provider-ready Fallback Behavior**:
+* If email credentials are empty or missing:
+  - Disclaimers indicate fallback mode on forgot password page.
+  - Reset links are printed to backend server logs.
+  - In development mode (`NODE_ENV` is not `production`), the API response also includes the raw token helper to make local developer testing seamless.
+  - Non-existing account inquiries simulate identical timeline workloads to prevent email scanning.
+
+**Reset Token Security Notes**:
+* Generated securely using `crypto.randomBytes(32)` cryptorandom token.
+* Database stores SHA-256 hash representation only.
+* Tokens automatically expire 1 hour after generation.
+* Tokens are immediately invalidated (cleared) upon successful reset.
+* No passwords or reset tokens are exposed in normal application logs.
 
 ---
 

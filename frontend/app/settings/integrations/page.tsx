@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Circle, ExternalLink, Info, RefreshCw, Zap } from "lucide-react";
+import { CheckCircle2, Circle, XCircle, ExternalLink, Info, RefreshCw, Zap } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
@@ -19,7 +18,7 @@ const STATIC_PROVIDERS = [
   { id: "naukri", name: "Naukri API", category: "Job Boards", description: "India-centric job feed from Naukri.com (requires partner credentials).", envKey: "NAUKRI_API_KEY", setupSteps: ["Contact Naukri for API partner access.", "Set NAUKRI_API_KEY in backend .env."] },
   { id: "stripe", name: "Stripe", category: "Payments", description: "Subscription billing, plan enforcement, and invoices.", envKey: "STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET", setupSteps: ["Create a Stripe account at stripe.com.", "Add STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to backend .env.", "Configure webhook endpoint in Stripe dashboard."] },
   { id: "google_oauth", name: "Google OAuth", category: "Auth", description: "One-click sign-in via Google.", envKey: "GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET", setupSteps: ["Create OAuth credentials at console.cloud.google.com.", "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in backend .env."] },
-  { id: "sendgrid", name: "SendGrid / Email", category: "Notifications", description: "Transactional emails for reminders, interview alerts, and OTPs.", envKey: "SENDGRID_API_KEY", setupSteps: ["Create a SendGrid account and verify sender domain.", "Set SENDGRID_API_KEY in backend .env."] }
+  { id: "sendgrid", name: "SendGrid / SMTP Email", category: "Notifications", description: "Transactional emails for account recovery, OTPs, and reminders.", envKey: "SENDGRID_API_KEY or (SMTP_HOST + SMTP_PORT + SMTP_USER + SMTP_PASS)", setupSteps: ["Set EMAIL_PROVIDER to sendgrid or smtp in backend .env.", "For SendGrid: Add SENDGRID_API_KEY and EMAIL_FROM.", "For SMTP: Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM."] }
 ];
 
 const categoryColors: Record<string, string> = {
@@ -34,17 +33,17 @@ const categoryColors: Record<string, string> = {
 export default function IntegrationsPage() {
   const readiness = useQuery({ queryKey: ["job-sources"], queryFn: () => api.get<any>("/jobs/sources"), retry: false });
 
-  const liveIds: string[] = readiness.data?.externalProviders
-    ?.filter((p: any) => p.isLive)
-    .map((p: any) => p.id as string) ?? [];
+  const getProviderInfo = (providerId: string) => {
+    return readiness.data?.externalProviders?.find((p: any) => p.id === providerId);
+  };
+
+  const liveCount = STATIC_PROVIDERS.filter((p) => getProviderInfo(p.id)?.isLive).length;
 
   const categorized = STATIC_PROVIDERS.reduce<Record<string, typeof STATIC_PROVIDERS>>((acc, p) => {
     if (!acc[p.category]) acc[p.category] = [];
     acc[p.category].push(p);
     return acc;
   }, {});
-
-  const liveCount = STATIC_PROVIDERS.filter((p) => liveIds.includes(p.id)).length;
 
   return (
     <AppShell>
@@ -78,19 +77,34 @@ export default function IntegrationsPage() {
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">{category}</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {providers.map((provider) => {
-              const isLive = liveIds.includes(provider.id);
+              const info = getProviderInfo(provider.id);
+              const isLive = info?.isLive ?? false;
+              const status = info?.status ?? (isLive ? "live" : "ready");
+
+              let statusLabel = "Provider-ready";
+              let statusColor = "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 border-amber-300";
+              let StatusIcon = Circle;
+
+              if (status === "live") {
+                statusLabel = "Live";
+                statusColor = "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border-emerald-300";
+                StatusIcon = CheckCircle2;
+              } else if (status === "not_configured") {
+                statusLabel = "Not configured";
+                statusColor = "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200 border-rose-300";
+                StatusIcon = XCircle;
+              }
+
               return (
-                <Card key={provider.id} className={isLive ? "border-emerald-300" : ""}>
+                <Card key={provider.id} className={status === "live" ? "border-emerald-300" : status === "not_configured" ? "border-rose-200/60" : "border-amber-200"}>
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center justify-between gap-3 text-base">
                       <span className="flex items-center gap-2">
-                        {isLive
-                          ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          : <Circle className="h-4 w-4 text-muted-foreground" />}
+                        <StatusIcon className={`h-4 w-4 ${status === "live" ? "text-emerald-600" : status === "not_configured" ? "text-rose-500" : "text-amber-500"}`} />
                         {provider.name}
                       </span>
-                      <span className={`rounded px-2 py-0.5 text-xs font-semibold ${categoryColors[category] || ""}`}>
-                        {isLive ? "Live" : "Provider-ready"}
+                      <span className={`rounded border px-2 py-0.5 text-xs font-semibold ${statusColor}`}>
+                        {statusLabel}
                       </span>
                     </CardTitle>
                   </CardHeader>
@@ -99,7 +113,7 @@ export default function IntegrationsPage() {
                     <div className="rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground">
                       {provider.envKey}
                     </div>
-                    {!isLive && (
+                    {status !== "live" && (
                       <div>
                         <p className="mb-1 text-xs font-semibold text-muted-foreground">Setup steps</p>
                         <ol className="list-inside list-decimal space-y-1 text-xs text-muted-foreground">

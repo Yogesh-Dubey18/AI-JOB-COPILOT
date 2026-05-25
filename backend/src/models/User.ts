@@ -14,7 +14,9 @@ const UserSchema = new Schema(
     failedLoginAttempts: { type: Number, default: 0 },
     lockedUntil: Date,
     passwordChangedAt: Date,
-    lastLoginAt: Date
+    lastLoginAt: Date,
+    passwordResetTokenHash: { type: String, sparse: true, index: true },
+    passwordResetExpires: Date
   },
   { timestamps: true }
 );

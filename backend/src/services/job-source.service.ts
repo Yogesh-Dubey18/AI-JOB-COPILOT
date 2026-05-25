@@ -163,18 +163,54 @@ export function listJobSourceReadiness() {
     localSources: curatedJobSources,
     externalProviders: externalJobProviders.map((provider) => {
       let isLive = false;
+      let status: "live" | "ready" | "not_configured" = "not_configured";
+
       if (provider.id === "openai") {
         isLive = Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+        const openAiExists = typeof process.env.OPENAI_API_KEY !== "undefined";
+        const geminiExists = typeof process.env.GEMINI_API_KEY !== "undefined";
+        if (isLive) {
+          status = "live";
+        } else if (openAiExists || geminiExists) {
+          status = "ready";
+        } else {
+          status = "not_configured";
+        }
+      } else if (provider.id === "sendgrid") {
+        const hasSendGrid = Boolean(process.env.SENDGRID_API_KEY);
+        const hasSmtp = Boolean((process.env.SMTP_HOST || process.env.EMAIL_HOST) && 
+                                (process.env.SMTP_USER || process.env.EMAIL_USER) && 
+                                (process.env.SMTP_PASS || process.env.EMAIL_PASS));
+        isLive = hasSendGrid || hasSmtp;
+        
+        const sendgridExists = typeof process.env.SENDGRID_API_KEY !== "undefined";
+        const smtpExists = typeof process.env.SMTP_HOST !== "undefined" || typeof process.env.EMAIL_HOST !== "undefined" || typeof process.env.SMTP_USER !== "undefined" || typeof process.env.SMTP_PASS !== "undefined";
+        if (isLive) {
+          status = "live";
+        } else if (sendgridExists || smtpExists) {
+          status = "ready";
+        } else {
+          status = "not_configured";
+        }
       } else {
         isLive = provider.envVars.every((name) => Boolean(process.env[name]));
+        const allExists = provider.envVars.every((name) => typeof process.env[name] !== "undefined");
+        if (isLive) {
+          status = "live";
+        } else if (allExists || provider.envVars.some((name) => typeof process.env[name] !== "undefined")) {
+          status = "ready";
+        } else {
+          status = "not_configured";
+        }
       }
+
       return {
         ...provider,
         isLive,
         configured: isLive,
         configuredVars: provider.envVars.filter((name) => Boolean(process.env[name])),
         missingVars: provider.envVars.filter((name) => !process.env[name]),
-        status: isLive ? "configured_requires_review" : "not_configured"
+        status
       };
     }),
     safetyRules: [

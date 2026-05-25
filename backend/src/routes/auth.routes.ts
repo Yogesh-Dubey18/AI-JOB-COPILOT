@@ -54,13 +54,35 @@ router.post("/reset-password", authLimiter, validateBody(resetPasswordSchema), a
 }));
 
 router.get("/providers/status", asyncHandler(async (_req, res) => {
-  const configured = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  const googleConfigured = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  
+  const isSendGridLive = Boolean(env.SENDGRID_API_KEY);
+  const isSmtpLive = Boolean(env.EMAIL_HOST && env.EMAIL_USER && env.EMAIL_PASS);
+  const emailLive = (env.EMAIL_PROVIDER === "sendgrid" && isSendGridLive) || 
+                      (env.EMAIL_PROVIDER === "smtp" && isSmtpLive);
+  
+  let emailStatus: "live" | "ready" | "not_configured" = "not_configured";
+  if (emailLive) {
+    emailStatus = "live";
+  } else {
+    const sendgridExists = typeof process.env.SENDGRID_API_KEY !== "undefined";
+    const smtpExists = typeof process.env.SMTP_HOST !== "undefined" || typeof process.env.EMAIL_HOST !== "undefined";
+    if (sendgridExists || smtpExists) {
+      emailStatus = "ready";
+    }
+  }
+
   res.json({
     success: true,
     data: {
       google: {
-        configured,
-        status: configured ? "live" : "ready"
+        configured: googleConfigured,
+        status: googleConfigured ? "live" : "ready"
+      },
+      email: {
+        configured: emailLive,
+        provider: env.EMAIL_PROVIDER,
+        status: emailStatus
       }
     }
   });

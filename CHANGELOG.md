@@ -4,6 +4,15 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.20 — Forgot/Reset Password Email Provider Readiness (2026-05-25)
+
+- **Account Recovery Flow**: Hardened authentication system with secure token recovery. Generates a random 32-byte hex recovery token, hashes it using SHA-256 for Mongoose storage, enforces 1-hour expiration limits, and invalidates token fields upon update.
+- **Account Enumeration Defense**: Protects user endpoints by returning a generic success recovery message. Features timeline delay simulations for invalid email queries to block timing scans.
+- **SendGrid & SMTP Email Abstraction**: Upgraded the email service to deliver recovery links via direct fetch POST requests to SendGrid's V3 API or nodemailer transport if SMTP configurations exist.
+- **Provider Status Badging**: Refactored the integrations API endpoints and frontend Integrations view to honestly display provider statuses as `"live"`, `"ready"` (placeholders configured but empty), or `"not_configured"`.
+- **Form UX & Suspense Guarding**: Added a password requirement checklist to the Reset Password page. Wrapped recovery forms in Next.js Suspense boundaries to fix static build generation checks.
+- **Verification**: Created comprehensive vitest unit tests in backend and frontend verifying all recover behaviors and UI elements. All tests pass successfully.
+
 ### v2.0.19 — Private Cloud Storage Hardening (2026-05-25)
 
 - **Storage Abstraction Service**: Created `storage.service.ts` to abstract cloud object storing (S3/R2) with local fallback.

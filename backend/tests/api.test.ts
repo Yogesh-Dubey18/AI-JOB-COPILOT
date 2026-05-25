@@ -2,7 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { resetMemoryStore } from "../src/utils/memoryStore.js";
-import { createRecord, updateRecord } from "../src/utils/repository.js";
+import { createRecord, updateRecord, findOneRecord } from "../src/utils/repository.js";
 import { ensureSampleJobs } from "../src/services/job.service.js";
 import { recordUsageEvent } from "../src/services/usage.service.js";
 
@@ -496,5 +496,99 @@ describe("AI Job Copilot API", () => {
     // 5. Empty again
     const list3 = await agent.get("/api/career-vault").expect(200);
     expect(list3.body.data).toEqual([]);
+  });
+
+  it("handles forgot-password and reset-password flow safely and securely", async () => {
+    // 1. Register a test user
+    const email = "recovery@example.com";
+    await request(app).post("/api/auth/register").send({
+      fullName: "Recovery User",
+      email,
+      password: "Password123!"
+    }).expect(201);
+
+    // 2. Request password reset (existing email)
+    const resExist = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email })
+      .expect(200);
+
+    // Verify response structure and generic messaging
+    expect(resExist.body.data.message).toContain("If an account exists");
+    // Development mode should return the token (since test runs under development/test and mock mode)
+    const token = resExist.body.data.token;
+    expect(token).toBeTruthy();
+
+    // 3. Request password reset (non-existing email)
+    const resNotExist = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: "nonexistent@example.com" })
+      .expect(200);
+
+    expect(resNotExist.body.data.message).toContain("If an account exists");
+    // Verify it returns the token in dev mode even for non-existent emails to prevent enumeration leaks!
+    expect(resNotExist.body.data.token).toBeTruthy();
+    expect(resNotExist.body.data.token).not.toBe(token);
+
+    // 4. Verify token hash storage in the DB (directly search DB record)
+    const userInDb = await findOneRecord("users", { email });
+    expect(userInDb).toBeTruthy();
+    expect(userInDb.passwordResetTokenHash).toBeTruthy();
+    // It must NOT store the raw token in the database
+    expect(userInDb.passwordResetTokenHash).not.toBe(token);
+    expect(userInDb.passwordResetExpires).toBeTruthy();
+
+    // 5. Attempt reset with invalid token
+    const resInvalid = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: "invalidtoken123", password: "NewPassword123!" })
+      .expect(400);
+    expect(resInvalid.body.message).toContain("invalid or has expired");
+
+    // 6. Attempt reset with weak password
+    await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token, password: "weak" })
+      .expect(422);
+
+    // 7. Manually expire token in DB and attempt reset
+    await updateRecord("users", userInDb._id.toString(), {
+      passwordResetExpires: new Date(Date.now() - 1000) // Expired
+    });
+    const resExpired = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token, password: "NewPassword123!" })
+      .expect(400);
+    expect(resExpired.body.message).toContain("invalid or has expired");
+
+    // Restore valid expiration for the next steps
+    await updateRecord("users", userInDb._id.toString(), {
+      passwordResetExpires: new Date(Date.now() + 60000) // Valid for 1 min
+    });
+
+    // 8. Attempt successful password reset
+    const resSuccess = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token, password: "NewPassword123!" })
+      .expect(200);
+    expect(resSuccess.body.data.reset).toBe(true);
+    expect(resSuccess.body.data.message).toContain("successfully reset");
+
+    // Verify token was invalidated
+    const updatedUser = await findOneRecord("users", { email });
+    expect(updatedUser.passwordResetTokenHash).toBeNull();
+    expect(updatedUser.passwordResetExpires).toBeNull();
+
+    // 9. Login with new password
+    await request(app)
+      .post("/api/auth/login")
+      .send({ email, password: "NewPassword123!" })
+      .expect(200);
+
+    // Old password should fail
+    await request(app)
+      .post("/api/auth/login")
+      .send({ email, password: "Password123!" })
+      .expect(401);
   });
 });

@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/app/providers";
 import LoginPage from "@/app/auth/login/page";
 import RegisterPage from "@/app/auth/register/page";
+import ForgotPasswordPage from "@/app/auth/forgot-password/page";
+import ResetPasswordPage from "@/app/auth/reset-password/page";
 import RootLoginPage from "@/app/login/page";
 import RootRegisterPage from "@/app/register/page";
 import DashboardPage from "@/app/dashboard/page";
@@ -771,5 +773,52 @@ describe("recruiter portal", () => {
     const hrefs = links.map((l) => l.getAttribute("href"));
     expect(hrefs).toContain("/privacy");
     expect(hrefs).toContain("/register");
+  });
+});
+
+describe("forgot password and reset password pages", () => {
+  it("forgot password page renders and submits", async () => {
+    mockApiResponse({
+      google: { configured: false, status: "ready" },
+      email: { configured: false, provider: "mock", status: "ready" }
+    });
+
+    renderWithProviders(<ForgotPasswordPage />);
+
+    expect(screen.getByRole("heading", { name: /Reset your password/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/you@example.com/i)).toBeInTheDocument();
+
+    // Verify fallback warning is shown when email status is ready/not live
+    await waitFor(() => {
+      expect(screen.getByText(/Email service not active/i)).toBeInTheDocument();
+    });
+
+    // Mock forgot-password post
+    mockApiResponse({
+      success: true,
+      message: "If an account exists, password reset instructions will be sent."
+    });
+
+    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
+    await userEvent.type(emailInput, "test@example.com");
+
+    const submitBtn = screen.getByRole("button", { name: /Send reset link/i });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/If an account exists, password reset instructions will be sent/i)).toBeInTheDocument();
+    });
+  });
+
+  it("reset password page renders and displays complexity checklist", async () => {
+    renderWithProviders(<ResetPasswordPage />);
+
+    expect(screen.getByRole("heading", { name: /Reset your password/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Paste the reset token/i)).toBeInTheDocument();
+    expect(screen.getByText(/Password requirements:/i)).toBeInTheDocument();
+    expect(screen.getByText(/At least 8 characters/i)).toBeInTheDocument();
+    expect(screen.getByText(/At least one uppercase letter/i)).toBeInTheDocument();
+    expect(screen.getByText(/At least one lowercase letter/i)).toBeInTheDocument();
+    expect(screen.getByText(/At least one number/i)).toBeInTheDocument();
   });
 });
