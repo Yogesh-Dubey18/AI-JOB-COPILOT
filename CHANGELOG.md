@@ -4,6 +4,12 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.15 — Career Vault Model and Routes (2026-05-25)
+
+- **Career Vault Schema & Model**: Created the Mongoose schema for `CareerVault` to store structured work history, achievements, education, projects, certifications, and skills.
+- **Validation, Service & Routes**: Implemented Zod validation schemas, service layer methods, and `/api/career-vault` routes (GET, POST, DELETE) for full RESTful resource management.
+- **Verification**: Verified endpoint functionality in integration tests (`api.test.ts`) and checked page component rendering in unit tests (`pages.test.tsx`). All 99 tests passed.
+
 ### v2.0.14 — Connected Answer Vault & Predefined Templates (2026-05-25)
 
 - **Answer Vault Schema & Model**: Created the Mongoose schema for `AnswerVault` with indexing on `userId` and `category`.

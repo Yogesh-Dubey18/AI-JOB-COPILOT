@@ -30,6 +30,7 @@ import { AuditLogModel } from "../models/AuditLog.js";
 import { FeedbackModel } from "../models/Feedback.js";
 import { CompanyResearchModel } from "../models/CompanyResearch.js";
 import { AnswerVaultModel } from "../models/AnswerVault.js";
+import { CareerVaultModel } from "../models/CareerVault.js";
 import { CollectionName, StoredRecord, makeId, memory } from "./memoryStore.js";
 
 const modelMap: Record<CollectionName, Model<any>> = {
@@ -62,7 +63,8 @@ const modelMap: Record<CollectionName, Model<any>> = {
   auditLogs: AuditLogModel,
   feedback: FeedbackModel,
   companyResearch: CompanyResearchModel,
-  answerVault: AnswerVaultModel
+  answerVault: AnswerVaultModel,
+  careerVault: CareerVaultModel
 };
 
 function clone<T>(value: T): T {

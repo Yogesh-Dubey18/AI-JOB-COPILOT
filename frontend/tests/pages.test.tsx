@@ -41,6 +41,7 @@ import NotificationPreferencesPage from "@/app/settings/notifications/page";
 import RecruiterPage from "@/app/recruiters/page";
 import CompanyResearchPage from "@/app/company-research/page";
 import AnswerVaultPage from "@/app/answer-vault/page";
+import CareerVaultPage from "@/app/career-vault/page";
 import { t, getStoredLanguage, setStoredLanguage, DEFAULT_LANGUAGE } from "@/lib/i18n";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
@@ -423,6 +424,18 @@ describe("frontend pages", () => {
 
     // 6. Ensure buttons to copy and save predefined templates are present
     expect(screen.getByRole("button", { name: /Copy Tell me about yourself \(STAR format\)/i })).toBeInTheDocument();
+  });
+
+  it("career vault page renders forms and displays records", () => {
+    mockApiResponse([]);
+    renderWithProviders(<CareerVaultPage />);
+
+    // 1. Check title and main heading
+    expect(screen.getByRole("heading", { name: "Career vault" })).toBeInTheDocument();
+
+    // 2. Check form is visible
+    expect(screen.getByRole("heading", { name: /Add career entry/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save entry/i })).toBeInTheDocument();
   });
 
   it("shared UX states expose accessible status and alert roles", () => {

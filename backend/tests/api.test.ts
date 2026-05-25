@@ -464,4 +464,37 @@ describe("AI Job Copilot API", () => {
     const list3 = await agent.get("/api/answer-vault").expect(200);
     expect(list3.body.data).toEqual([]);
   });
+
+  it("saves, lists, and deletes career vault records", async () => {
+    const agent = await authAgent();
+    // 1. Initially empty
+    const list1 = await agent.get("/api/career-vault").expect(200);
+    expect(list1.body.data).toEqual([]);
+
+    // 2. Save a career vault record
+    const saveRes = await agent.post("/api/career-vault").send({
+      type: "experience",
+      title: "Senior Software Engineer",
+      organisation: "Acme Corp",
+      startDate: "2023-01",
+      endDate: "2026-05",
+      description: "Led development of core features.",
+      impact: "Reduced page load time by 40%.",
+      skills: ["React", "TypeScript", "Node.js"]
+    }).expect(201);
+    expect(saveRes.body.data.title).toBe("Senior Software Engineer");
+    expect(saveRes.body.data.skills).toContain("TypeScript");
+
+    // 3. List contains the saved record
+    const list2 = await agent.get("/api/career-vault").expect(200);
+    expect(list2.body.data.length).toBe(1);
+    expect(list2.body.data[0].title).toBe("Senior Software Engineer");
+
+    // 4. Delete the record
+    await agent.delete(`/api/career-vault/${saveRes.body.data._id}`).expect(200);
+
+    // 5. Empty again
+    const list3 = await agent.get("/api/career-vault").expect(200);
+    expect(list3.body.data).toEqual([]);
+  });
 });
