@@ -33,6 +33,6 @@ Object.defineProperty(globalThis, "ResizeObserver", {
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useParams: () => ({ jobId: "job-1", applicationId: "app-1", interviewId: "int-1" }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(typeof window !== "undefined" ? window.location.search : ""),
   redirect: vi.fn()
 }));

@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.12 — Connected PDF Generation and Parameter Pre-fill (2026-05-25)
+
+- **Search Parameter Pre-fill**: Updated the frontend PDF export page (`frontend/app/pdf-export/page.tsx`) to retrieve URL search parameters (like `versionId`, `resumeId`, `tailoredResumeId`, `applicationKitId`, `portfolioId`, and `interviewId`) and automatically populate corresponding input fields.
+- **Next.js Suspense Optimization**: Wrapped the PDF export page content in a `<Suspense>` boundary to prevent Next.js static generation build time errors when calling `useSearchParams()`.
+- **Pre-fill Loop Prevention**: Optimized the page mounting hook by running the URL pre-fill logic only on mount and checking state changes before updating state, preventing infinite re-render loops in test and development environments.
+- **Verification**: Updated frontend unit tests to mock search parameters dynamically using `window.history.pushState` and verified correct form pre-population. All tests compiled and passed.
+
 ### v2.0.11 - Full Website Feature Audit and SaaS Upgrade Planning (2026-05-25)
 
 - **Full Route and Feature Audit**: Added `docs/full-website-feature-audit.md` covering live status, route-by-route behavior, feature inventory, broken workflows, provider honesty, UX/mobile/accessibility, security/privacy, performance/reliability, testing, and SaaS realism.

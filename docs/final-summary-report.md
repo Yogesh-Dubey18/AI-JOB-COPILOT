@@ -109,3 +109,11 @@ All checker scripts and code compilers compile and pass:
   3. Better Stack uptime monitors are active. Triage any alert patterns.
   4. Prepare execution for the [P0 Upload Hardening Sprint Plan](p0-upload-hardening-sprint-plan.md).
 - **Next Recommended Engineering Roadmap:** Execute the storage migration to S3/R2 and magic number validation as outlined in the sprint plan, followed by Google OAuth and Playwright E2E.
+
+---
+
+## 🚀 Connected Workflows Sprint (2026-05-25)
+
+Completed connected workflow sprint updates:
+- **Phase 5 (Connected Resume Analysis):** Implemented interactive Suggestions Checklist and Resume tailored draft preview. Passed and committed in `b010734`.
+- **Phase 6 (Connected PDF Generation and Pre-fill):** Wrapped PDF export page in Suspense to resolve build-time static page checks. Enhanced page mount logic to parse URL query parameters (`versionId`, `resumeId`, `tailoredResumeId`, `applicationKitId`, `portfolioId`, `interviewId`) and automatically populate corresponding input fields. Prevented loop hangs in testing by evaluating parameter pre-fills on initial mount only and guarding state updates. Integrated `window.history.pushState` mocks inside tests.

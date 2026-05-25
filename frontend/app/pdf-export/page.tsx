@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Download, FileArchive, FileText, History, IdCard, LayoutTemplate, MessagesSquare } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
 import { Badge } from "@/components/ui/badge";
@@ -22,9 +23,34 @@ const exportTypes = [
   { key: "interview-prep", label: "Interview prep", icon: FileArchive, placeholder: "Interview ID", format: "PDF" }
 ] as const;
 
-export default function PdfExportPage() {
+function PdfExportContent() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [ids, setIds] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const versionId = searchParams.get("versionId") || searchParams.get("resumeId");
+    const tailoredResumeId = searchParams.get("tailoredResumeId");
+    const applicationKitId = searchParams.get("applicationKitId");
+    const portfolioId = searchParams.get("portfolioId");
+    const interviewId = searchParams.get("interviewId");
+
+    const newIds: Record<string, string> = {};
+    if (versionId) newIds.resume = versionId;
+    if (tailoredResumeId) newIds["tailored-resume"] = tailoredResumeId;
+    if (applicationKitId) newIds["application-kit"] = applicationKitId;
+    if (portfolioId) newIds.portfolio = portfolioId;
+    if (interviewId) newIds["interview-prep"] = interviewId;
+
+    if (Object.keys(newIds).length > 0) {
+      setIds((prev) => {
+        const hasChange = Object.entries(newIds).some(([key, val]) => prev[key] !== val);
+        if (!hasChange) return prev;
+        return { ...prev, ...newIds };
+      });
+    }
+  }, []); // Run only on mount to prevent infinite re-render loops in test environments
+
   const history = useQuery({ queryKey: ["pdf-exports"], queryFn: () => api.get<any[]>("/exports/history"), retry: false });
   const createExport = useMutation({
     mutationFn: ({ type, id }: { type: string; id: string }) => api.post<any>(`/exports/${type}/${id}`, {}),
@@ -101,5 +127,20 @@ export default function PdfExportPage() {
         </Card>
       </div>
     </AppShell>
+  );
+}
+
+export default function PdfExportPage() {
+  return (
+    <Suspense fallback={
+      <AppShell>
+        <PageHeading title="PDF and DOCX exports" description="Generate ATS-friendly exports for resumes, tailored resumes, application kits, portfolios, and interview prep. File names follow the pattern: CandidateName_Role_Resume.pdf" />
+        <div className="flex h-40 items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading exports page...</p>
+        </div>
+      </AppShell>
+    }>
+      <PdfExportContent />
+    </Suspense>
   );
 }

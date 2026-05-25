@@ -271,9 +271,20 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Interview history/i)).toBeInTheDocument();
   });
 
-  it("exports page renders", () => {
+  it("exports page renders and pre-fills input from URL parameters", () => {
+    window.history.pushState({}, "", "?versionId=test-resume-version-id&tailoredResumeId=test-tailored-id");
+
     renderWithProviders(<PdfExportPage />);
     expect(screen.getByRole("heading", { name: /PDF and DOCX exports/i })).toBeInTheDocument();
+    
+    const resumeInput = screen.getAllByPlaceholderText("Resume or resume version ID")[0] as HTMLInputElement;
+    expect(resumeInput.value).toBe("test-resume-version-id");
+
+    const tailoredInput = screen.getByPlaceholderText("Tailored resume ID") as HTMLInputElement;
+    expect(tailoredInput.value).toBe("test-tailored-id");
+
+    // Cleanup URL search params
+    window.history.pushState({}, "", "/");
   });
 
   it("analytics page renders", () => {
