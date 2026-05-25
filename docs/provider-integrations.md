@@ -160,14 +160,17 @@ STRIPE_PUBLISHABLE_KEY=
 
 ## File Storage
 
-Resume files should move from local disk to an approved object store in production.
+Resume files and generated PDFs are stored via the configured storage provider.
 
+**Required env vars**:
 ```
 STORAGE_PROVIDER=local   # or s3 or r2
-S3_BUCKET=
-S3_REGION=
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
+STORAGE_BUCKET_NAME=
+STORAGE_REGION=
+STORAGE_ENDPOINT=
+STORAGE_ACCESS_KEY_ID=
+STORAGE_SECRET_ACCESS_KEY=
+STORAGE_SIGNED_URL_TTL_SECONDS=900
 ```
 
 ---

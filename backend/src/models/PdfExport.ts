@@ -17,7 +17,7 @@ const PdfExportSchema = new Schema(
     byteSize: Number,
     status: { type: String, enum: ["ready", "failed"], default: "ready", index: true },
     renderer: { type: String, default: "native-basic-pdf" },
-    storage: { type: String, enum: ["local"], default: "local" },
+    storage: { type: String, enum: ["local", "s3", "r2"], default: "local" },
     metadata: Schema.Types.Mixed,
     privacy: {
       ownerVerified: { type: Boolean, default: true },

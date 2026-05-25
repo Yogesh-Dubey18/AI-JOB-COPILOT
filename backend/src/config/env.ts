@@ -42,7 +42,14 @@ export const env = {
   SENTRY_DSN: process.env.SENTRY_DSN || "",
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
-  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || ""
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || "",
+  STORAGE_PROVIDER: process.env.STORAGE_PROVIDER || "local",
+  STORAGE_BUCKET_NAME: process.env.STORAGE_BUCKET_NAME || "",
+  STORAGE_REGION: process.env.STORAGE_REGION || "",
+  STORAGE_ENDPOINT: process.env.STORAGE_ENDPOINT || "",
+  STORAGE_ACCESS_KEY_ID: process.env.STORAGE_ACCESS_KEY_ID || "",
+  STORAGE_SECRET_ACCESS_KEY: process.env.STORAGE_SECRET_ACCESS_KEY || "",
+  STORAGE_SIGNED_URL_TTL_SECONDS: Number(process.env.STORAGE_SIGNED_URL_TTL_SECONDS || 900)
 };
 
 export const isProduction = env.NODE_ENV === "production";

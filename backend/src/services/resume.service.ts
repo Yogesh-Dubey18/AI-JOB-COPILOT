@@ -4,6 +4,31 @@ import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { anonymizeParsedResume, extractResumeTextDetailed, parseResumeText } from "./resume-parser.service.js";
 import { validateResumeBuffer } from "./file-validation.service.js";
+import { uploadFile, getSignedUrl } from "./storage.service.js";
+
+export async function resolveResumeUrl(resume: any) {
+  if (!resume) return resume;
+  const doc = resume.toObject ? resume.toObject() : resume;
+  let key = doc.fileUrl;
+  if (key.startsWith("/uploads/")) {
+    key = key.replace("/uploads/", "");
+  }
+  doc.fileUrl = await getSignedUrl(key);
+  return doc;
+}
+
+export async function resolveResumeVersionUrl(version: any) {
+  if (!version) return version;
+  const doc = version.toObject ? version.toObject() : version;
+  if (doc.pdfUrl) {
+    let key = doc.pdfUrl;
+    if (key.startsWith("/uploads/")) {
+      key = key.replace("/uploads/", "");
+    }
+    doc.pdfUrl = await getSignedUrl(key);
+  }
+  return doc;
+}
 
 export async function uploadResume(userId: string, file: Express.Multer.File, isBaseResume = true, options: { anonymizePreview?: boolean } = {}) {
   if (!file) throw new ApiError(400, "Resume file is required");
@@ -30,10 +55,20 @@ export async function uploadResume(userId: string, file: Express.Multer.File, is
   const parsed = await extractResumeTextDetailed(file.path, file.mimetype);
   const parsedData = parseResumeText(parsed.text);
   const anonymizedPreview = options.anonymizePreview ? anonymizeParsedResume(parsedData, parsed.text) : null;
-  return createRecord("resumes", {
+
+  // Generate unique user-specific key for S3/R2 storage partition
+  const fileKey = `resumes/${userId}/${Date.now()}-${path.basename(file.path)}`;
+
+  // Upload to configured storage
+  await uploadFile(fileKey, buffer, file.mimetype);
+
+  // Remove local temp multer upload
+  await fs.unlink(file.path).catch(() => {});
+
+  const resume = await createRecord("resumes", {
     userId,
     fileName: file.originalname,
-    fileUrl: "/uploads/" + path.basename(file.path),
+    fileUrl: fileKey,
     fileType: file.mimetype,
     rawText: parsed.text,
     parsedData: {
@@ -47,16 +82,19 @@ export async function uploadResume(userId: string, file: Express.Multer.File, is
     },
     isBaseResume
   });
+
+  return resolveResumeUrl(resume);
 }
 
 export async function listResumes(userId: string) {
-  return findRecords("resumes", { userId }, { sort: { createdAt: -1 } });
+  const list = await findRecords("resumes", { userId }, { sort: { createdAt: -1 } });
+  return Promise.all(list.map((r) => resolveResumeUrl(r)));
 }
 
 export async function getResume(userId: string, id: string) {
   const resume = await findRecordById("resumes", id);
   if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
-  return resume;
+  return resolveResumeUrl(resume);
 }
 
 export async function updateResumeParsedData(userId: string, id: string, parsedData: any) {
@@ -69,15 +107,16 @@ export async function updateResumeParsedData(userId: string, id: string, parsedD
   };
   const updated = await updateRecord("resumes", id, { parsedData: nextParsedData });
   if (!updated) throw new ApiError(404, "Resume not found");
-  return updated;
+  return resolveResumeUrl(updated);
 }
 
 export async function listResumeVersions(userId: string) {
-  return findRecords("resumeVersions", { userId }, { sort: { createdAt: -1 } });
+  const list = await findRecords("resumeVersions", { userId }, { sort: { createdAt: -1 } });
+  return Promise.all(list.map((v) => resolveResumeVersionUrl(v)));
 }
 
 export async function getResumeVersion(userId: string, id: string) {
   const version = await findRecordById("resumeVersions", id);
   if (!version || String(version.userId) !== userId) throw new ApiError(404, "Resume version not found");
-  return version;
+  return resolveResumeVersionUrl(version);
 }

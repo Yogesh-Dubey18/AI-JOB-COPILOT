@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.19 — Private Cloud Storage Hardening (2026-05-25)
+
+- **Storage Abstraction Service**: Created `storage.service.ts` to abstract cloud object storing (S3/R2) with local fallback.
+- **Signed URL Handling**: Updated resume upload and PDF export flows to utilize storage key lookup and dynamically resolve authenticated presigned download URLs on demand.
+- **Provider Status**: Integrated S3/R2 storage provider credentials presence checks in `getProviderStatus` API responses.
+- **Verification**: Added automated unit tests in `storage.test.ts` verifying file writing, signed URL formatting, and file deletions. All tests pass.
+
 ### v2.0.18 — Portfolio PDF Export & Storage Status Warnings (2026-05-25)
 
 - **Portfolio PDF Export Action**: Added "Generate PDF" action on `/portfolio-generator` linked directly to the backend PDF generator service.

@@ -137,3 +137,14 @@ All checker scripts and code compilers compile and pass:
 Completed connected workflow sprint updates:
 - **Phase 5 (Connected Resume Analysis):** Implemented interactive Suggestions Checklist and Resume tailored draft preview. Passed and committed in `b010734`.
 - **Phase 6 (Connected PDF Generation and Pre-fill):** Wrapped PDF export page in Suspense to resolve build-time static page checks. Enhanced page mount logic to parse URL query parameters (`versionId`, `resumeId`, `tailoredResumeId`, `applicationKitId`, `portfolioId`, `interviewId`) and automatically populate corresponding input fields. Prevented loop hangs in testing by evaluating parameter pre-fills on initial mount only and guarding state updates. Integrated `window.history.pushState` mocks inside tests.
+
+---
+
+## 📦 Production-Hardening Storage Sprint (Phase A) (2026-05-25)
+
+Completed Phase A Storage Hardening updates:
+- **Storage Abstraction Service:** Designed and integrated `storage.service.ts` supporting standard local disk fallback and S3/R2 private object store uploading, unlinking, and dynamic presigned URL generation.
+- **Signed URL Resolution:** Modified resume and PDF export services to save file keys and dynamically generate temporary presigned download links (15-minute TTL) for authenticated users.
+- **Secure File Validation:** Aligned magic number validation with S3/R2 direct uploads to block arbitrary binary/executable uploads.
+- **Provider Status Honesty:** Added storage configuration checking inside the provider status API endpoint.
+

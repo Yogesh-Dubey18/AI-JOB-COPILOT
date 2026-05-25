@@ -2,6 +2,7 @@ import { getAiRuntime } from "../ai/aiClient.js";
 import { env } from "../config/env.js";
 import { getBillingProviderStatus } from "./billing-provider.service.js";
 import { getMonitoringStatus } from "./monitoring.service.js";
+import { isConfigured as isStorageConfigured, getProvider as getStorageProvider } from "./storage.service.js";
 
 export function getProviderStatus() {
   const ai = getAiRuntime();
@@ -34,6 +35,11 @@ export function getProviderStatus() {
       configured: calendarProvider === "google" ? Boolean(env.GOOGLE_CALENDAR_CLIENT_ID && env.GOOGLE_CALENDAR_CLIENT_SECRET) : false,
       mockSafe: calendarProvider === "mock"
     },
-    monitoring: getMonitoringStatus()
+    monitoring: getMonitoringStatus(),
+    storage: {
+      provider: getStorageProvider(),
+      configured: isStorageConfigured(),
+      mockSafe: getStorageProvider() === "local"
+    }
   };
 }

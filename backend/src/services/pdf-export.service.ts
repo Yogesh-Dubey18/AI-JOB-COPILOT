@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findRecordById, findRecords } from "../utils/repository.js";
+import { uploadFile, getSignedUrl, getProvider } from "./storage.service.js";
 
 export type PdfExportType = "resume" | "tailored-resume" | "application-kit" | "portfolio" | "interview-prep";
 
@@ -205,41 +206,55 @@ function interviewPrepSections(interview: any): PdfSection[] {
   ];
 }
 
+export async function resolvePdfExportUrl(exportDoc: any) {
+  if (!exportDoc) return exportDoc;
+  const doc = exportDoc.toObject ? exportDoc.toObject() : exportDoc;
+  let key = doc.fileUrl;
+  if (key.startsWith("/uploads/")) {
+    key = key.replace("/uploads/", "");
+  }
+  doc.fileUrl = await getSignedUrl(key);
+  return doc;
+}
+
 async function writePdfExport(userId: string, sourceType: PdfExportType, sourceId: string, title: string, sections: PdfSection[], metadata: Record<string, unknown> = {}, privacyNotes: string[] = []) {
-  await fs.mkdir(exportDir(), { recursive: true });
   const buffer = buildPdfBuffer(title, sections);
   const shortHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
   const fileName = `${Date.now()}-${safeSegment(sourceType)}-${safeSegment(sourceId).slice(-16)}-${shortHash}.pdf`;
-  const filePath = path.join(exportDir(), fileName);
-  await fs.writeFile(filePath, buffer);
-  const fileUrl = `/uploads/exports/${fileName}`;
+  const fileKey = `exports/${fileName}`;
+
+  // Upload file key and buffer to configured S3/R2 storage or local fallback
+  await uploadFile(fileKey, buffer, "application/pdf");
+
   return createRecord("pdfExports", {
     userId,
     sourceType,
     sourceId,
     title,
     fileName,
-    fileUrl,
+    fileUrl: fileKey,
     mimeType: "application/pdf",
     byteSize: buffer.byteLength,
     status: "ready",
     renderer,
-    storage: "local",
+    storage: getProvider(),
     metadata: { ...metadata, checksumSha256: shortHash },
     privacy: {
       ownerVerified: true,
       redactedFields: [],
-      notes: ["Generated file is written to ignored local upload storage.", ...privacyNotes]
+      notes: [`Generated file is stored via ${getProvider()} storage provider.`, ...privacyNotes]
     }
-  });
+  }).then(resolvePdfExportUrl);
 }
 
 export async function listPdfExports(userId: string) {
-  return findRecords("pdfExports", { userId }, { sort: { createdAt: -1 }, limit: 50 });
+  const list = await findRecords("pdfExports", { userId }, { sort: { createdAt: -1 }, limit: 50 });
+  return Promise.all(list.map((item) => resolvePdfExportUrl(item)));
 }
 
 export async function getPdfExport(userId: string, id: string) {
-  return assertOwned(await findRecordById("pdfExports", id), userId, "PDF export");
+  const exportDoc = assertOwned(await findRecordById("pdfExports", id), userId, "PDF export");
+  return resolvePdfExportUrl(exportDoc);
 }
 
 export async function exportResumePdf(userId: string, id: string) {
