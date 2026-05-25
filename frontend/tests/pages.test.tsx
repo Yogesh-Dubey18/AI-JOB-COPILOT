@@ -249,9 +249,36 @@ describe("frontend pages", () => {
     });
   });
 
-  it("job listing page renders", () => {
+  it("job listing page renders and shows action buttons", async () => {
+    mockApiResponse({
+      items: [
+        {
+          _id: "job-1",
+          title: "Full Stack Engineer",
+          company: "Test Co",
+          location: "Remote",
+          remoteType: "Remote",
+          jobType: "Full-time",
+          skillsRequired: ["React", "TypeScript"],
+          trustScore: 85,
+          applyUrl: "https://example.com/apply"
+        }
+      ],
+      total: 1
+    });
     renderWithProviders(<JobsPage />);
+
+    // 1. Heading
     expect(screen.getByRole("heading", { name: "Jobs" })).toBeInTheDocument();
+
+    // 2. Mock job card elements
+    await waitFor(() => {
+      expect(screen.getByText("Full Stack Engineer")).toBeInTheDocument();
+      expect(screen.getByText(/Test Co/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Track Full Stack Engineer/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Apply kit/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Official link/i })).toBeInTheDocument();
+    });
   });
 
   it("job detail page renders", () => {

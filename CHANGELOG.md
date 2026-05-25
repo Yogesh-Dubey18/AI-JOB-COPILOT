@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.17 — Connected Jobs Feed & Context Match (2026-05-25)
+
+- **Resume-to-Job Matching**: Implemented query parameter context `fromResume` resolution on the `/jobs` page to dynamically calculate overlap match scores, highlight strong fit skills, and detail missing skill gaps.
+- **Dynamic Matching Banner**: Added interactive contextual banner displaying the active resume name and parsed skill count, with a quick-clear filter action.
+- **Track App & Save Job Actions**: Integrated client mutations to "Track App" (creating a new application and navigating to Applications tracker) and "Save job" (bookmarking roles) directly from job card listings.
+- **Verification**: Added comprehensive unit test assertions verifying search matching layout and tracking buttons. All 99 tests pass.
+
 ### v2.0.16 — Connected Guided Workflows (2026-05-25)
 
 - **Dynamic Progress Calculation**: Refactored `/guided-workflow` frontend page to query real user data (resumes, applications, interviews, profile, answer vault).

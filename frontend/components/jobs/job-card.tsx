@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
-import { Bookmark, CheckCircle2, ShieldCheck, Sparkles, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Bookmark, CheckCircle2, ShieldCheck, Sparkles, XCircle, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { api } from "@/lib/api";
 
 function SourceBadge({ sourceType }: { sourceType?: string }) {
   const label = sourceType ? sourceType : "curated";
@@ -15,10 +20,46 @@ function SourceBadge({ sourceType }: { sourceType?: string }) {
   );
 }
 
-export function JobCard({ job }: { job: any }) {
+interface JobCardProps {
+  job: any;
+  isSaved?: boolean;
+}
+
+export function JobCard({ job, isSaved = false }: JobCardProps) {
+  const router = useRouter();
+  const qc = useQueryClient();
   const trustColor = (job.trustScore || 0) >= 70 ? "text-success" : (job.trustScore || 0) >= 40 ? "text-amber-600" : "text-danger";
+
+  const trackMutation = useMutation({
+    mutationFn: (status: string) => api.post("/applications", {
+      jobId: job._id,
+      company: job.company,
+      role: job.title,
+      status: status
+    }),
+    onSuccess: (res: any) => {
+      qc.invalidateQueries({ queryKey: ["applications"] });
+      if (res?.data?.status === "Applied") {
+        router.push("/applications");
+      }
+    }
+  });
+
+  const handleSave = () => {
+    if (isSaved) return;
+    trackMutation.mutate("Saved");
+  };
+
+  const handleTrack = () => {
+    if (isSaved) {
+      router.push("/applications");
+      return;
+    }
+    trackMutation.mutate("Applied");
+  };
+
   return (
-    <Card>
+    <Card className={isSaved ? "border-primary/40 bg-primary/[0.01]" : ""}>
       <CardContent className="space-y-3 p-4">
         {/* Header */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -88,8 +129,30 @@ export function JobCard({ job }: { job: any }) {
         <div className="flex flex-wrap gap-2">
           <Link href={"/jobs/" + job._id}><Button>Analyze</Button></Link>
           <Link href={`/application-kit/${job._id}`}><Button variant="outline"><Sparkles className="h-4 w-4" /> Apply kit</Button></Link>
+          
+          <Button
+            type="button"
+            variant={isSaved ? "primary" : "outline"}
+            onClick={handleTrack}
+            disabled={trackMutation.isPending}
+            aria-label={isSaved ? "View Tracker" : `Track ${job.title}`}
+          >
+            <PlusCircle className="h-4 w-4" /> {isSaved ? "View Tracker" : "Track App"}
+          </Button>
+
           {job.applyUrl ? <a href={job.applyUrl} target="_blank" rel="noopener noreferrer"><Button variant="outline">Official link</Button></a> : null}
-          <Button type="button" title="Save job" aria-label={`Save ${job.title}`} variant="ghost" className="w-10 px-0"><Bookmark className="h-4 w-4" /></Button>
+          
+          <Button
+            type="button"
+            title={isSaved ? "Saved" : "Save job"}
+            aria-label={isSaved ? "Saved" : `Save ${job.title}`}
+            variant="ghost"
+            className="w-10 px-0"
+            onClick={handleSave}
+            disabled={isSaved || trackMutation.isPending}
+          >
+            <Bookmark className={`h-4 w-4 ${isSaved ? "fill-primary text-primary" : ""}`} />
+          </Button>
         </div>
       </CardContent>
     </Card>
