@@ -180,17 +180,26 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             <label className="block space-y-1 text-sm font-medium">
               <span>Full name</span>
               <Input placeholder="Asha Developer" autoComplete="name" {...form.register("fullName" as never)} />
+              {(form.formState.errors as any).fullName?.message && (
+                <p className="text-xs text-danger" role="alert">{(form.formState.errors as any).fullName.message as string}</p>
+              )}
             </label>
           ) : null}
           {mode === "register" ? (
             <label className="block space-y-1 text-sm font-medium">
               <span>Phone</span>
               <Input placeholder="Optional phone number" autoComplete="tel" {...form.register("phone" as never)} />
+              {(form.formState.errors as any).phone?.message && (
+                <p className="text-xs text-danger" role="alert">{(form.formState.errors as any).phone.message as string}</p>
+              )}
             </label>
           ) : null}
           <label className="block space-y-1 text-sm font-medium">
             <span>Email</span>
             <Input placeholder="you@example.com" type="email" autoComplete="email" {...form.register("email" as never)} />
+            {(form.formState.errors as any).email?.message && (
+              <p className="text-xs text-danger" role="alert">{(form.formState.errors as any).email.message as string}</p>
+            )}
           </label>
 
           {/* Password field with Forgot password link in login mode (Fix 1) */}
@@ -214,6 +223,26 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               {...form.register("password" as never)}
             />
+            {(form.formState.errors as any).password?.message && (
+              <p className="text-xs text-danger mt-1 font-semibold" role="alert" data-testid="password-error">
+                {(form.formState.errors as any).password.message as string}
+              </p>
+            )}
+            {mode === "register" ? (
+              <div className="mt-2 rounded-md bg-muted/40 p-2.5 text-xs text-muted-foreground border" data-testid="password-guidance">
+                <span className="font-semibold text-foreground">Password criteria:</span>
+                <ul className="mt-1 space-y-1 list-disc pl-4 leading-relaxed">
+                  <li>Use at least 8 characters.</li>
+                  <li>Include letters (both uppercase and lowercase) and numbers.</li>
+                  <li>Avoid using your name or email.</li>
+                  <li>Never reuse passwords from other sites.</li>
+                </ul>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1" data-testid="login-password-note">
+                Use the password you created during signup.
+              </p>
+            )}
           </div>
 
           {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}

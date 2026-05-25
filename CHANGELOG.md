@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.8 — Password Guidance and Validation Alignment (2026-05-25)
+
+- **Backend Password Validation Synchronized**: Configured frontend `validators.ts` to require password complexity constraints matching the backend (minimum 8, maximum 128 characters, at least one uppercase letter, one lowercase letter, and one number).
+- **Frontend Password Guide and Notes**: Added interactive password criteria block on the registration form and a small usage note on the login form.
+- **Error Display**: Enhanced the login and register forms to render clear, red field-level validation helper messages beneath input fields.
+- **Verification & Tests**: Wrote frontend unit tests verifying guide visibility, weak password validation rejection, and login note visibility. Verified all test suites pass.
+
 ### v2.0.7 — Google OAuth Provider-Ready Integration (2026-05-25)
 
 - **Google OAuth Status Check**: Implemented `/api/auth/providers/status` endpoint to query configured status of Google Client variables.

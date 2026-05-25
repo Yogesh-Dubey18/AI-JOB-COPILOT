@@ -113,7 +113,7 @@ FRONTEND_URL=
 
 **Status**: Provider-ready. Enabled dynamically in `/settings/integrations` and login/register forms when environment variables are set.
 
-Setup: Create OAuth 2.0 credentials at [console.cloud.google.com](https://console.cloud.google.com). Add authorized redirect URIs. See [docs/google-oauth-activation.md](file:///C:/Users/Yoges/OneDrive/Desktop/ai-job-copilot/docs/google-oauth-activation.md) for full setup instructions.
+Setup: Create OAuth 2.0 credentials at [console.cloud.google.com](https://console.cloud.google.com). Add authorized redirect URIs. See [google-oauth-activation.md](google-oauth-activation.md) for full setup instructions.
 
 **Safety note**: Only request `openid`, `email`, and `profile` scopes. Never store OAuth tokens in logs.
 

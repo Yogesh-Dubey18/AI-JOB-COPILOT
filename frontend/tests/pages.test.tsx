@@ -78,6 +78,8 @@ describe("frontend pages", () => {
     // Fix 10: Google OAuth placeholder button must be disabled (not clickable)
     const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
     expect(googleBtn).toBeDisabled();
+    // Phase 3: Login password note must be visible
+    expect(screen.getByTestId("login-password-note")).toBeInTheDocument();
   });
 
   it("register page renders", () => {
@@ -89,6 +91,38 @@ describe("frontend pages", () => {
     // Fix 10: Google OAuth placeholder button must be disabled in register mode too
     const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
     expect(googleBtn).toBeDisabled();
+    // Phase 3: Password guidance must be visible
+    expect(screen.getByTestId("password-guidance")).toBeInTheDocument();
+  });
+
+  it("shows error for weak password on register", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<RegisterPage />);
+    
+    await user.type(screen.getByPlaceholderText(/Asha Developer/i), "Test User");
+    await user.type(screen.getByLabelText(/^Email$/i), "test@example.com");
+    await user.type(screen.getByLabelText(/^Password$/i), "weak");
+    await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Register" }));
+    
+    await waitFor(() => {
+      expect(screen.getByTestId("password-error")).toBeInTheDocument();
+      expect(screen.getByTestId("password-error")).toHaveTextContent(/at least 8 characters/i);
+    });
+  });
+
+  it("shows error for missing uppercase letter in register password", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<RegisterPage />);
+    
+    await user.type(screen.getByPlaceholderText(/Asha Developer/i), "Test User");
+    await user.type(screen.getByLabelText(/^Email$/i), "test@example.com");
+    await user.type(screen.getByLabelText(/^Password$/i), "password123");
+    await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Register" }));
+    
+    await waitFor(() => {
+      expect(screen.getByTestId("password-error")).toBeInTheDocument();
+      expect(screen.getByTestId("password-error")).toHaveTextContent(/uppercase letter/i);
+    });
   });
 
   it("top-level login and register routes render", () => {
