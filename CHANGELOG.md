@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.25 — Advanced Orchestration, Schema and SEO Sprint (2026-05-26)
+
+- **Resume Schema Enhancement**: Added sourceType, template, changeSummary, categoryScores, and scoreExplanation fields to Mongoose schemas. Refactored local scoring calculator to compute 5-category ATS scoring breakdown with detailed why-score explanations.
+- **Portfolio SEO**: Integrated server-side generateMetadata helper using Next.js App Router to fetch minimal profile information and render OG tags, canonical URLs, and Twitter cards with fallback support.
+- **Multi-Agent Orchestration / Next-Best-Action**: Added deterministic next-best-action recommendation engine, mounted `/api/workflow/next-best-actions` endpoint, and added recommended next actions and agent status cards to the guided-workflow UI.
+- **SaaS Architecture Alignment**: Created `docs/pdf-blueprint-gap-map.md`, `docs/competitor-outperformance-strategy.md`, and `docs/browser-extension-safe-workflow.md` to align codebase features with security, compliance, and outperformance specifications.
+
 ### v2.0.24 — Product Readiness Audit Sprint (2026-05-26)
 
 - **Comprehensive Product Audit**: Conducted a full website, codebase, security, and provider integration audit. Created `docs/complete-product-audit-report.md` mapping all 28+ routes, feature states, unauthenticated/authenticated behaviors, and UX gaps.

@@ -93,6 +93,16 @@
 - [Known Limitations](known-limitations.md)
 - [Resume Intelligence v2](resume-intelligence-v2.md)
 
+## Product Readiness Audit Docs
+
+- [Complete Product Audit Report](complete-product-audit-report.md)
+- [Advanced Real Product Roadmap](advanced-real-product-roadmap.md)
+- [Pending Gaps & Provider Blockers](pending-gaps-and-provider-blockers.md)
+- [Next Implementation Sprint Plan](next-implementation-sprint-plan.md)
+- [Browser Extension Safe Workflow](browser-extension-safe-workflow.md)
+- [Competitor Outperformance Strategy](competitor-outperformance-strategy.md)
+- [PDF Blueprint Gap Map](pdf-blueprint-gap-map.md)
+
 ## Product And QA
 
 - [Project Case Study](project-case-study.md)

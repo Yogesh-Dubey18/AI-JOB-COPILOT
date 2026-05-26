@@ -48,7 +48,16 @@ const ResumeAnalysisSchema = new Schema(
     },
     privacyMode: String,
     redactedFields: [String],
-    parserWarnings: [String]
+    parserWarnings: [String],
+    // v2 five-category breakdown
+    categoryScores: {
+      content: { score: Number, max: Number, why: String },
+      format: { score: Number, max: Number, why: String },
+      optimization: { score: Number, max: Number, why: String },
+      bestPractices: { score: Number, max: Number, why: String },
+      applicationReadiness: { score: Number, max: Number, why: String }
+    },
+    scoreExplanation: String
   },
   { timestamps: true }
 );

@@ -23,6 +23,19 @@ function normalizeOptions(options: AnalyzeResumeOptions = "Full Stack Developer"
   };
 }
 
+/** Compute a simple diff summary between base resume skills and improved skills. */
+function computeChangeSummary(baseResume: any, tailoredContent: { skills?: string[]; summary?: string; projects?: any[] }) {
+  const baseSkills: string[] = (baseResume?.parsedData?.skills || []).map((s: string) => String(s).toLowerCase());
+  const newSkills: string[] = (tailoredContent.skills || []).map((s) => String(s).toLowerCase());
+  const addedSkills = newSkills.filter((s) => !baseSkills.includes(s));
+  const removedSkills = baseSkills.filter((s) => !newSkills.includes(s));
+  const originalSummary = String(baseResume?.parsedData?.summary || "");
+  const newSummary = String(tailoredContent.summary || "");
+  const summaryChanged = newSummary.length > 0 && newSummary !== originalSummary;
+  const projectsChanged = Boolean(tailoredContent.projects && tailoredContent.projects.length > 0);
+  return { addedSkills, removedSkills, summaryChanged, projectsChanged };
+}
+
 export async function analyzeResume(userId: string, resumeId: string, options: AnalyzeResumeOptions = "Full Stack Developer") {
   const normalized = normalizeOptions(options);
   const resume = await findRecordById("resumes", resumeId);
@@ -33,7 +46,7 @@ export async function analyzeResume(userId: string, resumeId: string, options: A
   const analysis = await aiService.analyzeResume(userId, { resume: resumeForAi, targetRole: normalized.targetRole, jobDescription: normalized.jobDescription, localScore });
   const jdWeightedScore = jobDescriptionCoverage ? Math.round((localScore.atsScore * 0.75) + (jobDescriptionCoverage.coveragePercent * 0.25)) : localScore.atsScore;
   const atsScore = Math.round((Number(analysis.atsScore || jdWeightedScore) * 0.35) + (jdWeightedScore * 0.65));
-  const redactedFields = normalized.anonymizeForAnalysis ? resumeForAi.parsedData?.redactedFields || [] : [];
+  const redactedFields = normalized.anonymizeForAnalysis ? (resumeForAi as any).parsedData?.redactedFields || [] : [];
   return createRecord("resumeAnalyses", {
     userId,
     resumeId,
@@ -41,6 +54,9 @@ export async function analyzeResume(userId: string, resumeId: string, options: A
     ...analysis,
     atsScore,
     resumeLevel: localScore.resumeLevel,
+    // v2 five-category breakdown
+    categoryScores: localScore.categoryScores,
+    scoreExplanation: localScore.scoreExplanation,
     sectionScores: { ...analysis.sectionScores, ...localScore.sectionScores },
     strengths: mergeUnique(localScore.strengths, analysis.strengths),
     weaknesses: mergeUnique(localScore.weaknesses, analysis.weaknesses),
@@ -61,19 +77,24 @@ export async function improveResume(userId: string, resumeId: string, targetRole
   const resume = await findRecordById("resumes", resumeId);
   if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
   const tailored = await aiService.tailorResume(userId, { resume, targetRole });
+  const content = {
+    summary: tailored.updatedSummary,
+    skills: tailored.updatedSkills,
+    projects: tailored.improvedProjects,
+    education: resume.parsedData?.education || [],
+    certifications: resume.parsedData?.certifications || []
+  };
+  const changeSummary = computeChangeSummary(resume, content);
   return createRecord("resumeVersions", {
     userId,
     baseResumeId: resumeId,
     title: targetRole + " improved resume",
     targetRole,
-    content: {
-      summary: tailored.updatedSummary,
-      skills: tailored.updatedSkills,
-      projects: tailored.improvedProjects,
-      education: resume.parsedData?.education || [],
-      certifications: resume.parsedData?.certifications || []
-    },
+    sourceType: "generated",
+    template: "standard",
+    content,
     atsScore: tailored.afterAtsScore,
-    pdfUrl: tailored.pdfUrl
+    pdfUrl: tailored.pdfUrl,
+    changeSummary
   });
 }

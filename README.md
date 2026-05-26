@@ -58,6 +58,9 @@ Portfolio package docs:
 - [Advanced Real Product Roadmap](docs/advanced-real-product-roadmap.md)
 - [Pending Gaps & Provider Blockers](docs/pending-gaps-and-provider-blockers.md)
 - [Next Implementation Sprint Plan](docs/next-implementation-sprint-plan.md)
+- [Browser Extension Safe Workflow](docs/browser-extension-safe-workflow.md)
+- [Competitor Outperformance Strategy](docs/competitor-outperformance-strategy.md)
+- [PDF Blueprint Gap Map](docs/pdf-blueprint-gap-map.md)
 
 ## Monorepo
 
