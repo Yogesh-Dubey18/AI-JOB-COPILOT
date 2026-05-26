@@ -244,6 +244,21 @@ UDEMY_CLIENT_ID=
 UDEMY_CLIENT_SECRET=
 ```
 
+## Observability
+
+Sentry for exception tracking and Better Stack for uptime monitoring.
+
+**Sentry environment variables (backend & frontend)**:
+```env
+MONITORING_PROVIDER=sentry
+SENTRY_DSN=
+NEXT_PUBLIC_MONITORING_PROVIDER=sentry
+NEXT_PUBLIC_SENTRY_DSN=
+```
+
+**Better Stack setup**:
+- Register an external uptime HTTP monitor at Better Stack pointing to the backend `/health` endpoint. No secrets are stored in the repo.
+
 ---
 
 ## Chrome Extension

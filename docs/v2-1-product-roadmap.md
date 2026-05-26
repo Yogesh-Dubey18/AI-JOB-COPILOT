@@ -4,6 +4,26 @@ This document outlines the engineering priorities, effort estimates, technical r
 
 ---
 
+## 2026-05-26 Product Readiness Audit Refresh
+
+Following the comprehensive product readiness audit, the stabilization order has been updated to focus on route protection, API completeness, private storage, and E2E browser tests:
+
+1. **P0 Must-Fix**:
+   - Implement missing backend CRM model/routes for `/api/contacts`.
+   - Remove fake-looking analytics averages from user dashboard.
+   - Set up Next.js config redirects for missing aliases: `/tracker`, `/career-operating-system`, `/interview-prep`, `/skill-roadmap`.
+   - Hardened session cookies and HttpOnly Google OAuth callback token transport.
+   - Mount missing `/ai/github-analyzer` backend endpoint.
+   - Migrate resumes and exports to private AWS S3/R2 storage with signed URL pings.
+2. **P1 Advanced**:
+   - Word (.docx) layout format exporter.
+   - STAR Method voice recorder mock interview tool.
+   - Single-click job parser within Chrome Extension background syncing.
+
+Please refer to the new [Advanced Real Product Roadmap](advanced-real-product-roadmap.md) and [Next Implementation Sprint Plan](next-implementation-sprint-plan.md) for detailed scopes.
+
+---
+
 ## 2026-05-25 Audit Refresh
 
 The full website/codebase audit produced a stricter stabilization order than the earlier provider-first roadmap. The next work should prioritize truthfulness, route integrity, missing API completion, and privacy hardening before additional broad product expansion.

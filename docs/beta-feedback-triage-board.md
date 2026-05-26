@@ -72,7 +72,7 @@ The full website/codebase audit added the following stabilization items.
 |---|---|---|---|---|
 | **AUD-P0-01** | P0 | Remove fake-looking authenticated analytics/dashboard defaults | Analytics / Frontend | Triaged |
 | **AUD-P0-02** | P0 | Protect all private app routes in middleware and tests | Auth / Frontend | ✅ Done |
-| **AUD-P0-03** | P0 | Add backend APIs for company research, answer vault, career vault, and contacts | Backend / Workflow | ✅ Done |
+| **AUD-P0-03** | P0 | Add backend APIs for company research, answer vault, career vault, and contacts | Backend / Workflow | ⏳ Partially Done (contacts API missing) |
 | **AUD-P0-04** | P0 | Fix GitHub analyzer API mismatch | AI / Backend | Triaged |
 | **AUD-P0-05** | P0 | Move resume/PDF storage from public local uploads to private S3/R2 signed URLs | Security / Storage | Triaged |
 | **AUD-P0-06** | P0 | Harden Google OAuth callback before live activation | Auth / Security | Triaged |
@@ -80,3 +80,19 @@ The full website/codebase audit added the following stabilization items.
 | **AUD-P1-08** | P1 | Preserve apply URL and job snapshot in tracker records | Backend / Tracker | ✅ Done |
 | **AUD-P1-09** | P1 | Enable real Playwright E2E instead of skip-safe placeholder | Testing / CI-CD | Triaged |
 | **AUD-P1-10** | P1 | Wire forgot/reset password and email verification | Auth / Email | Triaged |
+
+---
+
+## 2026-05-26 Product Readiness Audit Update
+
+The complete product readiness audit logged the following new backlog items:
+
+| Ticket ID | Priority | Feature / Feature Area | Assigned | Status |
+|---|---|---|---|---|
+| **AUD-P0-11** | P0 | Implement backend contacts CRM model, controller, and routes | Backend / CRM | ⏳ Triaged |
+| **AUD-P0-12** | P0 | Remove fake-looking default metric averages from analytics | Analytics / Frontend | ⏳ Triaged |
+| **AUD-P0-13** | P0 | Add redirects for missing route aliases (/tracker, /interview-prep, etc.) | Routing / Frontend | ⏳ Triaged |
+| **AUD-P1-14** | P1 | Implement Word (.docx) format resume exporter service | Backend / Exporters | ⏳ Triaged |
+| **AUD-P1-15** | P1 | Sync Chrome Extension with web session and enable single-click HTML parses | Extension / Auth | ⏳ Triaged |
+| **AUD-P1-16** | P1 | STAR Method answer builder and voice practice recorder | AI / Interview | ⏳ Triaged |
+

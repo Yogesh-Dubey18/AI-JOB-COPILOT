@@ -52,6 +52,13 @@ Portfolio package docs:
 - [Commercial Readiness Index](docs/commercial-readiness-index.md)
 - [Presentation Package Index](docs/presentation-package-index.md)
 
+## Product Readiness Audit Docs
+
+- [Complete Product Audit Report](docs/complete-product-audit-report.md)
+- [Advanced Real Product Roadmap](docs/advanced-real-product-roadmap.md)
+- [Pending Gaps & Provider Blockers](docs/pending-gaps-and-provider-blockers.md)
+- [Next Implementation Sprint Plan](docs/next-implementation-sprint-plan.md)
+
 ## Monorepo
 
 - `frontend`: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui-compatible components, TanStack Query, React Hook Form, Zod, Recharts, Framer Motion, Lucide, dark mode, PWA-ready public manifest.
