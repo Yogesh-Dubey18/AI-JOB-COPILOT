@@ -4,6 +4,12 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.23 — Provider Activation Readiness Sprint (2026-05-26)
+
+- **Provider Status Audit**: Created `docs/provider-activation-status-audit.md` detailing required environment variables, configuration locations (Render or Vercel), verification methods, dependent features, security risks, and final activation status for all 14 integration providers.
+- **Manual Setup Checklist**: Created `docs/manual-provider-setup-checklist.md` providing step-by-step console instructions, test commands, rollback guidelines, and common issues for S3/R2 storage, SendGrid/SMTP, Google OAuth, OpenAI/Gemini AI, Stripe, and external job boards.
+- **Safe State Verification**: Executed automated and manual queries verifying `/ready` and `/status` endpoints return honest status categories (Live, Provider-ready, Local fallback, Not configured, Needs approval) matching the active environment without faking live claims.
+
 ### v2.0.22 — Playwright E2E Testing Workflow Sprint (2026-05-26)
 
 - **Comprehensive Playwright E2E Tests**: Implemented a comprehensive E2E test suite in `frontend/e2e/smoke.spec.ts` covering 12 critical user flows including public routes, onboarding/auth views, unconfigured Google button states, forgot/reset password pages, protected route redirections, and mocked settings/integrations badge displays.
