@@ -4,6 +4,13 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.22 — Playwright E2E Testing Workflow Sprint (2026-05-26)
+
+- **Comprehensive Playwright E2E Tests**: Implemented a comprehensive E2E test suite in `frontend/e2e/smoke.spec.ts` covering 12 critical user flows including public routes, onboarding/auth views, unconfigured Google button states, forgot/reset password pages, protected route redirections, and mocked settings/integrations badge displays.
+- **Hermetic Test Architecture**: Integrated Playwright native network interception using `page.route` to mock API endpoints. This isolates E2E tests from database state and backend server cold starts.
+- **Testing Documentation**: Created `docs/playwright-e2e-testing.md` detailing browser installation rules, configuration parameters, execution commands, and security guidelines.
+- **CI Verification**: Successfully integrated E2E tests in the workspace-level `ci:verify` script and confirmed that all code compilers, linters, unit tests, and E2E suites run and pass successfully.
+
 ### v2.0.21 — Google OAuth Activation Readiness (2026-05-25)
 
 - **Dynamic Configuration Status Checks**: Upgraded `/api/auth/providers/status` and `/jobs/sources` to return the real three-state configuration status for Google OAuth: `live` (env keys present and configured), `ready` (env key placeholders exist in process.env but values are empty), and `not_configured` (env keys completely absent).

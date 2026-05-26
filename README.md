@@ -123,8 +123,9 @@ Beta docs:
 - [v2 Beta Testing Plan](docs/v2-beta-testing-plan.md)
 - [v2 Beta Manual Actions](docs/v2-beta-manual-actions.md)
 - [v2 Stabilization Bug Tracker](docs/v2-stabilization-bug-tracker.md)
+- [Playwright E2E Testing Guide](docs/playwright-e2e-testing.md)
 
-Still pending for real production use: live deployment verification, provider credentials, object storage, active Playwright E2E, Chrome Web Store packaging, and professional legal/commercial review.
+Still pending for real production use: live deployment verification, provider credentials, object storage, Chrome Web Store packaging, and professional legal/commercial review.
 
 ## v2 Stable Status
 
