@@ -458,10 +458,28 @@ describe("frontend pages", () => {
     expect(screen.getByRole("heading", { name: "Monitoring" })).toBeInTheDocument();
   });
 
-  it("integrations settings page renders", () => {
+  it("integrations settings page renders and shows honest status badges", async () => {
+    mockApiResponse({
+      success: true,
+      data: {
+        externalProviders: [
+          { id: "stripe", isLive: true, status: "live" },
+          { id: "google_oauth", isLive: false, status: "ready" },
+          { id: "sendgrid", isLive: false, status: "not_configured" }
+        ]
+      }
+    });
+
     renderWithProviders(<IntegrationsSettingsPage />);
     expect(screen.getByRole("heading", { name: /Integrations/i })).toBeInTheDocument();
     expect(screen.getByText(/Provider status is determined by backend/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      // Assert that there's at least one badge for each state based on our mock response
+      expect(screen.getByText("Live")).toBeInTheDocument();
+      expect(screen.getAllByText("Provider-ready").length).toBeGreaterThan(0);
+      expect(screen.getByText("Not configured")).toBeInTheDocument();
+    });
   });
 
   it("guided workflow page renders all steps and computes progress dynamically", () => {

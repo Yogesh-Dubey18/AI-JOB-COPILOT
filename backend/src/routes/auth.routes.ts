@@ -72,12 +72,23 @@ router.get("/providers/status", asyncHandler(async (_req, res) => {
     }
   }
 
+  let googleStatus: "live" | "ready" | "not_configured" = "not_configured";
+  if (googleConfigured) {
+    googleStatus = "live";
+  } else {
+    const googleIdExists = typeof process.env.GOOGLE_CLIENT_ID !== "undefined";
+    const googleSecretExists = typeof process.env.GOOGLE_CLIENT_SECRET !== "undefined";
+    if (googleIdExists || googleSecretExists) {
+      googleStatus = "ready";
+    }
+  }
+
   res.json({
     success: true,
     data: {
       google: {
         configured: googleConfigured,
-        status: googleConfigured ? "live" : "ready"
+        status: googleStatus
       },
       email: {
         configured: emailLive,
@@ -91,7 +102,7 @@ router.get("/providers/status", asyncHandler(async (_req, res) => {
 router.get("/google", asyncHandler(async (req, res) => {
   const configured = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   if (!configured) {
-    return res.status(400).json({ success: false, message: "Google OAuth credentials not configured" });
+    return res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?error=Google OAuth credentials not configured`);
   }
   const clientUrl = env.CLIENT_URL || "http://localhost:3000";
   const redirectUri = env.GOOGLE_REDIRECT_URI || `${clientUrl}/api/auth/google/callback`;
@@ -102,7 +113,7 @@ router.get("/google", asyncHandler(async (req, res) => {
 router.get("/google/callback", asyncHandler(async (req, res) => {
   const configured = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   if (!configured) {
-    return res.status(400).json({ success: false, message: "Google OAuth credentials not configured" });
+    return res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?error=Google OAuth credentials not configured`);
   }
   const code = req.query.code;
   if (!code) {

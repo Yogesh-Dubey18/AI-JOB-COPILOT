@@ -77,7 +77,25 @@ SMTP_PASS=your-smtp-password
 
 ---
 
-## 🚀 3. Environment Placement on Render
+## 🔑 3. Google OAuth Authentication Readiness
+
+### Flow Overview
+1. **Status Checking**: The backend `/api/auth/providers/status` exposes Google OAuth status as `Live` (configured with credentials), `Provider-ready` (placeholders exist in environment but empty), or `Not configured` (keys absent).
+2. **Dynamic UI Rendering**: If the backend reports Google as unconfigured, the frontend disables the "Continue with Google" button and shows a "coming soon" helper notice. If backend returns configured, the button is enabled and redirects the user to the backend auth start route.
+3. **Safe Fallback Redirection**: If a user hits the backend `/api/auth/google` start URL or callback directly when unconfigured, the backend performs a safe `302` redirect to `/login?error=Google OAuth credentials not configured` instead of crashing or returning raw JSON.
+4. **Token Exposure Risk (P0 Follow-up)**: The backend redirect handoff currently exposes the 15-minute short-lived access token in the query string (`/login?googleToken=...`). A P0 security improvement is registered to transition this handoff to HTTP-only cookies and call `/api/auth/me` on redirect.
+
+### Configuration Variables
+```ini
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=https://ai-job-copilot-backend-l6ut.onrender.com/api/auth/google/callback
+CLIENT_URL=https://ai-job-copilot-frontend.vercel.app
+```
+
+---
+
+## 🚀 4. Environment Placement on Render
 To deploy these environment variables to the live backend hosted on Render:
 1. Log in to the [Render Dashboard](https://dashboard.render.com).
 2. Select your **Web Service** corresponding to the backend service (`ai-job-copilot-backend`).
@@ -90,37 +108,43 @@ To deploy these environment variables to the live backend hosted on Render:
    - `SMTP_PORT`
    - `SMTP_USER`
    - `SMTP_PASS`
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `GOOGLE_REDIRECT_URI`
    - `CLIENT_URL` (points to the frontend Vercel URL)
 5. Click **Save Changes**. Render will automatically trigger a new zero-downtime rolling deployment with the new configurations loaded.
 
 ---
 
-## 🛠️ 4. Fallback and Disaster Recovery
+## 🛠️ 5. Fallback and Disaster Recovery
 
 ### Provider-ready Fallback Behavior
 * **Local Fallback**: When `EMAIL_PROVIDER=mock` or API keys are missing/not configured:
-  - Safe disclaimers are shown on the frontend.
-  - Reset links containing the raw token are printed directly to backend `stdout` logs for manual copying by administrators.
-  - In development environments (`NODE_ENV` is not `production`), the API response returns the reset token in a helper payload field so local developers can test the recovery flow instantly.
+  - Safe disclaimers are shown on the forgot password page.
+  - Reset links containing the raw token are printed directly to backend `stdout` logs.
   - Timing analysis is prevented by running synthetic random delays for non-existing users.
-* **No Secret Leaking**: Plaintext passwords and raw reset tokens are never saved to the database. Only SHA-256 hashed tokens are stored.
+* **Google OAuth Fallback**: When Google credentials are unconfigured:
+  - The login/register Google buttons are disabled on the frontend.
+  - Custom URLs hitting `/api/auth/google` are redirected safely to the frontend login page with a safe error notice.
 
 ### Rollback Plan
-If email or storage services experience outages:
+If email, storage, or OAuth services experience outages:
 1. **Email Failure**: Set `EMAIL_PROVIDER=mock` in backend configuration and redeploy/restart. Service defaults to local console logging.
 2. **Storage Failure**: Set `STORAGE_PROVIDER=local` in backend configuration. Uploads and exports revert to the local uploads directory.
+3. **Google OAuth Failure**: Remove `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` variables from backend configuration. The buttons will disable automatically without redeploying code.
 
 ---
 
-## 🔬 5. Testing Verification Checklist
+## 🔬 6. Testing Verification Checklist
 
-Prior to launching Phase B to production, execute the following checklist:
+Prior to launching Phase C to production, execute the following checklist:
 - [x] **Generic Response Test**: Verify `/auth/forgot-password` returns same generic message for existing/non-existing emails.
 - [x] **Timing Attack Defense**: Confirm delays prevent bots from guessing valid account addresses.
 - [x] **No Token Exposure**: Verify `/forgot-password` does not expose the reset token in production mode responses.
 - [x] **Hashed Storage**: Verify only SHA-256 hashed tokens exist in Mongoose records.
-- [x] **Validation Rules**: Ensure passwords under 8 characters, missing uppercase, lowercase, or digits are rejected during reset.
 - [x] **Invalid/Expired Rejection**: Verify expired and invalid tokens fail with 400 Bad Request error.
-- [x] **Token Invalidation**: Confirm reset token fields are cleared in MongoDB upon successful update.
 - [x] **Mock Fallback**: Verify missing keys default to mock logs and do not crash the service.
+- [x] **Google OAuth Three-State Configuration**: Verify status returns `live` (when credentials exist), `ready` (when placeholders exist), or `not_configured` (when keys are absent).
+- [x] **Frontend Button Disable**: Verify Google login button is disabled when provider is unconfigured/ready.
+- [x] **Safe Redirections**: Verify backend redirects safely to `/login?error=...` if oauth routes are hit when unconfigured.
 - [x] **Build & Test Success**: Run `npm run ci:verify` and confirm all tests compile and pass.

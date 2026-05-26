@@ -75,3 +75,24 @@ If Google OAuth login breaks (e.g. invalid client secret or consent screen valid
 1. Remove `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` environment variables from the Render backend configuration dashboard.
 2. Restart the Render server.
 3. The platform will automatically revert back to the secure **Provider-ready** mode: the Google button becomes disabled and users will be guided to use email/password authentication instead.
+
+---
+
+## ⚠️ Common OAuth Errors
+
+| Error Code | Common Cause | Resolution |
+| :--- | :--- | :--- |
+| `redirect_uri_mismatch` | The backend callback URL doesn't match Google Console redirect URI. | Ensure `GOOGLE_REDIRECT_URI` is exactly identical to the Redirect URI registered in the Google Cloud Console (including port and protocol). |
+| `invalid_client` | Missing or incorrect client ID/secret. | Verify credentials in GCP console match backend env variables exactly. Check for trailing spaces. |
+| `access_denied` | The user declined the OAuth consent. | The backend redirects safely back to `/login?error=Google authentication failed` to notify the user. |
+
+---
+
+## 🔒 Security Notes: URL Token Exposure Risk & Handoff
+
+> [!WARNING]
+> **P0 Follow-up Action Required: HttpOnly Cookie Session Handoff**
+>
+> * **Current Risk:** The client redirects from the Google callback URL back to `/login?googleToken=...`. Exposing JWTs in URL parameters is vulnerable to local storage caching, proxy logs, and `Referer` headers.
+> * **Mitigation in Phase C:** The JWT is short-lived (expires in 15 minutes) to minimize token lifetime exposure.
+> * **Recommended Architecture:** Transition session rehydration to a secure, HttpOnly, SameSite cookie handshake. Since the backend `/api/auth/google/callback` already issues secure cookies, the client should query `/api/auth/me` on redirect to verify/initialize the session, eliminating the need to expose any tokens in the URL.

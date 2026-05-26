@@ -104,18 +104,22 @@ NAUKRI_API_KEY=
 
 **Google OAuth**
 
-```
+Required env vars (backend):
+```env
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=
-FRONTEND_URL=
+CLIENT_URL=
 ```
 
-**Status**: Provider-ready. Enabled dynamically in `/settings/integrations` and login/register forms when environment variables are set.
+**Status**: 
+- **Live**: Enabled dynamically when valid credentials are set and tested.
+- **Provider-ready**: Displayed when placeholders exist in the environment but values are missing.
+- **Not configured**: Displayed when environment variable keys are completely absent.
 
 Setup: Create OAuth 2.0 credentials at [console.cloud.google.com](https://console.cloud.google.com). Add authorized redirect URIs. See [google-oauth-activation.md](google-oauth-activation.md) for full setup instructions.
 
-**Safety note**: Only request `openid`, `email`, and `profile` scopes. Never store OAuth tokens in logs.
+**Safety note**: Only request `openid`, `email`, and `profile` scopes. Never store OAuth tokens in logs. Exposing JWTs in URL callback parameters is a known security risk; transition to HttpOnly cookies is planned as a P0 follow-up.
 
 ---
 

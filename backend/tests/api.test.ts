@@ -388,17 +388,47 @@ describe("AI Job Copilot API", () => {
   });
 
   it("exposes provider status and handles Google OAuth redirect checks when unconfigured", async () => {
-    const statusRes = await request(app).get("/api/auth/providers/status").expect(200);
-    expect(statusRes.body.success).toBe(true);
-    expect(statusRes.body.data.google.configured).toBe(false);
-    expect(statusRes.body.data.google.status).toBe("ready");
+    // Save original env vars
+    const originalGoogleId = process.env.GOOGLE_CLIENT_ID;
+    const originalGoogleSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-    const googleRes = await request(app).get("/api/auth/google").expect(400);
-    expect(googleRes.body.success).toBe(false);
-    expect(googleRes.body.message).toMatch(/credentials not configured/i);
+    try {
+      // Test when keys are absent
+      delete process.env.GOOGLE_CLIENT_ID;
+      delete process.env.GOOGLE_CLIENT_SECRET;
 
-    const callbackRes = await request(app).get("/api/auth/google/callback?code=mockcode").expect(400);
-    expect(callbackRes.body.success).toBe(false);
+      const statusRes1 = await request(app).get("/api/auth/providers/status").expect(200);
+      expect(statusRes1.body.success).toBe(true);
+      expect(statusRes1.body.data.google.configured).toBe(false);
+      expect(statusRes1.body.data.google.status).toBe("not_configured");
+
+      // Test when keys exist but are empty (placeholders)
+      process.env.GOOGLE_CLIENT_ID = "";
+      process.env.GOOGLE_CLIENT_SECRET = "";
+
+      const statusRes2 = await request(app).get("/api/auth/providers/status").expect(200);
+      expect(statusRes2.body.success).toBe(true);
+      expect(statusRes2.body.data.google.configured).toBe(false);
+      expect(statusRes2.body.data.google.status).toBe("ready");
+
+      const googleRes = await request(app).get("/api/auth/google").expect(302);
+      expect(googleRes.headers.location).toMatch(/\/login\?error=Google%20OAuth%20credentials%20not%20configured/i);
+
+      const callbackRes = await request(app).get("/api/auth/google/callback?code=mockcode").expect(302);
+      expect(callbackRes.headers.location).toMatch(/\/login\?error=Google%20OAuth%20credentials%20not%20configured/i);
+    } finally {
+      // Restore original env vars
+      if (typeof originalGoogleId !== "undefined") {
+        process.env.GOOGLE_CLIENT_ID = originalGoogleId;
+      } else {
+        delete process.env.GOOGLE_CLIENT_ID;
+      }
+      if (typeof originalGoogleSecret !== "undefined") {
+        process.env.GOOGLE_CLIENT_SECRET = originalGoogleSecret;
+      } else {
+        delete process.env.GOOGLE_CLIENT_SECRET;
+      }
+    }
   });
 
   it("saves, lists, and deletes company research records", async () => {

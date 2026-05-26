@@ -4,6 +4,14 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.21 — Google OAuth Activation Readiness (2026-05-25)
+
+- **Dynamic Configuration Status Checks**: Upgraded `/api/auth/providers/status` and `/jobs/sources` to return the real three-state configuration status for Google OAuth: `live` (env keys present and configured), `ready` (env key placeholders exist in process.env but values are empty), and `not_configured` (env keys completely absent).
+- **Safe Redirect Handoff**: Refactored the GET `/api/auth/google` and GET `/api/auth/google/callback` backend routes to redirect to `/login?error=Google OAuth credentials not configured` when Google OAuth variables are missing, replacing the previous raw JSON response.
+- **Disabled Sign-In Buttons**: Hardened frontend sign-in/register pages to query backend status and display disabled buttons with "Continue with Google — coming soon" notices and helpful descriptions when unconfigured. Clicking the buttons is blocked, and no technical environment errors are shown to end users.
+- **Security Risk & P0 Handoff Registration**: Documented the current token Transport callback behavior (short-lived 15-minute access token exposed in redirect URL query) and logged a P0 follow-up plan to migrate to HTTP-only cookie rehydration via `/api/auth/me`.
+- **Automated Tests**: Wrote tests asserting correct rendering of login/register pages under configured vs unconfigured states, integrations status badges, and backend redirect locations. All tests successfully passed.
+
 ### v2.0.20 — Forgot/Reset Password Email Provider Readiness (2026-05-25)
 
 - **Account Recovery Flow**: Hardened authentication system with secure token recovery. Generates a random 32-byte hex recovery token, hashes it using SHA-256 for Mongoose storage, enforces 1-hour expiration limits, and invalidates token fields upon update.

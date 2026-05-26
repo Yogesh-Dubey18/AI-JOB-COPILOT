@@ -159,3 +159,14 @@ Completed Phase B Password Recovery updates:
 - **Provider Status Badging**: Refactored the `/providers/status` and `/jobs/sources` backend endpoints to honestly return provider statuses as `"live"`, `"ready"` (placeholders configured but values empty), or `"not_configured"`.
 - **Frontend Form UX**: Rewrote the Forgot Password page to check provider status and display non-scary fallback notices. Added a password requirement checklist on the Reset Password page. Wrapped parameter-driven forms in Next.js Suspense boundaries to fix static build generation checks.
 - **Automated Tests**: Wrote comprehensive vitest tests for forgot/reset recover behaviors (generic response, token hashing, expiration, invalid tokens, weak passwords, and session updates) in backend and page rendering in frontend, achieving 100% test success.
+
+---
+
+## 🔐 Production-Hardening Google OAuth Sprint (Phase C) (2026-05-25)
+
+Completed Phase C Google OAuth Activation Readiness updates:
+- **Dynamic Configuration Status Checks**: Upgraded `/api/auth/providers/status` and `/jobs/sources` to return the real three-state configuration status for Google OAuth: `live` (env keys present and configured), `ready` (env key placeholders exist in process.env but values are empty), and `not_configured` (env keys completely absent).
+- **Safe Redirect Handoff**: Refactored the GET `/api/auth/google` and GET `/api/auth/google/callback` backend routes to redirect to `/login?error=Google OAuth credentials not configured` when Google OAuth variables are missing, replacing the previous raw JSON response.
+- **Disabled Sign-In Buttons**: Hardened frontend sign-in/register pages to query backend status and display disabled buttons with "Continue with Google — coming soon" notices and helpful descriptions when unconfigured. Clicking the buttons is blocked, and no technical environment errors are shown to end users.
+- **Security Risk & P0 Handoff Registration**: Documented the current token Transport callback behavior (short-lived 15-minute access token exposed in redirect URL query) and logged a P0 follow-up plan to migrate to HTTP-only cookie rehydration via `/api/auth/me`.
+- **Automated Tests**: Wrote tests asserting correct rendering of login/register pages under configured vs unconfigured states, integrations status badges, and backend redirect locations. All tests successfully passed.
