@@ -501,7 +501,7 @@ describe("frontend pages", () => {
   it("apply assistant page renders review disclaimer", () => {
     renderWithProviders(<ApplyAssistantPage />);
     expect(screen.getByText(/AI apply assistant/i)).toBeInTheDocument();
-    expect(screen.getByText(/Review and personalise every generated section/i)).toBeInTheDocument();
+    expect(screen.getByText(/Manual Review Required/i)).toBeInTheDocument();
   });
 
   it("company research page renders salary templates and add form", () => {
@@ -871,6 +871,124 @@ describe("resume builder page", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+  });
+});
+
+describe("apply assistant page", () => {
+  it("renders the page and all controls safely without auto-apply language", async () => {
+    const fetchMock = mockApiResponse([]);
+    
+    fetchMock.mockImplementation((url) => {
+      if (String(url).includes("/applications")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => [
+            {
+              _id: "app-1",
+              company: "Innovate Co",
+              role: "Senior React Developer",
+              status: "Saved",
+              jobId: "job-1",
+              contactId: "contact-1",
+              contact: {
+                _id: "contact-1",
+                name: "Jane Recruiter",
+                email: "jane@innovate.com",
+                company: "Innovate Co"
+              }
+            }
+          ]
+        });
+      }
+      if (String(url).includes("/resumes/versions")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => [
+            {
+              _id: "res-ver-1",
+              title: "React Developer Version",
+              sourceType: "tailored"
+            }
+          ]
+        });
+      }
+      if (String(url).includes("/contacts")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => [
+            {
+              _id: "contact-1",
+              name: "Jane Recruiter",
+              company: "Innovate Co",
+              role: "HR Lead",
+              email: "jane@innovate.com"
+            }
+          ]
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => []
+      });
+    });
+
+    renderWithProviders(<ApplyAssistantPage />);
+
+    expect(screen.getByRole("heading", { name: /AI apply assistant & answers synthesizer/i })).toBeInTheDocument();
+    expect(screen.getByText(/Manual Review Required/i)).toBeInTheDocument();
+    expect(screen.queryByText(/auto-apply/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/auto-submit/i)).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Select Resume Version/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Select Tone Mode/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: /Generate Answers/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Copy/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save Vault/i })).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    
+    fetchMock.mockImplementation((url) => {
+      if (String(url).includes("/generate-application-kit")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            _id: "kit-1",
+            whyHireYouAnswer: "I am a solid React Developer with matching skills.",
+            isFallback: true,
+            matchingSkills: ["React", "TypeScript"],
+            missingInfo: ["No salary specified."],
+            disclaimer: "Manual review required. This is a draft template. Please review before sending."
+          })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => []
+      });
+    });
+
+    await user.click(screen.getByRole("button", { name: /Generate Answers/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Fallback Template Mode/i)).toBeInTheDocument();
+      expect(screen.getByText(/Missing Information Alerts/i)).toBeInTheDocument();
+      expect(screen.getByText("React")).toBeInTheDocument();
     });
   });
 });

@@ -73,17 +73,167 @@ const tailoredResumeFallback = {
   pdfUrl: ""
 };
 
-const applicationKitFallback = {
-  coverLetter: "Dear Hiring Team, I am excited to apply for this role because my React, Node.js, Express, and MongoDB project work matches the core requirements. I would value the chance to discuss how I can contribute with clean implementation, fast learning, and ownership.",
-  hrEmail: "Subject: Application for the role\n\nHi, I have applied for the position and attached my tailored resume. My recent projects align with the required stack, and I would be grateful for an opportunity to interview.",
-  linkedinMessage: "Hi, I noticed the opening and believe my MERN stack projects align well. I have applied and would appreciate your guidance on the next steps.",
-  whatsappMessage: "Hi, I applied for the role and wanted to share that my React/Node/MongoDB projects match the requirements. Please let me know if any details are needed.",
-  referralMessage: "Hi, I am applying for this role and my project experience aligns with the listed stack. If you feel comfortable, I would be grateful for a referral.",
-  salaryAnswer: "I am open to a fair fresher or junior-market offer based on the role scope, learning opportunity, and company standards.",
-  whyHireYouAnswer: "You should hire me because I combine hands-on full-stack project work with strong fundamentals, clear communication, and a willingness to learn quickly without overstating my experience.",
-  tellMeAboutYourselfAnswer: "I am a full-stack developer focused on React, Node.js, Express, and MongoDB. I have built practical projects with authentication, APIs, dashboards, and responsive UI, and I am now looking for a role where I can contribute and keep growing.",
-  interviewPrepPlan: ["Revise project architecture", "Practice JavaScript and React fundamentals", "Prepare API and database explanations", "Practice concise HR answers"]
-};
+export function getDeterministicKitFallback(context: any) {
+  const tone = context.tone || "Professional";
+  const jobTitle = context.job?.title || "Full Stack Developer";
+  const company = context.job?.company || "Target Company";
+  const matchingSkills = context.matchingSkills && context.matchingSkills.length > 0 ? context.matchingSkills : ["React", "Node.js", "MongoDB"];
+  const skillsStr = matchingSkills.slice(0, 3).join(", ");
+
+  let coverLetter = "";
+  let hrEmail = "";
+  let linkedinMessage = "";
+  let whatsappMessage = "";
+  let referralMessage = "";
+  let salaryAnswer = "";
+  let whyHireYouAnswer = "";
+  let tellMeAboutYourselfAnswer = "";
+  let whyCompanyAnswer = "";
+  let noticePeriodAnswer = "";
+  let workAuthorizationAnswer = "";
+  let assignmentSubmissionAnswer = "";
+  let followUpMessageAnswer = "";
+  let rejectionResponseAnswer = "";
+  let interviewConfirmationAnswer = "";
+
+  if (tone === "Fresher-friendly") {
+    whyHireYouAnswer = `As an enthusiastic graduate with projects using ${skillsStr}, I am eager to apply my knowledge to this ${jobTitle} role. I learn fast and want to contribute to the team's success.`;
+    whyCompanyAnswer = `I admire ${company}'s focus on innovation and community. As a fresher, working at a company with your values and scale is my ideal environment to grow.`;
+    tellMeAboutYourselfAnswer = `I am a junior developer passionate about technology. I built practical projects using ${skillsStr} and love solving logical puzzles. I am looking for my first professional role to learn and deliver value.`;
+    salaryAnswer = `I am open to the standard fresher or entry-level salary package for this role. Learning and growth opportunities are my primary focus.`;
+    noticePeriodAnswer = `I am a fresher and can start immediately. I have no notice period or prior commitments.`;
+    workAuthorizationAnswer = `I am fully authorized to work in this location and do not require any visa sponsorship.`;
+    assignmentSubmissionAnswer = `Here is my completed coding assignment for the ${jobTitle} position at ${company}. I focused on clean code, structured APIs, and clear comments. Please review.`;
+    followUpMessageAnswer = `Hi, I wanted to politely follow up on my application for the ${jobTitle} role. I'd love to learn if there are any next steps. Thank you!`;
+    rejectionResponseAnswer = `Thank you for the update. Although disappointed, I appreciate the feedback and hope we can connect for future junior opportunities at ${company}.`;
+    interviewConfirmationAnswer = `Thank you for the invitation. I confirm my attendance for the interview on the proposed date and look forward to speaking with the team.`;
+    coverLetter = `Dear Hiring Team,\n\nI am writing to express my interest in the ${jobTitle} position at ${company}. As an entry-level developer skilled in ${skillsStr}, I am excited about the opportunity to grow with your team. I look forward to discussing my project work.`;
+    hrEmail = `Subject: Application for ${jobTitle} - Entry Level\n\nHi,\n\nI have applied for the ${jobTitle} position. I have built several projects using ${skillsStr} and would love to schedule an introductory call.`;
+    linkedinMessage = `Hi, I noticed the ${jobTitle} opening at ${company}. I'm an entry-level developer with ${skillsStr} project experience and would love to learn more about the team's engineering culture.`;
+    whatsappMessage = `Hi, I applied for the ${jobTitle} role at ${company}! My project stack matches your requirements, and I can start immediately.`;
+    referralMessage = `Hi, I see a ${jobTitle} open at ${company}. With my background in ${skillsStr}, I believe I'd be a great junior fit. Would you be open to referring me?`;
+  } else if (tone === "Technical") {
+    whyHireYouAnswer = `My hands-on experience with ${skillsStr} aligns perfectly with your technology stack. I focus on backend optimization, robust API design, and component reusability.`;
+    whyCompanyAnswer = `I want to work at ${company} because of your engineering challenges, particularly how you handle scaling and technical architecture. My background in ${skillsStr} fits your stack.`;
+    tellMeAboutYourselfAnswer = `I am a software engineer specializing in web development. I focus on ${skillsStr}, asynchronous workflows, and database schema performance. I build highly optimized web systems.`;
+    salaryAnswer = `Based on my technical capabilities and market rates for ${skillsStr} engineers, I am targeting a fair salary within the standard range.`;
+    noticePeriodAnswer = `My notice period is standard, but I am open to negotiation or early release depending on project handovers.`;
+    workAuthorizationAnswer = `I possess complete work authorization and do not require sponsorship for this role.`;
+    assignmentSubmissionAnswer = `The assignment is complete. I structured it using modular architecture, verified API endpoints, and included unit tests. You can review the code details in the attached repository.`;
+    followUpMessageAnswer = `Hi, following up on the technical assessment for ${jobTitle}. Let me know if the engineering team has any questions regarding my implementation.`;
+    rejectionResponseAnswer = `Thank you for the feedback. I appreciate the technical review and hope to stay in touch for future engineering openings at ${company}.`;
+    interviewConfirmationAnswer = `Confirmed. I look forward to the technical discussion and architecture review for the ${jobTitle} role.`;
+    coverLetter = `Dear Hiring Team,\n\nMy technical background in ${skillsStr} makes me a strong fit for the ${jobTitle} role at ${company}. I design modular APIs, secure endpoints, and responsive user interfaces.`;
+    hrEmail = `Subject: Application for ${jobTitle} - Technical Stack\n\nHi,\n\nI have applied for the ${jobTitle} role. With hands-on experience in ${skillsStr}, I am prepared for the technical challenges of your team.`;
+    linkedinMessage = `Hi, I applied for the ${jobTitle} role at ${company}. I have worked with ${skillsStr} and would love to discuss the technical roadmap of your team.`;
+    whatsappMessage = `Hi, I've submitted my application for ${jobTitle}. I have hands-on experience with ${skillsStr} and look forward to the technical stage.`;
+    referralMessage = `Hi, I am applying for the ${jobTitle} opening. I have built production-grade systems using ${skillsStr} and would appreciate a referral to the engineering team.`;
+  } else if (tone === "Confident") {
+    whyHireYouAnswer = `I bring a proven track record of building applications using ${skillsStr}. I don't just write code; I solve business problems and deliver robust systems on schedule.`;
+    whyCompanyAnswer = `${company} is leading the industry, and I want to contribute my skills to your team. I thrive in high-performing environments where we build excellent products.`;
+    tellMeAboutYourselfAnswer = `I am a driven software developer who loves building products. I have experience with ${skillsStr} and a history of taking features from conception to production successfully.`;
+    salaryAnswer = `My salary expectation is in line with my experience and the high value I will bring to the ${jobTitle} position at ${company}.`;
+    noticePeriodAnswer = `I am ready to transition and can align my start date to meet the project's critical path.`;
+    workAuthorizationAnswer = `I am fully authorized to work locally and require no visa sponsorship.`;
+    assignmentSubmissionAnswer = `I have completed the technical assignment. It meets all the core and bonus requirements, featuring scalable architecture and solid performance.`;
+    followUpMessageAnswer = `Hi, I am following up on the ${jobTitle} position. I am confident my background in ${skillsStr} matches your needs and would love to schedule the next interview.`;
+    rejectionResponseAnswer = `Thank you for letting me know. I respect your decision and wish ${company} the best. Let's keep in touch as my profile continues to evolve.`;
+    interviewConfirmationAnswer = `Thank you. I have confirmed the interview. I am excited to demonstrate how I can drive success for the ${jobTitle} team.`;
+    coverLetter = `Dear Hiring Team,\n\nI am confident that my experience with ${skillsStr} makes me an exceptional candidate for the ${jobTitle} role at ${company}. I look forward to showing how I can add immediate value.`;
+    hrEmail = `Subject: Candidate for ${jobTitle} - Confident Match\n\nHi,\n\nI'm reaching out regarding my application for the ${jobTitle} role. I have a strong skill set in ${skillsStr} and look forward to discussing how I can contribute.`;
+    linkedinMessage = `Hi, I applied for the ${jobTitle} opening. I have a solid track record with ${skillsStr} and would love to connect with the hiring manager.`;
+    whatsappMessage = `Hi! I applied for the ${jobTitle} role. My experience in ${skillsStr} is a great match, and I'd love to share my portfolio.`;
+    referralMessage = `Hi, I'm looking to apply for ${jobTitle} at ${company}. I am confident my experience with ${skillsStr} makes me a strong fit. Would you refer me?`;
+  } else if (tone === "Polite follow-up") {
+    whyHireYouAnswer = `I believe my collaborative nature and technical skills in ${skillsStr} make me a reliable fit for the team. I focus on team goals and constant improvement.`;
+    whyCompanyAnswer = `I appreciate ${company}'s work culture and customer focus. I would be honored to contribute my skills in ${skillsStr} to a team that values quality.`;
+    tellMeAboutYourselfAnswer = `I am a developer who values teamwork and clean code. I have experience with ${skillsStr} and enjoy collaborating to build meaningful applications.`;
+    salaryAnswer = `I am open to discussing salary to reach a mutually agreeable package that reflects the role's scope.`;
+    noticePeriodAnswer = `I will coordinate with my current team to ensure a smooth transition with standard notice.`;
+    workAuthorizationAnswer = `I am authorized to work and do not require sponsorship.`;
+    assignmentSubmissionAnswer = `I have completed the assignment for your review. Thank you for the opportunity to work on this challenge; I welcome any feedback.`;
+    followUpMessageAnswer = `Dear Hiring Team, I hope you are well. I wanted to politely follow up on my application for the ${jobTitle} role. Please let me know if you need any further information.`;
+    rejectionResponseAnswer = `Thank you for the update. I appreciate the team's time and consideration, and would welcome future opportunities to connect with ${company}.`;
+    interviewConfirmationAnswer = `Thank you for scheduling the interview. I am pleased to confirm my availability and look forward to our conversation.`;
+    coverLetter = `Dear Hiring Team,\n\nI am writing to politely follow up and express my continued interest in the ${jobTitle} role. My background in ${skillsStr} matches the position requirements well.`;
+    hrEmail = `Subject: Polite Follow-up: ${jobTitle} Application\n\nHi,\n\nI wanted to follow up on my application for ${jobTitle}. I remain highly interested and would appreciate a brief call.`;
+    linkedinMessage = `Hi, I wanted to politely follow up on the ${jobTitle} role. I'd love to share how my background in ${skillsStr} can support the team.`;
+    whatsappMessage = `Hi, just following up on my application for the ${jobTitle} role. Please let me know if you need any additional details.`;
+    referralMessage = `Hi, I'm following up on my interest in the ${jobTitle} role. If you are comfortable, I'd appreciate it if you could share my profile with the team.`;
+  } else if (tone === "Short recruiter DM") {
+    whyHireYouAnswer = `I have solid hands-on experience with ${skillsStr} and a history of fast delivery.`;
+    whyCompanyAnswer = `I respect ${company}'s product and engineering direction.`;
+    tellMeAboutYourselfAnswer = `I'm a software developer experienced in ${skillsStr}, focusing on clean APIs and responsive UI.`;
+    salaryAnswer = `Open to discussion based on total compensation and role requirements.`;
+    noticePeriodAnswer = `Negotiable / can start quickly.`;
+    workAuthorizationAnswer = `Authorized to work locally, no sponsorship needed.`;
+    assignmentSubmissionAnswer = `Assignment is complete. Here is the link to review.`;
+    followUpMessageAnswer = `Hi! Hope you're well. Just following up on the ${jobTitle} role. I'm highly interested and would love a quick chat.`;
+    rejectionResponseAnswer = `Thanks for the update. Let's stay in touch for future roles.`;
+    interviewConfirmationAnswer = `Confirming the interview time. Talk soon!`;
+    coverLetter = `Hi Hiring Team,\n\nI'm a developer skilled in ${skillsStr} interested in the ${jobTitle} role. I look forward to discussing how I can help.`;
+    hrEmail = `Subject: ${jobTitle} candidate: ${skillsStr}\n\nHi,\n\nInterested in the ${jobTitle} role. Experienced in ${skillsStr}. Let's chat.`;
+    linkedinMessage = `Hi! I see you're hiring a ${jobTitle}. I'm experienced in ${skillsStr} and applied. I'd love to connect.`;
+    whatsappMessage = `Hi! Just wanted to share my resume for the ${jobTitle} opening. I have experience in ${skillsStr}.`;
+    referralMessage = `Hi, could you refer me for the ${jobTitle} role? I have experience in ${skillsStr} and believe I'm a strong match.`;
+  } else if (tone === "Formal email") {
+    whyHireYouAnswer = `I offer professional expertise in ${skillsStr} and a commitment to structured software engineering. My capabilities align with the core requirements of this position.`;
+    whyCompanyAnswer = `I am highly motivated to join ${company} due to your leading position in the sector and my alignment with your corporate mission.`;
+    tellMeAboutYourselfAnswer = `I am a professional software developer with a background in engineering systems using ${skillsStr}. My focus is on writing clean, maintainable code and collaborating effectively.`;
+    salaryAnswer = `My salary expectations are aligned with standard market rates for a qualified engineer with my background.`;
+    noticePeriodAnswer = `I am prepared to fulfill my contractual notice period while ensuring a comprehensive transition.`;
+    workAuthorizationAnswer = `I possess full legal authorization to work in the country and do not require visa sponsorship.`;
+    assignmentSubmissionAnswer = `Please find attached my submission for the technical assessment of the ${jobTitle} position. I have detailed my implementation and architecture in the documentation.`;
+    followUpMessageAnswer = `Dear Recruiter,\n\nI am writing to inquire about the status of my application for the ${jobTitle} position. I remain very interested and look forward to your response.`;
+    rejectionResponseAnswer = `Dear Team,\n\nThank you for informing me of your decision. While disappointed, I appreciate your time and hope to be considered for future openings.`;
+    interviewConfirmationAnswer = `Dear Team,\n\nI am writing to confirm my attendance at the scheduled interview. I look forward to discussing the opportunity in detail.`;
+    coverLetter = `Dear Hiring Manager,\n\nI am writing to formally apply for the ${jobTitle} position at ${company}. With my background in ${skillsStr}, I am confident in my ability to contribute to your organization.`;
+    hrEmail = `Subject: Formal Application: ${jobTitle}\n\nDear Recruiter,\n\nI have submitted my application for the ${jobTitle} position. Please find my credentials attached.`;
+    linkedinMessage = `Dear Hiring Manager, I have applied for the ${jobTitle} position. I would be pleased to connect and discuss my qualifications in ${skillsStr}.`;
+    whatsappMessage = `Hello, I have submitted my formal application for the ${jobTitle} position. I look forward to the next stages of the process.`;
+    referralMessage = `Dear Colleague, I am interested in applying for the ${jobTitle} position. Given my background in ${skillsStr}, I would be grateful for a referral.`;
+  } else {
+    whyHireYouAnswer = `I bring a strong foundation in ${skillsStr} and practical experience building web applications. I focus on clean code, reliability, and helping the team achieve its sprint goals.`;
+    whyCompanyAnswer = `I'm drawn to ${company} because of your focus on product quality and engineering excellence. I want to build products that solve real problems.`;
+    tellMeAboutYourselfAnswer = `I am a full-stack developer experienced in building web applications. I work with ${skillsStr} and enjoy solving API integration and responsive UI challenges.`;
+    salaryAnswer = `I am seeking a salary that is competitive and aligned with the responsibilities of the role and my technical skill set.`;
+    noticePeriodAnswer = `My notice period is standard, but I am open to coordinating an early release if required by the project schedule.`;
+    workAuthorizationAnswer = `I am authorized to work and require no sponsorship now or in the future.`;
+    assignmentSubmissionAnswer = `I have completed the technical assignment. The submission contains the implementation, test coverage, and documentation for your review.`;
+    followUpMessageAnswer = `Hi, I wanted to follow up on my application for the ${jobTitle} position. Please let me know if you need any further information or references.`;
+    rejectionResponseAnswer = `Thank you for letting me know. I appreciate the opportunity to interview and hope we can keep in touch for future roles.`;
+    interviewConfirmationAnswer = `Thank you for the invitation. I am happy to confirm my availability for the interview at the proposed time.`;
+    coverLetter = `Dear Hiring Team,\n\nI am writing to apply for the ${jobTitle} position at ${company}. With my skills in ${skillsStr}, I am confident I can contribute to building high-quality web applications.`;
+    hrEmail = `Subject: Application for ${jobTitle} - Full Stack Developer\n\nHi,\n\nI have applied for the ${jobTitle} position. I have experience working with ${skillsStr} and would welcome the opportunity to discuss my qualifications.`;
+    linkedinMessage = `Hi, I recently applied for the ${jobTitle} position at ${company}. I have experience in ${skillsStr} and wanted to connect with your team.`;
+    whatsappMessage = `Hi, I've applied for the ${jobTitle} role. My experience in ${skillsStr} matches the requirements, and I would love to connect.`;
+    referralMessage = `Hi, I am planning to apply for the ${jobTitle} role at ${company}. With my background in ${skillsStr}, I'd appreciate it if you could refer me.`;
+  }
+
+  return {
+    coverLetter,
+    hrEmail,
+    linkedinMessage,
+    whatsappMessage,
+    referralMessage,
+    salaryAnswer,
+    whyHireYouAnswer,
+    tellMeAboutYourselfAnswer,
+    whyCompanyAnswer,
+    noticePeriodAnswer,
+    workAuthorizationAnswer,
+    assignmentSubmissionAnswer,
+    followUpMessageAnswer,
+    rejectionResponseAnswer,
+    interviewConfirmationAnswer,
+    interviewPrepPlan: [
+      `Review core requirements for ${jobTitle}`,
+      `Revise project architecture using ${skillsStr}`,
+      `Prepare company-specific context for ${company}`,
+      `Practice mock behavioral interview questions`
+    ]
+  };
+}
 
 const interviewPrepFallback = {
   technicalTopics: ["JavaScript", "React hooks", "Node.js APIs", "MongoDB schemas", "Authentication"],
@@ -191,8 +341,8 @@ export const aiService = {
   analyzeResume: (userId: string | undefined, context: any) => run(userId, "resume-analysis", buildresumeAnalysisPrompt(context), resumeAnalysisFallback, resumeAnalysisOutputSchema),
   matchJob: (userId: string | undefined, context: any) => run(userId, "job-match", buildjobMatchPrompt(context), jobMatchFallback, jobMatchOutputSchema),
   tailorResume: (userId: string | undefined, context: any) => run(userId, "tailor-resume", buildtailorResumePrompt(context), tailoredResumeFallback, tailoredResumeOutputSchema),
-  generateApplicationKit: (userId: string | undefined, context: any) => run(userId, "application-kit", buildapplicationKitPrompt(context), applicationKitFallback, applicationKitOutputSchema),
-  coverLetter: (userId: string | undefined, context: any) => run(userId, "cover-letter", buildcoverLetterPrompt(context), { coverLetter: applicationKitFallback.coverLetter }, looseObjectOutputSchema),
+  generateApplicationKit: (userId: string | undefined, context: any) => run(userId, "application-kit", buildapplicationKitPrompt(context), getDeterministicKitFallback(context), applicationKitOutputSchema),
+  coverLetter: (userId: string | undefined, context: any) => run(userId, "cover-letter", buildcoverLetterPrompt(context), { coverLetter: getDeterministicKitFallback(context).coverLetter }, looseObjectOutputSchema),
   interviewPrep: (userId: string | undefined, context: any) => run(userId, "interview-prep", buildinterviewPrepPrompt(context), interviewPrepFallback, interviewPrepOutputSchema),
   interviewCoach: (userId: string | undefined, context: any) => run(userId, "interview-coach", buildinterviewCoachPrompt(context), interviewCoachFallback, interviewCoachOutputSchema),
   mockInterview: (userId: string | undefined, context: any) => run(userId, "mock-interview", buildmockInterviewPrompt(context), mockInterviewFallback, mockInterviewOutputSchema),

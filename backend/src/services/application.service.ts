@@ -3,9 +3,35 @@ import { createRecord, deleteRecord, findRecordById, findRecords, updateRecord }
 import { buildTimelineEvent, enrichApplicationForStage, summarizeApplications } from "./application-intelligence.service.js";
 import { createNotification } from "./notification.service.js";
 
+async function enrichWithContact(userId: string, app: any) {
+  if (!app) return app;
+  if (app.contactId) {
+    try {
+      const contact = await findRecordById("contacts", String(app.contactId));
+      if (contact && String(contact.userId) === userId) {
+        return { ...app, contact };
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  return app;
+}
+
+async function enrichListWithContacts(userId: string, apps: any[]) {
+  const contacts = await findRecords("contacts", { userId });
+  const contactMap = new Map(contacts.map((c) => [String(c._id), c]));
+  return apps.map((app) => {
+    if (app.contactId && contactMap.has(String(app.contactId))) {
+      return { ...app, contact: contactMap.get(String(app.contactId)) };
+    }
+    return app;
+  });
+}
+
 export async function createApplication(userId: string, input: any) {
   const status = input.status || "Saved";
-  return createRecord("applications", enrichApplicationForStage({
+  const created = await createRecord("applications", enrichApplicationForStage({
     userId,
     jobId: input.jobId,
     company: input.company,
@@ -14,6 +40,7 @@ export async function createApplication(userId: string, input: any) {
     applicationSource: input.applicationSource,
     resumeVersionId: input.resumeVersionId,
     applicationKitId: input.applicationKitId,
+    contactId: input.contactId,
     status,
     currentRound: input.currentRound,
     notes: input.notes || "",
@@ -22,21 +49,24 @@ export async function createApplication(userId: string, input: any) {
     offerDetails: input.offerDetails,
     nextFollowUpDate: input.nextFollowUpDate
   }));
+  return enrichWithContact(userId, created);
 }
 
 export async function listApplications(userId: string) {
-  return findRecords("applications", { userId }, { sort: { updatedAt: -1 } });
+  const apps = await findRecords("applications", { userId }, { sort: { updatedAt: -1 } });
+  return enrichListWithContacts(userId, apps);
 }
 
 export async function getApplication(userId: string, id: string) {
   const app = await findRecordById("applications", id);
   if (!app || String(app.userId) !== userId) throw new ApiError(404, "Application not found");
-  return app;
+  return enrichWithContact(userId, app);
 }
 
 export async function updateApplication(userId: string, id: string, input: any) {
   const app = await getApplication(userId, id);
-  return updateRecord("applications", id, enrichApplicationForStage(input, app));
+  const updated = await updateRecord("applications", id, enrichApplicationForStage(input, app));
+  return enrichWithContact(userId, updated);
 }
 
 export async function updateApplicationStatus(userId: string, id: string, status: string) {

@@ -26,6 +26,7 @@ const ApplicationSchema = new Schema(
     applicationSource: String,
     resumeVersionId: { type: Schema.Types.ObjectId, ref: "ResumeVersion" },
     applicationKitId: { type: Schema.Types.ObjectId, ref: "ApplicationKit" },
+    contactId: { type: Schema.Types.ObjectId, ref: "Contact" },
     status: { type: String, enum: applicationStatuses, default: "Saved", index: true },
     currentRound: String,
     roundNumber: Number,

@@ -44,6 +44,13 @@ export const applicationKitOutputSchema = z.object({
   salaryAnswer: z.string(),
   whyHireYouAnswer: z.string(),
   tellMeAboutYourselfAnswer: z.string(),
+  whyCompanyAnswer: z.string(),
+  noticePeriodAnswer: z.string(),
+  workAuthorizationAnswer: z.string(),
+  assignmentSubmissionAnswer: z.string(),
+  followUpMessageAnswer: z.string(),
+  rejectionResponseAnswer: z.string(),
+  interviewConfirmationAnswer: z.string(),
   interviewPrepPlan: z.array(z.string())
 });
 

@@ -769,4 +769,130 @@ describe("AI Job Copilot API", () => {
       expect(p.isLive).toBeDefined();
     });
   });
+
+  it("handles recruiter contacts and linking to applications", async () => {
+    const agent = await authAgent();
+
+    // 1. Create a contact
+    const contactRes = await agent
+      .post("/api/contacts")
+      .send({
+        name: "Jane Doe",
+        company: "PixelCraft Labs",
+        role: "Technical Recruiter",
+        email: "jane@pixelcraft.com",
+        phone: "+1-555-0199",
+        linkedinUrl: "https://linkedin.com/in/janedoe",
+        notes: "Met at career fair"
+      })
+      .expect(201);
+    expect(contactRes.body.success).toBe(true);
+    expect(contactRes.body.data.name).toBe("Jane Doe");
+    const contactId = contactRes.body.data._id;
+
+    // 2. List contacts
+    const listRes = await agent.get("/api/contacts").expect(200);
+    expect(listRes.body.success).toBe(true);
+    expect(listRes.body.data.some((c: any) => c._id === contactId)).toBe(true);
+
+    // 3. Create application with contactId linked
+    const appRes = await agent
+      .post("/api/applications")
+      .send({
+        company: "PixelCraft Labs",
+        role: "Vue Developer",
+        contactId
+      })
+      .expect(201);
+    expect(appRes.body.success).toBe(true);
+    expect(appRes.body.data.contactId).toBe(contactId);
+    expect(appRes.body.data.contact).toBeDefined();
+    expect(appRes.body.data.contact.name).toBe("Jane Doe");
+
+    // 4. Update application's contactId
+    const appRes2 = await agent
+      .patch(`/api/applications/${appRes.body.data._id}`)
+      .send({
+        contactId: null
+      })
+      .expect(200);
+    expect(appRes2.body.data.contact).toBeUndefined();
+
+    // 5. Delete contact
+    await agent.delete(`/api/contacts/${contactId}`).expect(200);
+    const listResAfter = await agent.get("/api/contacts").expect(200);
+    expect(listResAfter.body.data.some((c: any) => c._id === contactId)).toBe(false);
+  });
+
+  it("generates application kits with different tones and labels fallback honestly", async () => {
+    const agent = await authAgent();
+
+    // Create a mock resume version and job first
+    const resume = await createRecord("resumes", {
+      userId: "test-user-id",
+      fileName: "resume.pdf",
+      rawText: "React developer",
+      parsedData: { skills: ["React", "Node.js"] }
+    });
+    const user = await findOneRecord("users", { email: "test@example.com" });
+    const resumeVer = await createRecord("resumeVersions", {
+      userId: user._id,
+      baseResumeId: resume._id,
+      title: "React Version",
+      content: { skills: ["React", "Node.js"] }
+    });
+
+    const job = await createRecord("jobs", {
+      title: "Senior React Developer",
+      company: "Innovate Co",
+      skillsRequired: ["React", "TypeScript"]
+    });
+
+    // Generate Kit with Professional Tone
+    const kitResProf = await agent
+      .post("/api/ai/generate-application-kit")
+      .send({
+        jobId: job._id,
+        resumeVersionId: resumeVer._id,
+        tone: "Professional"
+      })
+      .expect(200);
+    expect(kitResProf.body.success).toBe(true);
+    expect(kitResProf.body.data.isFallback).toBe(true); // Should be fallback in test env (mock provider)
+    expect(kitResProf.body.data.disclaimer).toMatch(/Manual review required/i);
+    expect(kitResProf.body.data.whyHireYouAnswer).toContain("clean code, reliability");
+
+    // Generate Kit with Fresher-friendly Tone
+    const kitResFresher = await agent
+      .post("/api/ai/generate-application-kit")
+      .send({
+        jobId: job._id,
+        resumeVersionId: resumeVer._id,
+        tone: "Fresher-friendly"
+      })
+      .expect(200);
+    expect(kitResFresher.body.success).toBe(true);
+    // Tones should produce different text
+    expect(kitResProf.body.data.whyHireYouAnswer).not.toEqual(kitResFresher.body.data.whyHireYouAnswer);
+    expect(kitResFresher.body.data.whyHireYouAnswer).toContain("enthusiastic graduate");
+    
+    // Assert all 10 custom answers and fields are present
+    const data = kitResProf.body.data;
+    expect(data.whyHireYouAnswer).toBeDefined();
+    expect(data.whyCompanyAnswer).toBeDefined();
+    expect(data.tellMeAboutYourselfAnswer).toBeDefined();
+    expect(data.salaryAnswer).toBeDefined();
+    expect(data.noticePeriodAnswer).toBeDefined();
+    expect(data.workAuthorizationAnswer).toBeDefined();
+    expect(data.assignmentSubmissionAnswer).toBeDefined();
+    expect(data.followUpMessageAnswer).toBeDefined();
+    expect(data.rejectionResponseAnswer).toBeDefined();
+    expect(data.interviewConfirmationAnswer).toBeDefined();
+    expect(data.coverLetter).toBeDefined();
+    expect(data.hrEmail).toBeDefined();
+    expect(data.linkedinMessage).toBeDefined();
+    expect(data.whatsappMessage).toBeDefined();
+    expect(data.referralMessage).toBeDefined();
+    expect(data.interviewPrepPlan).toBeDefined();
+  });
 });

@@ -4,6 +4,16 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.27 — AI Answer Synthesizer and CRM Recruiter Linking Sprint (2026-05-26)
+
+- **Tone-Based Answer Synthesizer**: Expanded AI kit generator to support 7 distinct tones (Professional, Fresher-friendly, Technical, Confident, Polite follow-up, Short recruiter DM, Formal email) and 10 screening question types.
+- **Safe AI Fallback System**: Implemented dynamic context-aware templates for mock/unconfigured AI modes that shape answers based on tone, job details, and matching skills. Honestly labeled outputs as "Fallback Template Mode" on the UI.
+- **Recruiter CRM**: Added `/api/contacts` routes, services, and models to register recruiter contacts.
+- **Recruiter Linking**: Added `contactId` to the application schema, allowing users to link recruiter contacts to their application tracker cards and return populated contact data.
+- **Vault & Timeline Integration**: Provided UI controls to copy drafts, save answers directly to the local Answer Vault, and log activity events directly to the application tracker timeline history.
+- **Disclaimers & Safety**: Added a prominent "Manual Review Required" safety warning. The assistant is strictly review-only, with no anti-detection or automated background sending.
+- **Unit Testing**: Added frontend and backend test suites verifying tone outputs, CRM contacts, fallback tags, and linking operations. All tests passed.
+
 ### v2.0.26 — Job Aggregation and Deduplication Sprint (2026-05-26)
 
 - **Heuristic & AI Job Parser**: Added backend extraction utility `parseJobText` supporting Lever/Greenhouse link parsing and technical keyword scanning fallbacks.

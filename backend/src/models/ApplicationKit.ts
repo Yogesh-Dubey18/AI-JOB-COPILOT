@@ -13,6 +13,13 @@ const ApplicationKitSchema = new Schema(
     salaryAnswer: String,
     whyHireYouAnswer: String,
     tellMeAboutYourselfAnswer: String,
+    whyCompanyAnswer: String,
+    noticePeriodAnswer: String,
+    workAuthorizationAnswer: String,
+    assignmentSubmissionAnswer: String,
+    followUpMessageAnswer: String,
+    rejectionResponseAnswer: String,
+    interviewConfirmationAnswer: String,
     interviewPrepPlan: [String]
   },
   { timestamps: true }
