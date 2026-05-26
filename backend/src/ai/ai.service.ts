@@ -202,5 +202,24 @@ export const aiService = {
   rejectionAnalysis: (userId: string | undefined, context: any) => run(userId, "rejection-analysis", buildrejectionAnalysisPrompt(context), rejectionFallback, rejectionAnalysisOutputSchema),
   portfolioGenerator: (userId: string | undefined, context: any) => run(userId, "portfolio-generator", buildportfolioGeneratorPrompt(context), { hero: "Full-stack developer building practical web products", about: "I build responsive, API-driven applications with React, Node.js, Express, and MongoDB.", skills: ["React", "Node.js", "MongoDB"], projects: ["AI Job Copilot", "Airbnb clone", "Spotify clone"] }, looseObjectOutputSchema),
   linkedinOptimizer: (userId: string | undefined, context: any) => run(userId, "linkedin-optimizer", buildlinkedinOptimizerPrompt(context), { headline: "Full-stack Developer | React | Node.js | MongoDB", about: "Project-focused developer seeking entry-level software roles." }, looseObjectOutputSchema),
-  followUpMessage: (userId: string | undefined, context: any) => run(userId, "follow-up-message", buildfollowUpPrompt(context), { message: "Hi, I wanted to politely follow up on my application. I remain interested in the role and would be happy to share any additional details." }, looseObjectOutputSchema)
+  followUpMessage: (userId: string | undefined, context: any) => run(userId, "follow-up-message", buildfollowUpPrompt(context), { message: "Hi, I wanted to politely follow up on my application. I remain interested in the role and would be happy to share any additional details." }, looseObjectOutputSchema),
+  parseJobText: (userId: string | undefined, context: any) => run(userId, "job-parser", `Extract structured job details from the following raw job description text.
+Format the output as a valid JSON object matching this schema:
+{
+  "title": "Job title or best estimate",
+  "company": "Company name",
+  "location": "location, e.g. city, Remote, Hybrid",
+  "remoteType": "Remote" | "Hybrid" | "Onsite",
+  "jobType": "Full-time" | "Internship" | "Contract" | "Part-time",
+  "salaryMin": number | null,
+  "salaryMax": number | null,
+  "skillsRequired": ["skill1", "skill2"],
+  "description": "brief summary",
+  "responsibilities": ["resp1", "resp2"],
+  "requirements": ["req1", "req2"],
+  "applyUrl": "url if found"
+}
+
+Raw job text:
+${context.text}`, context.fallback, looseObjectOutputSchema)
 };

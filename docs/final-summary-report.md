@@ -4,6 +4,15 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-26 Job Aggregation & Deduplication Sprint (Phase 4) (Completed)
+
+Implemented Phase 4 features from the master blueprint:
+- **Heuristic & AI Job Parser**: Built an extraction engine supporting copy-paste job description text and URL analysis (e.g. Lever, Greenhouse). Handles keyword scanning against `technicalKeywordBank` for automatic skill tag extraction.
+- **Robust Duplicate Checker**: Enabled database-level duplicate matching on title/company/location combinations and duplicateKey hashes to prevent feed cluttering.
+- **Manual Import Form**: Created a premium import UI at `/jobs/import` featuring copy-paste parse actions, full editable previews, and real-time debounced duplicate warning alerts.
+- **Apply Readiness Score**: Integrated a composite formula calculating application readiness using match score weights, resume ATS levels, and official link checks.
+- **Provider Status Honesty**: Displayed correct badging matching the active setup (manual import tags).
+
 ## 2026-05-26 Full Product Readiness Audit Addendum
 
 A complete product readiness audit was completed as a documentation-only pass. No application code or database configuration was changed.

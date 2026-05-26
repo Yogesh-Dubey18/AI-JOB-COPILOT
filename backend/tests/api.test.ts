@@ -668,4 +668,105 @@ describe("AI Job Copilot API", () => {
       .send({ email, password: "Password123!" })
       .expect(401);
   });
+
+  it("parses job text heuristics and AI fallbacks", async () => {
+    const agent = await authAgent();
+    
+    // Test parsing a URL
+    const parseUrlRes = await agent
+      .post("/api/jobs/parse-text")
+      .send({ text: "https://jobs.lever.co/google/software-engineer-react-1234" })
+      .expect(200);
+    expect(parseUrlRes.body.data.title).toContain("Software Engineer React");
+    expect(parseUrlRes.body.data.company).toBe("Google");
+    expect(parseUrlRes.body.data.remoteType).toBe("Remote");
+
+    // Test parsing raw text
+    const parseTextRes = await agent
+      .post("/api/jobs/parse-text")
+      .send({ text: "Job Title: React Frontend Developer\nCompany: PixelCraft\nLocation: Bengaluru\nResponsibilities:\n- Build cool stuff\nRequirements:\n- React and Node.js knowledge" })
+      .expect(200);
+    expect(parseTextRes.body.data.title).toBe("React Frontend Developer");
+    expect(parseTextRes.body.data.company).toBe("PixelCraft");
+    expect(parseTextRes.body.data.location).toBe("Bengaluru");
+    expect(parseTextRes.body.data.skillsRequired).toContain("React");
+    expect(parseTextRes.body.data.skillsRequired).toContain("Node.js");
+  });
+
+  it("handles manual job import and duplicate detection", async () => {
+    const agent = await authAgent();
+    
+    const jobData = {
+      title: "Vue Developer",
+      company: "PixelCraft Labs",
+      location: "Bengaluru",
+      remoteType: "Hybrid",
+      jobType: "Full-time",
+      skillsRequired: ["Vue", "TypeScript"],
+      description: "Awesome Vue developer role",
+      source: "Manual import"
+    };
+
+    // First import (should succeed and not be marked as duplicate)
+    const importRes = await agent
+      .post("/api/jobs/manual-import")
+      .send(jobData)
+      .expect(201);
+    expect(importRes.body.data.duplicate).toBe(false);
+    expect(importRes.body.data.job.title).toBe("Vue Developer");
+
+    // Second import with same details (should detect duplicate)
+    const importDupRes = await agent
+      .post("/api/jobs/manual-import")
+      .send(jobData)
+      .expect(201);
+    expect(importDupRes.body.data.duplicate).toBe(true);
+    expect(importDupRes.body.data.job._id).toBe(importRes.body.data.job._id);
+  });
+
+  it("calculates job match applyReadinessScore correctly", async () => {
+    const agent = await authAgent();
+    
+    // Create a mock resume first
+    const resume = await createRecord("resumes", {
+      userId: "test-user-id",
+      fileName: "resume.pdf",
+      rawText: "React Node.js developer with TypeScript",
+      parsedData: {
+        skills: ["React", "Node.js", "TypeScript"],
+        summary: "Full stack developer",
+        projects: ["Built a portfolio site"],
+        experience: ["Worked at tech company"],
+        education: ["BS Computer Science"]
+      }
+    });
+
+    const user = await findOneRecord("users", { email: "test@example.com" });
+    await updateRecord("resumes", resume._id, { userId: user._id });
+
+    // Create a job match
+    const jobsRes = await agent.get("/api/jobs").expect(200);
+    const jobId = jobsRes.body.data.items[0]._id;
+
+    const matchRes = await agent
+      .post(`/api/jobs/${jobId}/match`)
+      .send({ resumeId: resume._id })
+      .expect(201);
+
+    expect(matchRes.body.data.matchScore).toBeDefined();
+    expect(matchRes.body.data.applyReadinessScore).toBeDefined();
+    expect(matchRes.body.data.applyReadinessScore).toBeGreaterThanOrEqual(0);
+    expect(matchRes.body.data.applyReadinessScore).toBeLessThanOrEqual(100);
+  });
+
+  it("reports provider status honestly", async () => {
+    const res = await request(app).get("/api/jobs/sources").expect(200);
+    expect(res.body.success).toBe(true);
+    const providers = res.body.data.externalProviders;
+    expect(providers).toBeDefined();
+    providers.forEach((p: any) => {
+      expect(p.status).toMatch(/live|ready|not_configured/);
+      expect(p.isLive).toBeDefined();
+    });
+  });
 });

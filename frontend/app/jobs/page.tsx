@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Filter, Search, Sparkles, X } from "lucide-react";
+import { Filter, PlusCircle, Search, Sparkles, X } from "lucide-react";
 import { useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -105,7 +105,12 @@ function JobsContent() {
 
   return (
     <>
-      <PageHeading title="Jobs" description="Search, filter, save, analyze, and open official job links. AI match and trust score help you decide before applying." />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
+        <PageHeading title="Jobs" description="Search, filter, save, analyze, and open official job links. AI match and trust score help you decide before applying." />
+        <Button onClick={() => router.push("/jobs/import")}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Import job
+        </Button>
+      </div>
 
       {/* Resume context match banner */}
       {fromResume && resumeQuery.data && (

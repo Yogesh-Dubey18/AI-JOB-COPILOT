@@ -14,7 +14,8 @@ const JobMatchSchema = new Schema(
     locationFit: String,
     recommendationReason: String,
     applyRecommendation: String,
-    riskFlags: [String]
+    riskFlags: [String],
+    applyReadinessScore: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

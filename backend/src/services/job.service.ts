@@ -1,7 +1,9 @@
 import { ApiError } from "../utils/ApiError.js";
-import { countRecords, createRecord, findRecordById, findRecords } from "../utils/repository.js";
+import { countRecords, createRecord, findOneRecord, findRecordById, findRecords } from "../utils/repository.js";
 import { createApplication } from "./application.service.js";
 import { listJobSourceReadiness, normalizeJobSourceJob, parseCsvPreview } from "./job-source.service.js";
+import { technicalKeywordBank } from "./ats-scoring.service.js";
+import { aiService } from "../ai/ai.service.js";
 
 export const sampleJobs = [
   ["React Developer", "PixelCraft Labs", "Bengaluru", "Hybrid", "Full-time", "0-2 years", ["React", "TypeScript", "Tailwind", "REST API"]],
@@ -111,8 +113,14 @@ export async function saveJob(userId: string, jobId: string) {
 
 export async function createManualJob(input: any) {
   const normalized = normalizeJobSourceJob({ ...input, source: input.source || "Manual import" });
-  const jobs = await findRecords("jobs", {});
-  const duplicate = jobs.find((job: any) => job.duplicateKey === normalized.duplicateKey);
+  let duplicate = await findOneRecord("jobs", { duplicateKey: normalized.duplicateKey });
+  if (!duplicate) {
+    duplicate = await findOneRecord("jobs", {
+      normalizedTitle: normalized.normalizedTitle,
+      normalizedCompany: normalized.normalizedCompany,
+      location: normalized.location
+    });
+  }
   if (duplicate) return { job: duplicate, duplicate: true, duplicateKey: normalized.duplicateKey };
   const job = await createRecord("jobs", normalized);
   return { job, duplicate: false, duplicateKey: normalized.duplicateKey };
@@ -126,4 +134,209 @@ export async function previewCsvJobs(csv: string) {
     ...row,
     duplicate: jobs.some((job: any) => job.duplicateKey === row.duplicateKey)
   }));
+}
+
+function includesTerm(text: string, term: string) {
+  const lowerText = text.toLowerCase();
+  const lowerTerm = term.toLowerCase();
+  if (/^[a-z0-9.+#-]+$/i.test(term)) return lowerText.includes(lowerTerm);
+  return lowerTerm.split(/\s+/).every((part) => lowerText.includes(part));
+}
+
+function parseJobUrlHeuristically(url: string) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    const hostParts = host.split(".");
+    let company = hostParts[0];
+    
+    const pathParts = parsed.pathname.split("/").filter(Boolean);
+    const isJobPortal = /lever\.co|greenhouse\.io|workable\.com|bamboohr\.com/i.test(host);
+    
+    if (isJobPortal && pathParts.length > 0) {
+      company = pathParts[0];
+    } else if (["jobs", "careers", "recruit", "recruiting", "app", "boards"].includes(company.toLowerCase()) && hostParts.length > 1) {
+      company = hostParts[1];
+    }
+    company = company.charAt(0).toUpperCase() + company.slice(1);
+    let title = "";
+    for (const part of pathParts) {
+      const cleaned = part.replace(/[^a-zA-Z]+/g, " ").trim();
+      if (cleaned.length > 5) {
+        if (/software|engineer|developer|manager|analyst|designer|architect|lead/i.test(cleaned)) {
+          title = cleaned.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+          break;
+        }
+      }
+    }
+    if (!title && pathParts.length) {
+      const lastPart = pathParts[pathParts.length - 1];
+      title = lastPart.replace(/[^a-zA-Z]+/g, " ").trim().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    }
+    return {
+      title: title || "Software Developer",
+      company: company || "Hiring Company",
+      location: "Remote",
+      remoteType: "Remote",
+      jobType: "Full-time",
+      applyUrl: url,
+      description: `Job listing imported from URL: ${url}`,
+      skillsRequired: ["React", "Node.js", "TypeScript"],
+      responsibilities: ["Develop and maintain software applications", "Collaborate on product integration workflows"],
+      requirements: ["Strong programming fundamentals", "Good problem-solving skills"]
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseJobTextHeuristically(text: string) {
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  
+  let title = "";
+  const titleLine = lines.find(l => /^(job\s+)?title:|^(role|position):/i.test(l));
+  if (titleLine) {
+    title = titleLine.replace(/^(job\s+)?title:|^(role|position):/i, "").trim();
+  } else {
+    const commonRoles = [
+      /software engineer/i, /full\s*stack/i, /frontend/i, /backend/i, /developer/i,
+      /data scientist/i, /devops/i, /qa engineer/i, /product manager/i, /intern/i
+    ];
+    for (const line of lines.slice(0, 5)) {
+      if (commonRoles.some(r => r.test(line)) && line.length < 60) {
+        title = line;
+        break;
+      }
+    }
+  }
+  if (!title) title = "Software Developer";
+
+  let company = "";
+  const companyLine = lines.find(l => /^company:|^organization:/i.test(l));
+  if (companyLine) {
+    company = companyLine.replace(/^company:|^organization:/i, "").trim();
+  } else {
+    const companyMatch = text.match(/at\s+([A-Z][a-zA-Z0-9\s]+?)(?:\s+is\s+looking|\s+seeks|\s+team|\.|\n)/);
+    if (companyMatch) {
+      company = companyMatch[1].trim();
+    }
+  }
+  if (!company) company = "Hiring Company";
+
+  let location = "Remote";
+  let remoteType = "Remote";
+  if (/hybrid/i.test(text)) {
+    remoteType = "Hybrid";
+    location = "Hybrid";
+  } else if (/onsite|on-site/i.test(text)) {
+    remoteType = "Onsite";
+    location = "Office";
+  }
+  
+  const cities = ["Bengaluru", "Bangalore", "Pune", "Hyderabad", "Mumbai", "Chennai", "Delhi", "Noida", "Gurugram", "San Francisco", "New York", "London"];
+  for (const city of cities) {
+    if (new RegExp(city, "i").test(text)) {
+      location = city;
+      break;
+    }
+  }
+
+  let jobType = "Full-time";
+  if (/internship|intern\b/i.test(text)) {
+    jobType = "Internship";
+  } else if (/contract|contractor/i.test(text)) {
+    jobType = "Contract";
+  } else if (/part-time|parttime/i.test(text)) {
+    jobType = "Part-time";
+  }
+
+  const skillsRequired: string[] = [];
+  technicalKeywordBank.forEach((skill) => {
+    if (includesTerm(text, skill)) {
+      skillsRequired.push(skill);
+    }
+  });
+
+  const description = lines.slice(0, 3).join(" ").substring(0, 300) + "...";
+  
+  const responsibilities: string[] = [];
+  const requirements: string[] = [];
+  
+  let section: "none" | "responsibilities" | "requirements" = "none";
+  for (const line of lines) {
+    if (/responsibility|responsibilities|what you will do|role duties|key tasks/i.test(line)) {
+      section = "responsibilities";
+      continue;
+    }
+    if (/requirement|requirements|what we look for|qualifications|experience required/i.test(line)) {
+      section = "requirements";
+      continue;
+    }
+    
+    if (line.startsWith("-") || line.startsWith("*") || /^\d+\./.test(line)) {
+      const cleanedLine = line.replace(/^[-*\d.]+\s*/, "").trim();
+      if (section === "responsibilities" && responsibilities.length < 6) {
+        responsibilities.push(cleanedLine);
+      } else if (section === "requirements" && requirements.length < 6) {
+        requirements.push(cleanedLine);
+      }
+    }
+  }
+
+  if (responsibilities.length === 0) {
+    responsibilities.push("Design and implement feature components", "Collaborate on product integration workflows");
+  }
+  if (requirements.length === 0) {
+    requirements.push("Strong core programming logic", "Familiarity with modern software tech stack");
+  }
+
+  return {
+    title,
+    company,
+    location,
+    remoteType,
+    jobType,
+    skillsRequired: skillsRequired.slice(0, 10),
+    description,
+    responsibilities,
+    requirements
+  };
+}
+
+export async function parseJobText(text: string, userId?: string) {
+  const trimmed = text.trim();
+  if (!trimmed) throw new ApiError(400, "Job text cannot be empty");
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    const urlData = parseJobUrlHeuristically(trimmed);
+    if (urlData) return urlData;
+  }
+
+  const isAiLive = Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
+  const fallback = parseJobTextHeuristically(trimmed);
+  if (isAiLive) {
+    try {
+      const parsedData = await aiService.parseJobText(userId, { text: trimmed, fallback });
+      if (parsedData && (parsedData.title || parsedData.company)) {
+        return {
+          title: parsedData.title || fallback.title,
+          company: parsedData.company || fallback.company,
+          location: parsedData.location || fallback.location,
+          remoteType: parsedData.remoteType || fallback.remoteType,
+          jobType: parsedData.jobType || fallback.jobType,
+          salaryMin: parsedData.salaryMin || undefined,
+          salaryMax: parsedData.salaryMax || undefined,
+          skillsRequired: parsedData.skillsRequired || fallback.skillsRequired,
+          description: parsedData.description || fallback.description,
+          responsibilities: parsedData.responsibilities || fallback.responsibilities,
+          requirements: parsedData.requirements || fallback.requirements,
+          applyUrl: parsedData.applyUrl || ""
+        };
+      }
+    } catch (e) {
+      console.warn("AI parsing failed, falling back to heuristics:", e);
+    }
+  }
+
+  return fallback;
 }

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { createManualJob, dailyFeed, getJob, getJobSources, listJobs, previewCsvJobs, saveJob } from "../services/job.service.js";
+import { createManualJob, dailyFeed, getJob, getJobSources, listJobs, parseJobText, previewCsvJobs, saveJob } from "../services/job.service.js";
 import { matchJob } from "../services/job-match.service.js";
 import { tailorResumeForJob } from "../services/resume-tailor.service.js";
 
@@ -10,6 +10,7 @@ const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : v
 router.get("/recommended", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await listJobs({ ...req.query, recommendedFor: req.user!.id }) })));
 router.get("/daily-feed", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await dailyFeed(req.query) })));
 router.post("/manual-import", requireAuth, asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await createManualJob(req.body) })));
+router.post("/parse-text", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await parseJobText(req.body.text || "", req.user?.id) })));
 router.post("/import/csv-preview", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await previewCsvJobs(req.body.csv || "") })));
 router.get("/sources", asyncHandler(async (_req, res) => res.json({ success: true, data: getJobSources() })));
 router.get("/", asyncHandler(async (req, res) => res.json({ success: true, data: await listJobs(req.query) })));

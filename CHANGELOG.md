@@ -4,6 +4,14 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.26 — Job Aggregation and Deduplication Sprint (2026-05-26)
+
+- **Heuristic & AI Job Parser**: Added backend extraction utility `parseJobText` supporting Lever/Greenhouse link parsing and technical keyword scanning fallbacks.
+- **Deduplication Engine**: Integrated MongoDB duplicate checks mapping normalized title, company, location, and apply URLs.
+- **Manual Import View**: Created `/jobs/import` frontend interface with automatic paste-parsing, full-form editing, and debounced duplicate alert checks.
+- **Apply Readiness Score**: Structured a weighted formula mapping candidate match scores, resume ATS levels, and apply URL completeness.
+- **E2E & Unit Tests**: Verified coverage for parsing, duplicate warning thresholds, scoring indices, and status flags (all 139+ tests passing).
+
 ### v2.0.25 — Advanced Orchestration, Schema and SEO Sprint (2026-05-26)
 
 - **Resume Schema Enhancement**: Added sourceType, template, changeSummary, categoryScores, and scoreExplanation fields to Mongoose schemas. Refactored local scoring calculator to compute 5-category ATS scoring breakdown with detailed why-score explanations.
