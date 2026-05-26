@@ -12,6 +12,7 @@ import RootRegisterPage from "@/app/register/page";
 import DashboardPage from "@/app/dashboard/page";
 import ResumeUploadPage from "@/app/resume/upload/page";
 import ResumeAnalyzerPage from "@/app/resume/analyzer/page";
+import ResumeBuilderPage from "@/app/resume/builder/page";
 import JobsPage from "@/app/jobs/page";
 import JobDetailPage from "@/app/jobs/[jobId]/page";
 import ApplicationsPage from "@/app/applications/page";
@@ -838,5 +839,38 @@ describe("forgot password and reset password pages", () => {
     expect(screen.getByText(/At least one uppercase letter/i)).toBeInTheDocument();
     expect(screen.getByText(/At least one lowercase letter/i)).toBeInTheDocument();
     expect(screen.getByText(/At least one number/i)).toBeInTheDocument();
+  });
+});
+
+describe("resume builder page", () => {
+  it("renders empty state when no resume is selected", () => {
+    mockApiResponse([]);
+    renderWithProviders(<ResumeBuilderPage />);
+    expect(screen.getByText(/No Resume Loaded/i)).toBeInTheDocument();
+  });
+
+  it("loads resume and shows editor inputs when selection is made", async () => {
+    mockApiResponse([
+      {
+        _id: "res-1",
+        fileName: "Base_Resume.pdf",
+        parsedData: {
+          name: "Alice Developer",
+          email: "alice@example.com",
+          phone: "1234567890",
+          summary: "Professional resume summary",
+          skills: ["React", "TypeScript"],
+          experience: [{ company: "A", role: "R", bullets: ["Do it."] }],
+          projects: [],
+          education: []
+        }
+      }
+    ]);
+
+    renderWithProviders(<ResumeBuilderPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
   });
 });

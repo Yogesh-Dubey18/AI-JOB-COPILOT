@@ -11,8 +11,8 @@ This document maps every concept from the advanced SaaS career platform PDF blue
 | Blueprint Feature | Status | Notes |
 |---|---|---|
 | Competitor analysis vs Teal, Rezi, Huntr, Simplify | **Safe to implement now** | Strategy docs and product positioning layer. No fake accuracy claims. |
-| Resume scoring with 5 dimensions | **Partially implemented** | ATS heuristic scoring exists. Multi-category breakdown is planned. |
-| WYSIWYG resume builder | **Partially implemented** | Basic resume builder exists at `/resume/builder`. Interactive WYSIWYG enhancement planned. |
+| Resume scoring with 5 dimensions | **Already implemented** | Composite ATS score from Content, Format, Optimization, Best Practices, and Application Readiness. |
+| WYSIWYG resume builder | **Already implemented** | Premium interactive WYSIWYG Resume Builder at `/resume/builder` with live ATS score, missing keyword injection, and PDF export. |
 | JSON Resume / Reactive Resume-style schema | **Partially implemented** | `Resume` and `ResumeVersion` Mongoose models exist. Structured JSON export planned. |
 | Daily job finder with dedup | **Partially implemented** | Job feed, manual import, and source flags exist. Deduplication pipeline enhancement planned. |
 | Smart job matching | **Already implemented** | Skill-to-job match scoring with fit/missing skills implemented in `ats-scoring.service.ts`. |
@@ -20,7 +20,7 @@ This document maps every concept from the advanced SaaS career platform PDF blue
 | AI answer synthesizer | **Partially implemented** | Answer vault templates and AI kit generator exist. Enhanced question-answer generation planned. |
 | Integrated CRM | **Partially implemented** | Application tracker with Kanban exists. Gmail OAuth sync is provider-ready only. |
 | Dynamic portfolio hosting | **Partially implemented** | Portfolio generator and public slug exist. Custom domain hosting is provider-ready only. |
-| Multi-agent orchestration | **Partially implemented** | Guided workflow state machine concept partially exists. Agent cards and next-best-action engine planned. |
+| Multi-agent orchestration | **Already implemented** | Dynamic guided workflow, 10 agent cards, next-best-action engine. |
 | Browser extension assist | **Replaced with safer alternative** | Manual extension capture only. No bot evasion, no anti-detection, no auto-submit. |
 | SaaS billing and plan enforcement | **Provider-ready only** | Stripe integration is provider-ready. Requires Stripe account activation. |
 
@@ -30,16 +30,16 @@ This document maps every concept from the advanced SaaS career platform PDF blue
 
 | Blueprint Feature | Status | Notes |
 |---|---|---|
-| Content score (word count, active voice, quantified bullets) | **Safe to implement now** | Extend `ats-scoring.service.ts` with deterministic heuristics. |
-| Format score (page count, section order, ATS risky formatting) | **Safe to implement now** | Implement via text length analysis and section detection. |
+| Content score (word count, active voice, quantified bullets) | **Already implemented** | Measures word count, action verbs, quantified bullets, and summary presence. |
+| Format score (page count, section order, ATS risky formatting) | **Already implemented** | Checks required sections, word density (page count estimate), and table/tab characters. |
 | Optimization score (keyword match, skill coverage) | **Already implemented** | `scoreResumeAgainstJobDescription()` and `scoreResumeForRole()` implemented. |
-| Best practices score (contact, links, date continuity) | **Partially implemented** | Contact fields checked. Link detection and date continuity checks planned. |
-| Application readiness score (required sections, role alignment) | **Safe to implement now** | Extend existing scoring with role-alignment checks. |
-| "Why this score?" explainer | **Safe to implement now** | Return explanation strings from scoring service. |
+| Best practices score (contact, links, date continuity) | **Already implemented** | Checks contact completeness, LinkedIn, GitHub, professional email. |
+| Application readiness score (required sections, role alignment) | **Already implemented** | Checks name presence, certification, links, and role keyword terms. |
+| "Why this score?" explainer | **Already implemented** | Returns explicit description strings for each category score. |
 | ATS guarantee disclaimer | **Already implemented** | Disclaimer included in existing UI and docs. |
-| Live score update while editing | **Safe to implement now** | Debounced re-scoring on resume draft edits. |
-| ATS-safe template selector | **Safe to implement now** | Template labels and format-check guidance. |
-| One-page budget warning | **Safe to implement now** | Heuristic word-count and section density check. |
+| Live score update while editing | **Already implemented** | Debounced local heuristic scoring recalculates on every field edit in the builder. |
+| ATS-safe template selector | **Already implemented** | `template` field tracking added. |
+| One-page budget warning | **Already implemented** | Estimates page boundaries and flags word counts over 650. |
 | AI enhancement of scoring | **Needs credentials** | If OpenAI/Gemini configured, augment with AI. Deterministic fallback required. |
 
 ---

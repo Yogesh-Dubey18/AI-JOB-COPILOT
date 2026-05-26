@@ -10,6 +10,7 @@ All notable changes to AI Job Copilot will be documented here.
 - **Portfolio SEO**: Integrated server-side generateMetadata helper using Next.js App Router to fetch minimal profile information and render OG tags, canonical URLs, and Twitter cards with fallback support.
 - **Multi-Agent Orchestration / Next-Best-Action**: Added deterministic next-best-action recommendation engine, mounted `/api/workflow/next-best-actions` endpoint, and added recommended next actions and agent status cards to the guided-workflow UI.
 - **SaaS Architecture Alignment**: Created `docs/pdf-blueprint-gap-map.md`, `docs/competitor-outperformance-strategy.md`, and `docs/browser-extension-safe-workflow.md` to align codebase features with security, compliance, and outperformance specifications.
+- **Interactive Resume Builder (Phase 10)**: Created interactive WYSIWYG Resume Builder at `/resume/builder` with live-updating ATS diagnostics. Mounted backend `/api/resumes/score-draft` route to run local heuristic breakdown in-memory on active fields. Built dynamic forms for experience, projects, skills, and links with immediate score recalculation and missing keyword injection helpers.
 
 ### v2.0.24 — Product Readiness Audit Sprint (2026-05-26)
 

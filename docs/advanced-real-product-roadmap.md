@@ -87,6 +87,17 @@
 
 ---
 
+## Phase 10: Interactive WYSIWYG Resume Builder (Completed)
+
+| Feature | Status |
+|---|---|
+| Selection of base resumes and editable field groups | ✅ Complete |
+| Reconstructed draft text analysis and live debounced scoring checks | ✅ Complete |
+| Integrated Category score gauge, weaknesses alerts, and keyword coverage | ✅ Complete |
+| Direct missing keyword injection back into skills listing | ✅ Complete |
+
+---
+
 ## Planned (Provider-Ready — Needs Credentials)
 
 | Feature | Requires |
@@ -121,13 +132,12 @@
 
 ## Roadmap Priorities (Next)
 
-1. **WYSIWYG resume builder** — inline editing with live ATS score update
-2. **Resume compare view** — diff between original and tailored version using changeSummary
-3. **Tone selector** — formal/fresher/technical tone for AI-generated cover letters and answers
-4. **Application stage flow chart** — Sankey or funnel chart for CRM analytics
-5. **Notification reminders** — email alerts for follow-ups when SendGrid configured
-6. **Job CSV batch import** — approved, legally-obtained job list upload
-7. **Rate limit documentation** — approved polling limits per provider
+1. **Resume compare view** — diff between original and tailored version using changeSummary
+2. **Tone selector** — formal/fresher/technical tone for AI-generated cover letters and answers
+3. **Application stage flow chart** — Sankey or funnel chart for CRM analytics
+4. **Notification reminders** — email alerts for follow-ups when SendGrid configured
+5. **Job CSV batch import** — approved, legally-obtained job list upload
+6. **Rate limit documentation** — approved polling limits per provider
 
 ---
 

@@ -86,6 +86,53 @@ describe("AI Job Copilot API", () => {
     expect(analysis.body.data.atsBreakdown.total).toBeGreaterThan(0);
   });
 
+  it("scores a resume draft without writing to the database", async () => {
+    const agent = await authAgent();
+    const draftPayload = {
+      parsedData: {
+        name: "Test User",
+        email: "test@example.com",
+        phone: "9876543210",
+        links: ["linkedin.com/in/test", "github.com/test"],
+        summary: "Experiened React and Node.js full stack developer with 3 years of experience.",
+        skills: ["React", "TypeScript", "Node.js", "Express", "MongoDB", "Git"],
+        projects: [
+          {
+            name: "Portfolio Project",
+            technologies: "React, Node.js",
+            bullets: ["Built a responsive full stack platform using React and Node.js which improved page speed by 40%."]
+          }
+        ],
+        experience: [
+          {
+            company: "Tech Corp",
+            role: "Software Engineer",
+            bullets: ["Developed REST APIs and integrated Stripe payments reducing checkout friction."]
+          }
+        ],
+        education: [
+          {
+            institution: "University of Tech",
+            degree: "B.S.",
+            field: "Computer Science"
+          }
+        ]
+      },
+      targetRole: "Full Stack Developer",
+      jobDescription: "Looking for a React developer with TypeScript, Node.js, Express, MongoDB, and Git experience."
+    };
+
+    const res = await agent.post("/api/resumes/score-draft")
+      .send(draftPayload)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.atsScore).toBeGreaterThan(50);
+    expect(res.body.data.categoryScores).toBeDefined();
+    expect(res.body.data.categoryScores.content.score).toBeGreaterThan(0);
+    expect(res.body.data.jobDescriptionCoverage.coveragePercent).toBeGreaterThan(0);
+  });
+
   it("rejects fake PDF resume uploads with bad magic numbers", async () => {
     const agent = await authAgent();
     await agent.post("/api/resumes/upload")
