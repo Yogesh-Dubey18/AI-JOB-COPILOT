@@ -45,6 +45,7 @@ import RecruiterPage from "@/app/recruiters/page";
 import CompanyResearchPage from "@/app/company-research/page";
 import AnswerVaultPage from "@/app/answer-vault/page";
 import CareerVaultPage from "@/app/career-vault/page";
+import SkillRoadmapPage from "@/app/skill-roadmap/page";
 import { t, getStoredLanguage, setStoredLanguage, DEFAULT_LANGUAGE } from "@/lib/i18n";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
 
@@ -1092,5 +1093,95 @@ describe("interview prep page", () => {
     await waitFor(() => {
       expect(screen.getByText(/heuristic/i)).toBeInTheDocument();
     });
+  });
+
+  it("renders /skill-roadmap page with empty states, inputs, checklists, and curated resources", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn()
+      }))
+    });
+
+    vi.stubGlobal("fetch", (url: string) => {
+      if (url.endsWith("/resumes")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => [
+            { _id: "res-1", fileName: "MyResume.pdf", isBaseResume: true, parsedData: { skills: ["React", "JavaScript"] } }
+          ]
+        });
+      }
+      if (url.endsWith("/applications")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => [
+            { _id: "app-1", jobId: "job-1", company: "Google", role: "Frontend Engineer", status: "Saved" }
+          ]
+        });
+      }
+      if (url.endsWith("/ai/skill-gap/plans")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => [
+            {
+              _id: "plan-1",
+              targetRole: "Frontend Engineer",
+              missingSkills: ["TypeScript", "Tailwind CSS"],
+              prioritySkills: ["TypeScript"],
+              sevenDayPlan: ["Study TS core", "Revise React types"],
+              thirtyDayPlan: ["Build a large TS app"],
+              projectSuggestions: ["Project A", "Project B"],
+              progress: 25,
+              fallbackResources: [
+                { topic: "JavaScript", resource: "MDN Web Docs", url: "https://developer.mozilla.org" }
+              ]
+            }
+          ]
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
+    });
+
+    renderWithProviders(<SkillRoadmapPage />);
+
+    // Header check
+    expect(screen.getByRole("heading", { name: /Skill gap roadmap/i })).toBeInTheDocument();
+
+    // Check list of missing skills
+    await waitFor(() => {
+      expect(screen.getByText("TypeScript")).toBeInTheDocument();
+      expect(screen.getByText("Tailwind CSS")).toBeInTheDocument();
+    });
+
+    // Check ethical warning
+    expect(screen.getByText(/Do not add skills to your resume unless you can explain them in an interview/i)).toBeInTheDocument();
+
+    // Check progress rendering
+    expect(screen.getByText("25%")).toBeInTheDocument();
+
+    // Check 7-day checklist items
+    expect(screen.getByText("Study TS core")).toBeInTheDocument();
+
+    // Check fallback resources title/label
+    expect(screen.getByText(/Curated fallback resources — external course provider is not connected/i)).toBeInTheDocument();
+
+    // Check practice questions link
+    const practiceLink = screen.getByRole("link", { name: /Practice interview questions/i });
+    expect(practiceLink).toBeInTheDocument();
+    expect(practiceLink).toHaveAttribute("href", "/interviews/prep?mode=technical");
   });
 });

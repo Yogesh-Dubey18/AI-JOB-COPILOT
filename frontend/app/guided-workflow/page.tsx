@@ -32,6 +32,7 @@ export default function GuidedWorkflowPage() {
   const interviews = useQuery({ queryKey: ["interviews"], queryFn: () => api.get<any[]>("/interviews"), retry: false });
   const profile = useQuery({ queryKey: ["profile"], queryFn: () => api.get<any>("/profile"), retry: false });
   const answerVault = useQuery({ queryKey: ["answer-vault"], queryFn: () => api.get<any[]>("/answer-vault"), retry: false });
+  const learningPlans = useQuery({ queryKey: ["learning-plans"], queryFn: () => api.get<any[]>("/ai/skill-gap/plans"), retry: false });
   const nextBestActions = useQuery({
     queryKey: ["next-best-actions"],
     queryFn: () => api.get<any>("/workflow/next-best-actions"),
@@ -65,7 +66,20 @@ export default function GuidedWorkflowPage() {
   const isStep3Done = kitsCount > 0;
   const isStep4Done = trackedAppsCount > 0;
   const isStep5Done = interviewsCount > 0;
-  const isStep6Done = profileSkillsCount > 0 || profileRolesCount > 0;
+  const plans = learningPlans.data || [];
+  const latestPlan = plans[0];
+  let skillRoadmapStatus = "Not started";
+  let isStep6Done = false;
+  if (latestPlan) {
+    isStep6Done = true;
+    if (latestPlan.progress > 0) {
+      skillRoadmapStatus = "Practice started";
+    } else if (latestPlan.sevenDayPlan?.length || latestPlan.thirtyDayPlan?.length) {
+      skillRoadmapStatus = "Roadmap generated";
+    } else if (latestPlan.missingSkills?.length) {
+      skillRoadmapStatus = "Gaps identified";
+    }
+  }
   const isStep7Done = answersCount > 0;
 
   const steps = [
@@ -130,10 +144,10 @@ export default function GuidedWorkflowPage() {
       description: "Run the skill gap analyzer for your target role. Get a 7-day or 30-day learning roadmap with specific resources to fill missing skills.",
       icon: Wrench,
       cta: "Skill Gap Analysis",
-      href: "/skill-gap",
+      href: "/skill-roadmap",
       tips: ["Focus on the top 3 missing skills from your ATS analysis.", "Build a small project demonstrating each new skill.", "Add completed courses to your resume and re-run the ATS analyzer."],
       isDone: isStep6Done,
-      statusLabel: isStep6Done ? "Completed (profile skills configured)" : "Pending"
+      statusLabel: isStep6Done ? skillRoadmapStatus : "Not started"
     },
     {
       step: "07",

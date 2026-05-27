@@ -57,7 +57,7 @@ export default function DashboardPage() {
             <div><p className="text-sm font-semibold">Resume health</p><Progress value={data.averageAtsScore || 82} /></div>
             <p className="text-sm text-muted-foreground">{health.bestNextActions?.[0] || "Tailor your resume for the top two roles before applying. Practice project explanation for technical screens."}</p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/skill-gap"><Button variant="outline"><Wrench className="h-4 w-4" /> Skill gaps</Button></Link>
+              <Link href="/skill-roadmap"><Button variant="outline"><Wrench className="h-4 w-4" /> Skill gaps</Button></Link>
               <Link href="/career-mentor-chat"><Button variant="outline"><Sparkles className="h-4 w-4" /> Ask mentor</Button></Link>
             </div>
           </CardContent>

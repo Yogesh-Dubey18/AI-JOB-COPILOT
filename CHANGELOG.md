@@ -4,6 +4,16 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.29 — Skill Gap Analyzer & Learning Roadmap (2026-05-27)
+
+- **Skill Gap Analyzer Workspace**: Implemented `/skill-roadmap` protected route performing direct comparisons between resume parsed skills and job required skills.
+- **Checklist-Enabled Roadmaps**: Added click-to-toggle 7-day Revision Sprint and 30-day Improvement Curriculum checklists that persist progress updates (0–100%) to the MongoDB backend database.
+- **Reference Resource Library**: Integrated a dynamic library of curated reference materials for JavaScript, React, Node.js, Express, MongoDB, SQL, Git/GitHub, Deployment, DSA, System Design, and Interview Prep, clearly labeled as falling back due to unconfigured live course providers.
+- **Ethical Verification Banners**: Embedded strict disclaimers reminding candidates to only list skills they can honestly explain, with warning details against faking resume information.
+- **Guided Workflow Dynamic Badging**: Configured step 6 of the Guided Workflow to query plans and render real-time progress statuses: Not started, Gaps identified, Roadmap generated, Practice started.
+- **Unified Routing Redirects**: Added middleware rule intercepting requests to `/skill-gap` or `/learning-roadmap` and cleanly redirecting them to `/skill-roadmap`.
+- **Testing**: Added backend API tests for gap calculation, plan queries, and PATCH updates; added frontend React tests for roadmap page components and checkboxes; added Playwright E2E redirection coverage.
+
 ### v2.0.28 — Advanced Interview Preparation & Mock Interview Builder (2026-05-26)
 
 - **10 Interview Prep Modes**: Added HR, Technical, React frontend, Node/Express, MERN full stack, JavaScript basics, Project explanation, Fresher behavioral, Salary discussion, and Assignment discussion modes.

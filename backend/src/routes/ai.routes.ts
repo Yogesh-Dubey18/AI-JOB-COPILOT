@@ -8,7 +8,7 @@ import { generateApplicationKit } from "../services/application-kit.service.js";
 import { tailorResumeForJob } from "../services/resume-tailor.service.js";
 import { matchJob } from "../services/job-match.service.js";
 import { analyzeResume } from "../services/resume-analysis.service.js";
-import { generateSkillGap } from "../services/skill-gap.service.js";
+import { generateSkillGap, listLearningPlans, updateLearningPlan } from "../services/skill-gap.service.js";
 import { checkJobScam } from "../services/scam-detector.service.js";
 import { chatWithMentor } from "../services/career-chat.service.js";
 import { generatePortfolio } from "../services/portfolio.service.js";
@@ -26,6 +26,8 @@ router.post("/generate-application-kit", enforceAiCreditLimit("application-kit")
 router.post("/cover-letter", enforceAiCreditLimit("cover-letter"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await aiService.coverLetter(req.user!.id, req.body) })));
 router.post("/interview-prep", enforceAiCreditLimit("interview-prep"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await aiService.interviewPrep(req.user!.id, req.body) })));
 router.post("/mock-interview", enforceAiCreditLimit("mock-interview"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await aiService.mockInterview(req.user!.id, req.body) })));
+router.get("/skill-gap/plans", asyncHandler(async (req, res) => res.json({ success: true, data: await listLearningPlans(req.user!.id) })));
+router.patch("/skill-gap/plans/:id", asyncHandler(async (req, res) => res.json({ success: true, data: await updateLearningPlan(req.user!.id, req.params.id as string, req.body) })));
 router.post("/skill-gap", enforceAiCreditLimit("skill-gap"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await generateSkillGap(req.user!.id, req.body) })));
 router.post("/scam-check", enforceAiCreditLimit("scam-check"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await checkJobScam(req.user!.id, req.body) })));
 router.post("/chat", enforceAiCreditLimit("career-chat"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await chatWithMentor(req.user!.id, req.body) })));
@@ -34,3 +36,4 @@ router.post("/linkedin-optimizer", enforceAiCreditLimit("linkedin-optimizer"), v
 router.post("/portfolio-generator", enforceAiCreditLimit("portfolio-generator"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await generatePortfolio(req.user!.id, req.body) })));
 router.post("/follow-up-message", enforceAiCreditLimit("follow-up-message"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await generateFollowUpMessage(req.user!.id, req.body) })));
 export default router;
+

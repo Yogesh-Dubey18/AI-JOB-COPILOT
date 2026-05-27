@@ -11,8 +11,7 @@ const protectedRoutes = [
   "/application-kit",
   "/applications",
   "/interviews",
-  "/skill-gap",
-  "/learning-roadmap",
+  "/skill-roadmap",
   "/portfolio-generator",
   "/job-scam-detector",
   "/career-mentor-chat",
@@ -31,13 +30,20 @@ const protectedRoutes = [
 ];
 
 export function middleware(req: NextRequest) {
-  const isProtected = protectedRoutes.some((route) => req.nextUrl.pathname.startsWith(route));
+  const pathname = req.nextUrl.pathname;
+  if (pathname === "/skill-gap" || pathname === "/learning-roadmap") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/skill-roadmap";
+    return NextResponse.redirect(url);
+  }
+
+  const isProtected = protectedRoutes.some((route) => pathname.startsWith(route));
   const hasBackendCookie = req.cookies.has("accessToken");
   const hasFrontendSessionMarker = req.cookies.has("ajc_session");
   if (isProtected && !hasBackendCookie && !hasFrontendSessionMarker) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", req.nextUrl.pathname);
+    url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
   const response = NextResponse.next();

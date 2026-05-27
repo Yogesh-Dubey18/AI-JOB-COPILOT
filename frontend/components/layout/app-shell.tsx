@@ -17,7 +17,7 @@ const nav = [
   ["/linkedin-optimizer", Linkedin, "LinkedIn"],
   ["/github-analyzer", Github, "GitHub"],
   ["/pdf-export", Download, "Exports"],
-  ["/skill-gap", Wrench, "Skills"],
+  ["/skill-roadmap", Wrench, "Skills"],
   ["/career-mentor-chat", Bot, "Mentor"],
   ["/analytics", BarChart3, "Analytics"],
   ["/job-scam-detector", ShieldAlert, "Scam check"],

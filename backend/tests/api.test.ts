@@ -974,5 +974,36 @@ describe("AI Job Copilot API", () => {
     expect(res.body.data.hasContext).toBe(false);
     expect(res.body.data.message).toBeTruthy();
   });
+
+  it("calculates skill gap, lists learning plans, and updates plan progress", async () => {
+    const agent = await authAgent();
+    const generateRes = await agent.post("/api/ai/skill-gap").send({
+      targetRole: "Senior React Developer",
+      currentSkills: ["React", "JavaScript", "CSS"],
+      message: "Analyze gap"
+    }).expect(200);
+
+    expect(generateRes.body.success).toBe(true);
+    expect(generateRes.body.data.targetRole).toBe("Senior React Developer");
+    expect(generateRes.body.data.missingSkills).toContain("Docker");
+    expect(generateRes.body.data.sevenDayPlan).toBeInstanceOf(Array);
+    expect(generateRes.body.data.thirtyDayPlan).toBeInstanceOf(Array);
+    expect(generateRes.body.data.fallbackResources).toBeInstanceOf(Array);
+    expect(generateRes.body.data.progress).toBe(0);
+
+    const planId = generateRes.body.data._id;
+
+    const listRes = await agent.get("/api/ai/skill-gap/plans").expect(200);
+    expect(listRes.body.success).toBe(true);
+    expect(listRes.body.data.length).toBeGreaterThan(0);
+    expect(listRes.body.data[0]._id).toBe(planId);
+
+    const patchRes = await agent.patch("/api/ai/skill-gap/plans/" + planId).send({
+      progress: 45
+    }).expect(200);
+    expect(patchRes.body.success).toBe(true);
+    expect(patchRes.body.data.progress).toBe(45);
+  });
 });
+
 

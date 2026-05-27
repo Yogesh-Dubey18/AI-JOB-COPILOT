@@ -96,6 +96,18 @@
 | Integrated Category score gauge, weaknesses alerts, and keyword coverage | ✅ Complete |
 | Direct missing keyword injection back into skills listing | ✅ Complete |
 
+## Phase 13: Skill Gap & Learning Roadmap Enhancement (Completed)
+
+| Feature | Status |
+|---|---|
+| Protected `/skill-roadmap` workspace with empty states and selection controls | ✅ Complete |
+| `/skill-gap` alias redirecting to `/skill-roadmap` | ✅ Complete |
+| Heuristic and AI skill gap calculation (current, required, missing, priority, and weak skills) | ✅ Complete |
+| 7-day revision sprint and 30-day improvement interactive checklists | ✅ Complete |
+| Curated fallback resource library honestly labeled with ethical warnings | ✅ Complete |
+| Interactive progress updates persisting to the database | ✅ Complete |
+| Guided workflow integration (Not started / Gaps identified / Roadmap generated / Practice started) | ✅ Complete |
+
 ---
 
 ## Planned (Provider-Ready — Needs Credentials)

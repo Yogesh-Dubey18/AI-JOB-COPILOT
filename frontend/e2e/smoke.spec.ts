@@ -105,7 +105,8 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
     "/guided-workflow",
     "/portfolio-generator",
     "/settings/integrations",
-    "/interviews/prep"
+    "/interviews/prep",
+    "/skill-roadmap"
   ];
 
   for (const route of protectedRoutes) {
