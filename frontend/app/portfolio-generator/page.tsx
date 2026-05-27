@@ -259,8 +259,13 @@ export default function PortfolioGeneratorPage() {
   const profileQuery = useQuery({ queryKey: ["profile"], queryFn: () => api.get<any>("/profile"), retry: false });
   const careerVaultQuery = useQuery({ queryKey: ["career-vault"], queryFn: () => api.get<any[]>("/career-vault"), retry: false });
   const roadmapQuery = useQuery({ queryKey: ["learning-plans"], queryFn: () => api.get<any[]>("/ai/skill-gap/plans"), retry: false });
+  const storageStatus = useQuery({ queryKey: ["portfolio-storage-status"], queryFn: () => api.get<any>("/portfolios/storage/status"), retry: false });
 
   const items = portfolios.data || [];
+  const storageInfo = storageStatus.data || {};
+  const storageBadgeText = storageInfo.status === "provider_ready" ? "Provider-ready signed URLs" : "Local fallback";
+  const storageStatusLabel = typeof storageInfo.label === "string" ? storageInfo.label : "Local fallback storage (not production-durable)";
+  const signedUrlText = `Signed URL/download readiness: ${storageInfo.signedUrlTtlSeconds || 900} second TTL when S3/R2 is configured; local fallback uses app-served /uploads links.`;
   const careerVaultEntries = useMemo(() => Array.isArray(careerVaultQuery.data) ? careerVaultQuery.data : [], [careerVaultQuery.data]);
   const roadmapPlans = useMemo(() => Array.isArray(roadmapQuery.data) ? roadmapQuery.data : [], [roadmapQuery.data]);
   const selectedPortfolio = items[0];
@@ -534,7 +539,14 @@ export default function PortfolioGeneratorPage() {
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <p className="font-semibold">Storage & Access Notice</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge data-testid="storage-status-badge">{storageBadgeText}</Badge>
+              <Badge>File privacy: private by default</Badge>
+            </div>
             <p className="mt-1 text-xs">Currently running in local storage fallback unless S3/R2 is configured. Generated PDFs can be written to local uploads, which means direct file URLs may be publicly accessible. Durable private storage and signed downloads are provider-ready and require manual setup before production use.</p>
+            <p className="mt-1 text-xs">{storageStatusLabel}</p>
+            <p className="mt-1 text-xs">{signedUrlText}</p>
+            <p className="mt-1 text-xs font-semibold">Private files are only shared when you approve them.</p>
             <p className="mt-1 text-xs">Custom domain portfolio hosting is provider-ready only. This builder creates an app slug at /u/[slug] and does not provision a hosted domain.</p>
           </div>
         </div>
@@ -609,6 +621,21 @@ export default function PortfolioGeneratorPage() {
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
               <p className="font-semibold">Proof honesty rule</p>
               <p>Do not claim skills, results, or metrics that you cannot explain or prove.</p>
+            </div>
+
+            <div className="rounded-md border bg-muted/20 p-3 text-sm" data-testid="proof-file-readiness">
+              <div className="flex flex-wrap items-center gap-2">
+                <Wrench className="h-4 w-4 text-primary" />
+                <p className="font-semibold">Proof File Storage Readiness</p>
+                <Badge>{storageBadgeText}</Badge>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Screenshots, proof PDFs, and generated portfolio assets can reference private file metadata. Upload wiring remains safe and manual until a user explicitly adds files through the app flow.</p>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                <Badge>Private until publicApproved</Badge>
+                <Badge>Signed download links expire</Badge>
+                <Badge>S3/R2 provider-ready only</Badge>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{signedUrlText}</p>
             </div>
 
             <div className="space-y-3" data-testid="case-study-editor">

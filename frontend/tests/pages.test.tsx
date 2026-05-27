@@ -370,6 +370,24 @@ describe("frontend pages", () => {
           })
         });
       }
+      if (String(url).includes("/portfolios/storage/status")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              provider: "local",
+              status: "local_fallback",
+              label: "Local fallback storage (not production-durable)",
+              signedUrlTtlSeconds: 900,
+              localFallback: true,
+              live: false
+            }
+          })
+        });
+      }
       if (String(url).includes("/portfolios")) {
         return Promise.resolve({
           ok: true,
@@ -419,8 +437,13 @@ describe("frontend pages", () => {
     expect(screen.getByRole("heading", { name: "Portfolio generator" })).toBeInTheDocument();
     expect(screen.getByTestId("storage-warning")).toBeInTheDocument();
     expect(screen.getByText(/Storage & Access Notice/i)).toBeInTheDocument();
+    expect(screen.getByTestId("storage-status-badge")).toHaveTextContent(/Local fallback/i);
+    expect(screen.getByText(/Private files are only shared when you approve them/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Signed URL\/download readiness/i).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("proof-file-readiness")).toBeInTheDocument();
     expect(screen.getByText(/does not provision a hosted domain/i)).toBeInTheDocument();
     expect(screen.queryByText(/permanent public hosting/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/S3\/R2 Live/i)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("My Full-Stack Developer Portfolio")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("public-slug-name")).toBeInTheDocument();
     expect(screen.getByText("Show contact email")).toBeInTheDocument();
@@ -1290,7 +1313,22 @@ describe("public portfolio page /u/[slug]", () => {
                 publicProofNote: "Can walk through the architecture.",
                 privateProofNotes: "Private reviewer notes",
                 githubUrl: "",
-                liveDemoUrl: ""
+                liveDemoUrl: "",
+                proofFiles: [
+                  {
+                    fileId: "public-case-file",
+                    originalFilename: "architecture-proof.pdf",
+                    visibility: "publicApproved",
+                    downloadUrl: "/uploads/proof/architecture-proof.pdf",
+                    signedUrlExpiresInSeconds: 900
+                  },
+                  {
+                    fileId: "private-case-file",
+                    originalFilename: "private-proof.pdf",
+                    visibility: "private",
+                    downloadUrl: "/uploads/proof/private-proof.pdf"
+                  }
+                ]
               }
             ],
             proofMappings: [
@@ -1303,7 +1341,21 @@ describe("public portfolio page /u/[slug]", () => {
                 publicNote: "Mapped to visible project work.",
                 privateNotes: "Private proof mapping note",
                 githubUrl: "",
-                liveDemoUrl: ""
+                liveDemoUrl: "",
+                proofFiles: [
+                  {
+                    fileId: "public-proof-file",
+                    originalFilename: "react-proof.pdf",
+                    visibility: "publicApproved",
+                    downloadUrl: "/uploads/proof/react-proof.pdf"
+                  },
+                  {
+                    fileId: "private-proof-file",
+                    originalFilename: "private-react-proof.pdf",
+                    visibility: "private",
+                    downloadUrl: "/uploads/proof/private-react-proof.pdf"
+                  }
+                ]
               }
             ],
             resumeUrl: "https://example.com/my-resume.pdf",
@@ -1352,10 +1404,15 @@ describe("public portfolio page /u/[slug]", () => {
     expect(screen.getByText("Project Case Studies")).toBeInTheDocument();
     expect(screen.getAllByText("Project Alpha").length).toBeGreaterThan(0);
     expect(screen.getByText(/Proof badges are user-maintained/i)).toBeInTheDocument();
+    expect(screen.getByText(/Public-approved proof files/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Signed proof file: architecture-proof\.pdf \(900s\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Signed proof file: react-proof\.pdf/i })).toBeInTheDocument();
     expect(screen.getByText("Skill Proof Map")).toBeInTheDocument();
     expect(screen.getAllByText("React").length).toBeGreaterThan(0);
     expect(screen.queryByText(/Private reviewer notes/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Private proof mapping note/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/private-proof\.pdf/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/private-react-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/guaranteed/i)).not.toBeInTheDocument();
   });
 });
@@ -1389,6 +1446,7 @@ describe("portfolio builder empty state and custom builder input toggles", () =>
     const user = userEvent.setup();
     vi.stubGlobal("fetch", (url: string) => {
       if (url.includes("/portfolios/slug/")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({ success: true, data: { available: true } }) });
+      if (url.includes("/portfolios/storage/status")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({ success: true, data: { status: "local_fallback", label: "Local fallback storage (not production-durable)", signedUrlTtlSeconds: 900, live: false } }) });
       if (url.includes("/portfolios")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
       if (url.includes("/resumes")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
       if (url.includes("/profile")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => null });
@@ -1413,6 +1471,12 @@ describe("portfolio builder empty state and custom builder input toggles", () =>
         return Promise.resolve({
           ok: true, status: 200, headers: new Headers(),
           json: async () => ({ success: true, data: { available: true, slug: "test-dev" } })
+        });
+      }
+      if (url.includes("/portfolios/storage/status")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({ success: true, data: { status: "local_fallback", label: "Local fallback storage (not production-durable)", signedUrlTtlSeconds: 900, live: false } })
         });
       }
       if (url.includes("/portfolios/portfolio-1/versions")) {

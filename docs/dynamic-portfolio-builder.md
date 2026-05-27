@@ -19,6 +19,9 @@ This document covers the implemented Dynamic Portfolio Builder & Public Slugs ph
 - Portfolio version history with save, list, compare, and safe restore actions.
 - Project case-study builder with proof status labels and public approval controls.
 - Skill-to-proof mapping cards that connect skills to projects, resume bullets, and proof links.
+- Portfolio file metadata readiness for resume PDFs, portfolio PDFs, screenshots, and proof files.
+- Storage status badge and signed URL/download status text in the builder.
+- Public portfolio filtering for `publicApproved` proof files only.
 
 ## Public Slug Behavior
 
@@ -53,10 +56,13 @@ The public endpoint exposes:
 - Roadmap achievement summary only when roadmap achievements are enabled.
 - Project case studies only when projects, case studies, and per-case-study public approval are enabled.
 - Skill proof mappings only when proof mapping visibility and per-mapping public approval are enabled.
+- Proof files only when file visibility is `publicApproved`.
 
 The public endpoint does not expose user IDs, private resume records, auth data, tokens, provider credentials, or unpublished portfolios.
 
 Private case-study notes and private proof-mapping notes are never returned by the public endpoint. GitHub, live demo, and screenshot links for case studies are withheld when social links are disabled.
+
+Private file metadata is kept owner-scoped. Absolute local paths and private bucket URLs are not returned to the frontend. Local fallback links remain non-durable and should not be presented as production hosting.
 
 ## Data Sources
 
@@ -87,6 +93,13 @@ POST /api/exports/portfolio/:id
 
 The export respects portfolio privacy settings. If local storage fallback is active, generated PDFs may be reachable by direct local upload URL. S3/R2 private storage with signed URLs is required before treating exports as durable production assets.
 
+Signed URL behavior:
+
+- `STORAGE_SIGNED_URL_TTL_SECONDS=900` is the default expiry window.
+- S3/R2 signed URLs are provider-ready until credentials and bucket access are verified.
+- Local fallback returns app-served `/uploads/...` links only when the existing app supports that file.
+- Proof files are private by default and only appear on `/u/[slug]` when marked `publicApproved`.
+
 ## Provider Honesty
 
 What is real now:
@@ -97,6 +110,7 @@ What is real now:
 - Existing PDF export workflow.
 - Protected version history and safe restore workflow.
 - Owner-maintained project case studies and proof mappings.
+- Private portfolio file metadata and public-approved file projection.
 
 What is provider-ready only:
 

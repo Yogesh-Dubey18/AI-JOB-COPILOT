@@ -2,12 +2,13 @@ import { getAiRuntime } from "../ai/aiClient.js";
 import { env } from "../config/env.js";
 import { getBillingProviderStatus } from "./billing-provider.service.js";
 import { getMonitoringStatus } from "./monitoring.service.js";
-import { isConfigured as isStorageConfigured, getProvider as getStorageProvider } from "./storage.service.js";
+import { getStorageStatus } from "./storage.service.js";
 
 export function getProviderStatus() {
   const ai = getAiRuntime();
   const emailProvider = env.EMAIL_PROVIDER || "mock";
   const calendarProvider = env.CALENDAR_PROVIDER || "mock";
+  const storage = getStorageStatus();
   return {
     ai: {
       provider: ai.provider,
@@ -37,9 +38,8 @@ export function getProviderStatus() {
     },
     monitoring: getMonitoringStatus(),
     storage: {
-      provider: getStorageProvider(),
-      configured: isStorageConfigured(),
-      mockSafe: getStorageProvider() === "local"
+      ...storage,
+      mockSafe: storage.localFallback
     }
   };
 }

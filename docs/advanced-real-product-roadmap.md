@@ -28,6 +28,8 @@
 | Portfolio slug validation and duplicate rejection | Complete |
 | Portfolio version history | Complete |
 | Project case-study proof mapping | Complete |
+| Portfolio storage hardening with private metadata | Complete |
+| Public-approved signed proof file links | Complete |
 | Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
@@ -36,6 +38,7 @@
 | Playwright E2E tests (69 passing) | ✅ Complete |
 | SendGrid / SMTP email provider-ready | ✅ Complete |
 | S3/R2 storage provider-ready | ✅ Complete |
+| Private portfolio file metadata and signed URL readiness | Complete |
 | Provider status and integrations page | ✅ Complete |
 | Privacy controls + audit log | ✅ Complete |
 | PDF export (resume + portfolio) | ✅ Complete |
@@ -133,7 +136,7 @@
 | Live Naukri job feed | Naukri API partner access |
 | Gmail OAuth sync (email classification) | Google OAuth + user consent |
 | Stripe subscription billing | Stripe account + webhook |
-| S3/R2 resume storage | AWS or Cloudflare R2 credentials |
+| S3/R2 resume and portfolio proof storage | AWS or Cloudflare R2 credentials, private bucket, signed URL verification |
 | Custom portfolio domains | Vercel/DNS provider credentials, ownership checks, and abuse controls |
 | Google OAuth login | Google OAuth credentials |
 | AI-enhanced scoring | OpenAI or Gemini API key |
@@ -159,10 +162,10 @@
 
 ## Roadmap Priorities (Next)
 
-Recommended priority update after portfolio proof mapping:
+Recommended priority update after portfolio storage hardening:
 
-1. **Portfolio storage hardening** - private S3/R2 storage and signed URLs for resume/PDF downloads, portfolio screenshots, and proof files
-2. **GitHub proof verification provider-ready integration** - optional GitHub API checks for repository existence and README quality without fake stats
+1. **GitHub proof verification provider-ready integration** - optional GitHub API checks for repository existence and README quality without fake stats
+2. **Portfolio file upload UX** - user-initiated upload for proof files/screenshots using the private metadata and signed URL boundary
 3. **Resume compare view** - diff between original and tailored version using changeSummary
 4. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
 5. **Notification reminders** - email alerts for follow-ups when SendGrid configured

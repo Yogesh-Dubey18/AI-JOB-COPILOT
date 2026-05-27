@@ -2,6 +2,7 @@ import { aiService } from "../ai/ai.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { randomUUID } from "node:crypto";
+import { resolvePublicPortfolioFiles, sanitizePortfolioFileReferences } from "./portfolio-file.service.js";
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "portfolio";
@@ -136,7 +137,8 @@ function normalizeCaseStudy(raw: any) {
       projectName: raw,
       proofStatus: "self-reported",
       isPublic: false,
-      showPublicProofNotes: false
+      showPublicProofNotes: false,
+      proofFiles: []
     };
   }
 
@@ -158,7 +160,8 @@ function normalizeCaseStudy(raw: any) {
     isPublic: Boolean(raw?.isPublic),
     publicProofNote: normalizeString(raw?.publicProofNote),
     privateProofNotes: normalizeString(raw?.privateProofNotes || raw?.proofNotes),
-    showPublicProofNotes: Boolean(raw?.showPublicProofNotes)
+    showPublicProofNotes: Boolean(raw?.showPublicProofNotes),
+    proofFiles: sanitizePortfolioFileReferences(normalizeArray(raw?.proofFiles || raw?.files))
   };
 }
 
@@ -181,7 +184,8 @@ function normalizeProofMapping(raw: any) {
     publicNote: normalizeString(raw?.publicNote),
     privateNotes: normalizeString(raw?.privateNotes || raw?.notes),
     showPublicNotes: Boolean(raw?.showPublicNotes),
-    showResumeBullet: raw?.showResumeBullet !== false
+    showResumeBullet: raw?.showResumeBullet !== false,
+    proofFiles: sanitizePortfolioFileReferences(normalizeArray(raw?.proofFiles || raw?.files))
   };
 }
 
@@ -236,6 +240,11 @@ function sanitizePublicProject(project: any, sections: typeof defaultSections) {
   };
 }
 
+function publicFileReferences(files: any[] = []) {
+  return sanitizePortfolioFileReferences(files)
+    .filter((file: any) => file.visibility === "publicApproved");
+}
+
 function publicCaseStudies(projectCaseStudies: any[], sections: typeof defaultSections) {
   if (!sections.showProjects || !sections.showCaseStudies) return [];
   return normalizeCaseStudies(projectCaseStudies)
@@ -256,7 +265,8 @@ function publicCaseStudies(projectCaseStudies: any[], sections: typeof defaultSe
       showPublicProofNotes: Boolean(project.showPublicProofNotes),
       githubUrl: sections.showLinks ? project.githubUrl : "",
       liveDemoUrl: sections.showLinks ? project.liveDemoUrl : "",
-      screenshotsUrl: sections.showLinks ? project.screenshotsUrl : ""
+      screenshotsUrl: sections.showLinks ? project.screenshotsUrl : "",
+      proofFiles: publicFileReferences(project.proofFiles)
     }));
 }
 
@@ -275,7 +285,8 @@ function publicProofMappings(proofMappings: any[], sections: typeof defaultSecti
       showPublicNotes: Boolean(mapping.showPublicNotes),
       showResumeBullet: mapping.showResumeBullet !== false,
       githubUrl: sections.showLinks ? mapping.githubUrl : "",
-      liveDemoUrl: sections.showLinks ? mapping.liveDemoUrl : ""
+      liveDemoUrl: sections.showLinks ? mapping.liveDemoUrl : "",
+      proofFiles: publicFileReferences(mapping.proofFiles)
     }));
 }
 
@@ -503,6 +514,18 @@ export async function getPublicPortfolio(slug: string) {
   const publicProfile = await findOneRecord("publicProfiles", { slug, isPublished: true });
   if (!publicProfile) throw new ApiError(404, "Public portfolio not found");
   const sections = { ...defaultSections, ...(publicProfile.sections || {}) };
+  const caseStudies = publicCaseStudies(publicProfile.projectCaseStudies || [], sections);
+  const proofMappings = publicProofMappings(publicProfile.proofMappings || [], sections);
+  const [resolvedCaseStudies, resolvedProofMappings] = await Promise.all([
+    Promise.all(caseStudies.map(async (project: any) => ({
+      ...project,
+      proofFiles: await resolvePublicPortfolioFiles(project.proofFiles || [])
+    }))),
+    Promise.all(proofMappings.map(async (mapping: any) => ({
+      ...mapping,
+      proofFiles: await resolvePublicPortfolioFiles(mapping.proofFiles || [])
+    })))
+  ]);
 
   let roadmap: any = null;
   if (sections.showRoadmap) {
@@ -527,8 +550,8 @@ export async function getPublicPortfolio(slug: string) {
     theme: publicProfile.theme || "classic",
     skills: sections.showSkills ? publicProfile.skills || [] : [],
     projects: sections.showProjects ? (publicProfile.projects || []).map((project: any) => sanitizePublicProject(project, sections)) : [],
-    projectCaseStudies: publicCaseStudies(publicProfile.projectCaseStudies || [], sections),
-    proofMappings: publicProofMappings(publicProfile.proofMappings || [], sections),
+    projectCaseStudies: resolvedCaseStudies,
+    proofMappings: resolvedProofMappings,
     resumeUrl: sections.showResume ? publicProfile.resumeUrl || "" : "",
     contactEmail: sections.showEmail ? publicProfile.contactEmail || "" : "",
     contactPhone: sections.showPhone ? publicProfile.contactPhone || "" : "",

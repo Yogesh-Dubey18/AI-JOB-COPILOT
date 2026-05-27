@@ -4,6 +4,19 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-27 Portfolio Storage Hardening With Private S3/R2 Signed URLs (Completed)
+
+Implemented the next safe portfolio storage phase without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake provider success, or fake hosted-domain claims.
+
+- **Private File Metadata**: Added owner-scoped portfolio file metadata for resume PDFs, portfolio PDFs, screenshots, proof files, and generated assets. Metadata stores storage keys, not local absolute paths or private bucket URLs.
+- **Signed URL Readiness**: Hardened the storage abstraction with safe storage-key normalization, a 900-second default signed URL TTL, and an honest storage status endpoint for local fallback versus provider-ready S3/R2.
+- **Proof File Privacy**: Project case studies and skill proof mappings can reference proof files, but public output filters to `publicApproved` metadata only.
+- **Public Portfolio Safety**: `/u/[slug]` shows public-approved proof file links when available and safe unavailable text when links are absent or expired. Private files, private notes, and private contact data remain hidden.
+- **Builder UI**: `/portfolio-generator` now shows storage status, file privacy labels, signed URL/download status text, and a clear warning that private files are only shared when approved.
+- **Docs**: Added portfolio storage hardening documentation and updated portfolio builder, hosting readiness, provider integration, roadmap, progress tracker, and changelog docs.
+
+---
+
 ## 2026-05-27 Portfolio Version History + Project Case-Study Proof Mapping (Completed)
 
 Implemented the next safe portfolio phase without starting Stripe, subscription tiers, job-board provider activation, release tagging, or fake hosting/provider claims.

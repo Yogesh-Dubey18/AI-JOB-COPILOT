@@ -14,6 +14,11 @@ import {
   updatePortfolio
 } from "../services/portfolio.service.js";
 import { getPublicProfileBySlug } from "../services/public-profile.service.js";
+import {
+  createPortfolioFileMetadata,
+  getPortfolioStorageStatus,
+  listPortfolioFiles
+} from "../services/portfolio-file.service.js";
 
 const router = Router();
 const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : value);
@@ -35,6 +40,18 @@ router.get("/slug/:slug", asyncHandler(async (req, res) => {
 
 router.post("/generate", asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: await generatePortfolio(req.user!.id, req.body) });
+}));
+
+router.get("/storage/status", asyncHandler(async (_req, res) => {
+  res.json({ success: true, data: getPortfolioStorageStatus() });
+}));
+
+router.get("/:id/files", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listPortfolioFiles(req.user!.id, param(req.params.id)) });
+}));
+
+router.post("/:id/files/metadata", asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, data: await createPortfolioFileMetadata(req.user!.id, param(req.params.id), req.body) });
 }));
 
 router.get("/:id/versions", asyncHandler(async (req, res) => {

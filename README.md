@@ -163,7 +163,7 @@ Provider-ready integrations are documented as placeholders until approved creden
 - `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, and `LINKEDIN_REDIRECT_URI` enable official LinkedIn OAuth/profile-import work only when the app is approved for the needed scopes.
 - `INDEED_API_KEY`, `ZIPRECRUITER_API_KEY`, `DICE_API_KEY`, and `NAUKRI_API_KEY` are reserved for approved APIs or partner feeds. The app must not scrape protected job boards.
 - `COURSE_PROVIDER`, `COURSERA_API_KEY`, `UDEMY_CLIENT_ID`, and `UDEMY_CLIENT_SECRET` are reserved for skill-gap learning resources. Mock learning plans remain available without keys.
-- `STORAGE_PROVIDER`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY` are placeholders for object storage. Local uploads remain the development fallback.
+- `STORAGE_PROVIDER`, `STORAGE_BUCKET_NAME`, `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, and `STORAGE_SIGNED_URL_TTL_SECONDS` are placeholders for private S3/R2 object storage. Local uploads remain the development fallback and are not production-durable.
 
 The product keeps applications user-reviewed. It can open official apply URLs and generate checklists/drafts, but it must not auto-submit applications or auto-send recruiter messages unless a future provider explicitly supports it and the user confirms each action.
 

@@ -1191,5 +1191,112 @@ describe("AI Job Copilot API", () => {
     expect(publicProfile.body.data.proofMappings[0].privateNotes).toBeUndefined();
     expect(publicProfile.body.data.proofMappings[0].githubUrl).toBe("");
   });
-});
 
+  it("hardens portfolio file metadata and only exposes public-approved proof files", async () => {
+    const agent = await authAgent();
+    const status = await agent.get("/api/portfolios/storage/status").expect(200);
+    expect(status.body.data.status).toBe("local_fallback");
+    expect(status.body.data.label).toMatch(/Local fallback/i);
+    expect(status.body.data.live).toBe(false);
+
+    const created = await agent.post("/api/portfolios/generate").send({
+      slug: "storage-proof-portfolio",
+      title: "Storage Proof Portfolio",
+      displayName: "Storage Dev",
+      headline: "Privacy-focused developer",
+      isPublished: true,
+      sections: {
+        showProjects: true,
+        showCaseStudies: true,
+        showProofMappings: true,
+        showLinks: true
+      },
+      projectCaseStudies: [
+        {
+          projectName: "Private Storage Hardening",
+          problemSolved: "Protected portfolio proof files from accidental public exposure.",
+          proofStatus: "self-reported",
+          isPublic: true,
+          proofFiles: [
+            {
+              fileId: "private-case-file",
+              fileType: "proofFile",
+              storageProvider: "local",
+              storageKey: "proof/private-case.pdf",
+              originalFilename: "private-case.pdf",
+              visibility: "private",
+              localPath: "C:\\private\\private-case.pdf",
+              bucketUrl: "https://private-bucket.example/private-case.pdf"
+            },
+            {
+              fileId: "public-case-file",
+              fileType: "proofFile",
+              storageProvider: "local",
+              storageKey: "proof/public-case.pdf",
+              originalFilename: "public-case.pdf",
+              visibility: "publicApproved"
+            }
+          ]
+        }
+      ],
+      proofMappings: [
+        {
+          skillName: "Storage Privacy",
+          projectName: "Private Storage Hardening",
+          confidence: "strong",
+          isPublic: true,
+          proofFiles: [
+            {
+              fileId: "private-mapping-file",
+              fileType: "proofFile",
+              storageProvider: "local",
+              storageKey: "proof/private-mapping.pdf",
+              originalFilename: "private-mapping.pdf",
+              visibility: "private",
+              absolutePath: "C:\\private\\private-mapping.pdf"
+            },
+            {
+              fileId: "public-mapping-file",
+              fileType: "proofFile",
+              storageProvider: "local",
+              storageKey: "proof/public-mapping.pdf",
+              originalFilename: "public-mapping.pdf",
+              visibility: "publicApproved"
+            }
+          ]
+        }
+      ]
+    }).expect(201);
+
+    const portfolioId = created.body.data._id;
+    const metadata = await agent.post(`/api/portfolios/${portfolioId}/files/metadata`).send({
+      fileType: "proofFile",
+      storageKey: "proof/architecture.pdf",
+      originalFilename: "architecture.pdf",
+      mimeType: "application/pdf",
+      size: 2048,
+      visibility: "private",
+      localPath: "C:\\private\\architecture.pdf",
+      bucketUrl: "https://private-bucket.example/architecture.pdf"
+    }).expect(201);
+
+    expect(metadata.body.data.fileType).toBe("proofFile");
+    expect(metadata.body.data.visibility).toBe("private");
+    expect(metadata.body.data.downloadUrl).toBe("/uploads/proof/architecture.pdf");
+    expect(JSON.stringify(metadata.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
+
+    const files = await agent.get(`/api/portfolios/${portfolioId}/files`).expect(200);
+    expect(files.body.data).toHaveLength(1);
+    expect(JSON.stringify(files.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
+
+    const publicProfile = await request(app).get("/api/portfolios/public/storage-proof-portfolio").expect(200);
+    const publicJson = JSON.stringify(publicProfile.body.data);
+    expect(publicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(1);
+    expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].fileId).toBe("public-case-file");
+    expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].downloadUrl).toBe("/uploads/proof/public-case.pdf");
+    expect(publicProfile.body.data.proofMappings[0].proofFiles).toHaveLength(1);
+    expect(publicProfile.body.data.proofMappings[0].proofFiles[0].fileId).toBe("public-mapping-file");
+    expect(publicProfile.body.data.proofMappings[0].proofFiles[0].downloadUrl).toBe("/uploads/proof/public-mapping.pdf");
+    expect(publicJson).not.toMatch(/private-case|private-mapping|private-bucket|C:\\|absolutePath|localPath/);
+  });
+});

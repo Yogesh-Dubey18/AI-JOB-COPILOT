@@ -4,6 +4,15 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.32 - Portfolio Storage Hardening With Signed URL Readiness (2026-05-27)
+
+- **Private File Metadata**: Added owner-scoped portfolio file metadata for resume PDFs, portfolio PDFs, screenshots, proof files, and generated portfolio assets.
+- **Storage Key Safety**: Hardened storage-key normalization to reject absolute local paths, bucket URLs, empty segments, and traversal-style keys before issuing links.
+- **Signed URL Readiness**: Added honest storage status reporting and signed URL TTL handling with `STORAGE_SIGNED_URL_TTL_SECONDS=900` as the default.
+- **PublicApproved Privacy Rule**: Updated public portfolio projection so `/u/[slug]` only returns proof file links when metadata visibility is `publicApproved`.
+- **Builder Storage UX**: Added storage status, file privacy labels, signed URL/download status text, and the warning that private files are only shared when approved.
+- **Provider Honesty**: Kept local fallback labeled as non-durable and S3/R2 as provider-ready until credentials and bucket access are verified. No fake hosted domain or fake storage Live claim added.
+
 ### v2.0.31 - Portfolio Version History & Project Proof Mapping (2026-05-27)
 
 - **Portfolio Version History**: Added owner-scoped save/list/compare/restore endpoints and builder UI for portfolio snapshots with version title, created date, visibility status, and change summary.

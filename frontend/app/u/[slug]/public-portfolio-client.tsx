@@ -19,9 +19,19 @@ const cardThemeClasses: Record<string, string> = {
   bold: "border border-slate-800 bg-slate-950 text-slate-100"
 };
 
+const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, "");
+
 type PublicPortfolioClientProps = {
   slug: string;
 };
+
+function publicApprovedProofFiles(files: any[] = []) {
+  return Array.isArray(files) ? files.filter((file) => file?.visibility === "publicApproved") : [];
+}
+
+function fileHref(fileUrl: string) {
+  return fileUrl?.startsWith("http") ? fileUrl : `${backendOrigin}${fileUrl}`;
+}
 
 export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
   const portfolio = useQuery({
@@ -224,6 +234,10 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                 <div className="grid gap-4">
                   {data.projectCaseStudies.map((project: any, index: number) => (
                     <article key={project.id || project.projectName || index} className={`rounded-lg p-5 ${cardClass}`}>
+                      {(() => {
+                        const proofFiles = publicApprovedProofFiles(project.proofFiles);
+                        return (
+                          <>
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <h3 className="font-bold text-lg tracking-tight">{project.projectName}</h3>
@@ -290,6 +304,27 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                           {project.screenshotsUrl ? <a href={project.screenshotsUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">Screenshots</a> : null}
                         </div>
                       ) : null}
+                      {proofFiles.length ? (
+                        <div className="mt-4 rounded-md border p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide">Public-approved proof files</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {proofFiles.map((file: any) => (
+                              file.downloadUrl ? (
+                                <a key={file.fileId || file.storageKey} href={fileHref(file.downloadUrl)} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">
+                                  Signed proof file: {file.originalFilename || file.fileType || "proof file"} ({file.signedUrlExpiresInSeconds || 900}s)
+                                </a>
+                              ) : (
+                                <span key={file.fileId || file.storageKey} className={`text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>
+                                  Proof file link unavailable or expired.
+                                </span>
+                              )
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                          </>
+                        );
+                      })()}
                     </article>
                   ))}
                 </div>
@@ -310,6 +345,10 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                 <div className="grid gap-3 md:grid-cols-2">
                   {data.proofMappings.map((mapping: any, index: number) => (
                     <article key={mapping.id || mapping.skillName || index} className={`rounded-lg p-4 ${cardClass}`}>
+                      {(() => {
+                        const proofFiles = publicApprovedProofFiles(mapping.proofFiles);
+                        return (
+                          <>
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="font-semibold">{mapping.skillName}</h3>
                         <Badge>{mapping.confidence || "medium"} confidence</Badge>
@@ -323,6 +362,24 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                           {mapping.liveDemoUrl ? <a href={mapping.liveDemoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">Live proof</a> : null}
                         </div>
                       ) : null}
+                      {proofFiles.length ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {proofFiles.map((file: any) => (
+                            file.downloadUrl ? (
+                              <a key={file.fileId || file.storageKey} href={fileHref(file.downloadUrl)} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">
+                                Signed proof file: {file.originalFilename || file.fileType || "proof file"}
+                              </a>
+                            ) : (
+                              <span key={file.fileId || file.storageKey} className={`text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>
+                                Proof file link unavailable or expired.
+                              </span>
+                            )
+                          ))}
+                        </div>
+                      ) : null}
+                          </>
+                        );
+                      })()}
                     </article>
                   ))}
                 </div>

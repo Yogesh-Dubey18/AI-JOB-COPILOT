@@ -20,7 +20,7 @@ AI Job Copilot is provider-ready. Live external integrations must be enabled onl
 | Google OAuth | Auth | Provider-ready | One-click sign-in |
 | SendGrid / SMTP | Notifications | Provider-ready | Email alerts and reminders |
 | Stripe | Payments | Provider-ready | Subscriptions, invoicing |
-| AWS S3 / R2 | Storage | Provider-ready | Resume file storage |
+| AWS S3 / R2 | Storage | Provider-ready | Resume, portfolio PDF, screenshot, and proof file storage |
 | Google Calendar | Calendar | Provider-ready | Interview reminders |
 | Coursera / Udemy | Courses | Provider-ready | Skill gap course links |
 | GitHub API | Dev Tools | Provider-ready | Project analyzer |
@@ -200,7 +200,7 @@ STRIPE_PUBLISHABLE_KEY=
 
 ## File Storage
 
-Resume files and generated PDFs are stored via the configured storage provider.
+Resume files, generated PDFs, portfolio PDFs, screenshots, and portfolio proof files are stored through the configured storage provider.
 
 **Required env vars**:
 ```
@@ -213,7 +213,22 @@ STORAGE_SECRET_ACCESS_KEY=
 STORAGE_SIGNED_URL_TTL_SECONDS=900
 ```
 
-Portfolio PDF downloads use the same storage boundary. If local storage fallback is active, portfolio PDFs can be reachable through direct local upload URLs. S3/R2 private storage with signed URLs is required before claiming durable production portfolio file hosting.
+**Current status**: Local fallback by default; S3/R2 is provider-ready until real credentials and bucket access are configured and tested.
+
+Portfolio file metadata is owner-scoped and private by default. The public portfolio route can return file links only when metadata visibility is `publicApproved`.
+
+Local fallback:
+- Uses app-served `/uploads/...` links when the existing app supports the file.
+- Is not production-durable.
+- Must not be described as private cloud hosting.
+
+S3/R2 provider-ready behavior:
+- Stores only storage keys in app records.
+- Generates short-lived signed download/view URLs.
+- Uses `STORAGE_SIGNED_URL_TTL_SECONDS`, defaulting to `900` seconds.
+- Must be verified manually before status is changed to Live.
+
+Never expose absolute local disk paths, private bucket URLs, access keys, or secret keys to the frontend.
 
 ---
 

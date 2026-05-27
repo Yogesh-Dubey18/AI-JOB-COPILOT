@@ -12,7 +12,9 @@ This document explains the hosting boundary for public portfolio slugs. The curr
 | Missing/private slug handling | Implemented | The page shows a safe unavailable state. |
 | Public SEO metadata | Implemented | Metadata is generated only from the public endpoint. |
 | Portfolio PDF export | Implemented | Uses existing PDF export service and respects visibility settings. |
-| S3/R2 private file storage | Provider-ready | Required for durable private resume/PDF hosting. |
+| Private portfolio file metadata | Implemented | Owner-scoped metadata for resume PDFs, portfolio PDFs, screenshots, and proof files. |
+| Signed URL readiness | Implemented | Uses S3/R2 presigned URLs when configured; local fallback is labeled non-durable. |
+| S3/R2 private file storage | Provider-ready | Required for durable private resume/PDF/proof-file hosting. |
 | Custom domain hosting | Provider-ready only | No Vercel domain provisioning is implemented. |
 | User custom subdomain | Not configured | Requires product, DNS, provider, and abuse-prevention design. |
 
@@ -52,8 +54,24 @@ Local uploads are not durable production storage. Before enabling real public re
 - Configure S3 or Cloudflare R2.
 - Store resumes and generated PDFs in a private bucket.
 - Serve downloads through short-lived signed URLs.
+- Keep portfolio screenshots and proof files private by default.
+- Return public file links only after the owner marks metadata as `publicApproved`.
 - Add deletion flows for unpublished portfolios and account deletion.
 - Add audit logs for publish/unpublish and resume download visibility changes.
+
+Required backend placeholders:
+
+```env
+STORAGE_PROVIDER=local
+STORAGE_BUCKET_NAME=
+STORAGE_REGION=
+STORAGE_ENDPOINT=
+STORAGE_ACCESS_KEY_ID=
+STORAGE_SECRET_ACCESS_KEY=
+STORAGE_SIGNED_URL_TTL_SECONDS=900
+```
+
+The current code must report local fallback honestly unless S3/R2 credentials and bucket access are configured and tested.
 
 ## Safe Launch Language
 
@@ -62,9 +80,11 @@ Allowed:
 - "Public portfolio slugs are available in the app."
 - "Custom-domain hosting is provider-ready."
 - "S3/R2 private storage is required before production file hosting."
+- "Proof files are private by default and public only after owner approval."
 
 Not allowed:
 
 - "Permanent portfolio hosting is live" unless storage and domain providers are configured.
 - "Custom domains are live" until verified.
 - "Hosted portfolio domain provisioned" without real provider evidence.
+- "S3/R2 storage is Live" while the app is running in local fallback or unverified provider-ready mode.
