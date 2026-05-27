@@ -1,67 +1,74 @@
-"use client";
+import type { Metadata } from "next";
+import { PublicPortfolioClient } from "./public-portfolio-client";
 
-import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { BriefcaseBusiness, ExternalLink, Mail } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://ai-job-copilot-frontend.vercel.app";
 
-const themeClasses: Record<string, string> = {
-  classic: "bg-background text-foreground",
-  compact: "bg-muted text-foreground",
-  bold: "bg-foreground text-background"
+type PublicPortfolioPageProps = {
+  params: { slug: string };
 };
 
-export default function PublicPortfolioPage({ params }: { params: { slug: string } }) {
-  const portfolio = useQuery({ queryKey: ["public-portfolio", params.slug], queryFn: () => api.get<any>(`/portfolios/public/${params.slug}`), retry: false });
-  const data = portfolio.data;
-  const shellClass = themeClasses[data?.theme || "classic"] || themeClasses.classic;
-  return (
-    <main className={`min-h-screen ${shellClass}`}>
-      <section className="mx-auto max-w-5xl px-4 py-10 md:py-14">
-        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold"><BriefcaseBusiness className="h-4 w-4" />AI Job Copilot</Link>
-        {portfolio.isLoading ? <div className="rounded-md border p-6 text-sm">Loading portfolio...</div> : null}
-        {portfolio.isError ? <div className="rounded-md border border-danger p-6 text-sm">This public portfolio is unavailable or private.</div> : null}
-        {data ? (
-          <div className="space-y-8">
-            <div className="max-w-3xl">
-              <div className="mb-3 flex flex-wrap gap-2">
-                <Badge>{data.theme}</Badge>
-                <Badge>Public profile</Badge>
-              </div>
-              <h1 className="text-4xl font-bold md:text-6xl">{data.displayName || data.hero}</h1>
-              <p className="mt-4 text-xl text-muted-foreground">{data.headline || data.hero}</p>
-              <p className="mt-5 text-base leading-7 text-muted-foreground">{data.about || data.bio}</p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {data.contactEmail ? <a href={`mailto:${data.contactEmail}`}><Button><Mail className="h-4 w-4" />Contact</Button></a> : null}
-                {data.resumeUrl ? <a href={data.resumeUrl} target="_blank" rel="noreferrer"><Button variant="outline"><ExternalLink className="h-4 w-4" />Resume</Button></a> : null}
-              </div>
-            </div>
+export async function generateMetadata({ params }: PublicPortfolioPageProps): Promise<Metadata> {
+  const slug = params.slug;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://ai-job-copilot-backend-l6ut.onrender.com/api";
 
-            {data.skills?.length ? (
-              <section>
-                <h2 className="text-xl font-semibold">Skills</h2>
-                <div className="mt-3 flex flex-wrap gap-2">{data.skills.map((skill: string) => <Badge key={skill}>{skill}</Badge>)}</div>
-              </section>
-            ) : null}
+  try {
+    const response = await fetch(`${apiBase}/portfolios/public/${encodeURIComponent(slug)}`, {
+      next: { revalidate: 3600 }
+    });
 
-            {data.projects?.length ? (
-              <section>
-                <h2 className="text-xl font-semibold">Projects</h2>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  {data.projects.map((project: any, index: number) => (
-                    <article key={String(project.title || project.name || project || index)} className="rounded-md border bg-card p-4 text-card-foreground">
-                      <h3 className="font-semibold">{project.title || project.name || String(project)}</h3>
-                      {typeof project === "object" && project.description ? <p className="mt-2 text-sm text-muted-foreground">{project.description}</p> : null}
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-          </div>
-        ) : null}
-      </section>
-    </main>
-  );
+    if (!response.ok) {
+      return defaultMetadata(slug);
+    }
+
+    const json = await response.json();
+    const data = json?.data || json;
+    const title = String(data?.title || data?.displayName || data?.hero || "Career Portfolio");
+    const headline = String(data?.headline || data?.bio || "Professional career portfolio built with AI Job Copilot.");
+    const canonicalUrl = `${SITE_URL}/u/${slug}`;
+
+    return {
+      title: `${title} | AI Job Copilot`,
+      description: headline.slice(0, 160),
+      alternates: { canonical: canonicalUrl },
+      openGraph: {
+        type: "profile",
+        title: `${title} | AI Job Copilot`,
+        description: headline.slice(0, 160),
+        url: canonicalUrl,
+        siteName: "AI Job Copilot"
+      },
+      twitter: {
+        card: "summary",
+        title: `${title} | AI Job Copilot`,
+        description: headline.slice(0, 160)
+      }
+    };
+  } catch {
+    return defaultMetadata(slug);
+  }
+}
+
+function defaultMetadata(slug: string): Metadata {
+  const canonicalUrl = `${SITE_URL}/u/${slug}`;
+  return {
+    title: "Career Portfolio | AI Job Copilot",
+    description: "A recruiter-safe public portfolio. Private or unpublished portfolios are not exposed.",
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      type: "profile",
+      title: "Career Portfolio | AI Job Copilot",
+      description: "A recruiter-safe public portfolio. Private or unpublished portfolios are not exposed.",
+      url: canonicalUrl,
+      siteName: "AI Job Copilot"
+    },
+    twitter: {
+      card: "summary",
+      title: "Career Portfolio | AI Job Copilot",
+      description: "A recruiter-safe public portfolio. Private or unpublished portfolios are not exposed."
+    }
+  };
+}
+
+export default function PublicPortfolioPage({ params }: PublicPortfolioPageProps) {
+  return <PublicPortfolioClient slug={params.slug} />;
 }

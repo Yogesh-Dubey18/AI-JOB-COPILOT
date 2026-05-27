@@ -1004,6 +1004,74 @@ describe("AI Job Copilot API", () => {
     expect(patchRes.body.success).toBe(true);
     expect(patchRes.body.data.progress).toBe(45);
   });
+
+  it("handles portfolio generator, slug validation, duplicate rejection, and privacy visibility controls", async () => {
+    const agent = await authAgent();
+
+    // 1. Generate portfolio with valid slug
+    const genRes = await agent.post("/api/portfolios/generate").send({
+      slug: "jane-designer",
+      title: "Jane Developer Portfolio",
+      displayName: "Jane Developer",
+      headline: "React Developer",
+      contactEmail: "jane@example.com",
+      contactPhone: "+1-555-9876",
+      githubUrl: "https://github.com/jane",
+      linkedinUrl: "https://linkedin.com/jane",
+      theme: "bold",
+      isPublished: true,
+      sections: {
+        showEmail: true,
+        showPhone: true,
+        showResume: false,
+        showProjects: true,
+        showSkills: true,
+        showLinks: true,
+        showRoadmap: true
+      }
+    }).expect(201);
+    expect(genRes.body.success).toBe(true);
+    expect(genRes.body.data.slug).toBe("jane-designer");
+    expect(genRes.body.data.title).toBe("Jane Developer Portfolio");
+    expect(genRes.body.data.isPublished).toBe(true);
+    const portfolioId = genRes.body.data._id;
+
+    const slugCheck = await agent.get("/api/portfolios/slug/jane-designer").expect(200);
+    expect(slugCheck.body.data.available).toBe(false);
+
+    const reservedSlug = await agent.get("/api/portfolios/slug/admin").expect(200);
+    expect(reservedSlug.body.data.available).toBe(false);
+    expect(reservedSlug.body.data.message).toMatch(/reserved/i);
+
+    // 2. Reject invalid slug structure
+    const badSlugRes = await agent.patch(`/api/portfolios/${portfolioId}`).send({
+      slug: "invalid_slug_with_underscores!"
+    }).expect(400);
+    expect(badSlugRes.body.success).toBe(false);
+
+    // 3. Generate another portfolio with duplicate slug (should be rejected, not silently published under a surprise URL)
+    const genDupRes = await agent.post("/api/portfolios/generate").send({
+      slug: "jane-designer",
+      displayName: "Jane Developer 2",
+      theme: "compact"
+    }).expect(409);
+    expect(genDupRes.body.success).toBe(false);
+
+    // 4. Retrieve public profile details by slug (only returns permitted public fields)
+    const publicRes = await request(app).get("/api/portfolios/public/jane-designer").expect(200);
+    expect(publicRes.body.success).toBe(true);
+    expect(publicRes.body.data.userId).toBeUndefined();
+    expect(publicRes.body.data.title).toBe("Jane Developer Portfolio");
+    expect(publicRes.body.data.displayName).toBe("Jane Developer");
+    expect(publicRes.body.data.contactEmail).toBe("jane@example.com");
+    expect(publicRes.body.data.contactPhone).toBe("+1-555-9876");
+    expect(publicRes.body.data.resumeUrl).toBe("");
+
+    // 5. Check private portfolio not publicly exposed (unpublish it)
+    await agent.post(`/api/portfolios/${portfolioId}/publish`).send({ isPublished: false }).expect(200);
+
+    await request(app).get("/api/portfolios/public/jane-designer").expect(404);
+  });
 });
 
 

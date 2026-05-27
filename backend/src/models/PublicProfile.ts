@@ -5,6 +5,7 @@ const PublicProfileSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     portfolioId: { type: Schema.Types.ObjectId, ref: "Portfolio", index: true },
     slug: { type: String, required: true, unique: true, index: true },
+    title: String,
     displayName: String,
     headline: String,
     hero: String,
@@ -14,15 +15,20 @@ const PublicProfileSchema = new Schema(
     projects: [Schema.Types.Mixed],
     resumeUrl: String,
     contactEmail: String,
+    contactPhone: String,
+    githubUrl: String,
+    linkedinUrl: String,
     links: Schema.Types.Mixed,
     theme: { type: String, enum: ["classic", "compact", "bold"], default: "classic" },
     visibility: { type: String, enum: ["private", "public"], default: "private", index: true },
     sections: {
       showEmail: { type: Boolean, default: false },
+      showPhone: { type: Boolean, default: false },
       showResume: { type: Boolean, default: false },
       showProjects: { type: Boolean, default: true },
       showSkills: { type: Boolean, default: true },
-      showLinks: { type: Boolean, default: true }
+      showLinks: { type: Boolean, default: true },
+      showRoadmap: { type: Boolean, default: false }
     },
     isPublished: { type: Boolean, default: false, index: true }
   },

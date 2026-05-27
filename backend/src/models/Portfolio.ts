@@ -4,19 +4,27 @@ const PortfolioSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     slug: { type: String, required: true, unique: true, index: true },
+    title: String,
+    displayName: String,
     hero: String,
+    headline: String,
     about: String,
     skills: [String],
     projects: [Schema.Types.Mixed],
     resumeUrl: String,
     contactEmail: String,
+    contactPhone: String,
+    githubUrl: String,
+    linkedinUrl: String,
     theme: { type: String, enum: ["classic", "compact", "bold"], default: "classic" },
     sections: {
       showEmail: { type: Boolean, default: false },
+      showPhone: { type: Boolean, default: false },
       showResume: { type: Boolean, default: false },
       showProjects: { type: Boolean, default: true },
       showSkills: { type: Boolean, default: true },
-      showLinks: { type: Boolean, default: true }
+      showLinks: { type: Boolean, default: true },
+      showRoadmap: { type: Boolean, default: false }
     },
     isPublished: { type: Boolean, default: false, index: true }
   },

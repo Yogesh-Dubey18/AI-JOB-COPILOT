@@ -117,6 +117,21 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
     });
   }
 
+  test("public portfolio missing slug shows safe unavailable state", async ({ page }) => {
+    await page.route("**/api/portfolios/public/demo-style", async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "Public portfolio not found" })
+      });
+    });
+
+    await page.goto("/u/demo-style");
+    await expect(page.getByText(/public portfolio is unavailable, private, or has been unpublished/i)).toBeVisible();
+    await expect(page.getByText(/Email Me/i)).toHaveCount(0);
+    await expect(page.getByText(/Download Resume/i)).toHaveCount(0);
+  });
+
   // 9. Settings integrations page shows provider statuses honestly using safe mocks
   test("settings integrations page shows honest statuses", async ({ page }) => {
     // 1. Mock jobs/sources endpoint to return various states

@@ -4,6 +4,20 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-27 Dynamic Portfolio Builder & Public Slugs (Completed)
+
+Implemented the Dynamic Portfolio Builder & Public Slugs phase without starting Stripe, subscription tiers, job-board provider activation, or custom-domain provisioning.
+
+- **Public Portfolio Route**: `/u/[slug]` renders published portfolios by slug, shows a safe unavailable state for missing/private/unpublished slugs, and exposes only privacy-approved fields.
+- **Builder Upgrade**: `/portfolio-generator` supports portfolio title, display name, headline, about summary, skills, projects, GitHub, LinkedIn, resume PDF URL, visibility controls, slug editor, and public preview link.
+- **Privacy Controls**: Email, phone, resume PDF, roadmap achievements, and social links are opt-in. Default portfolio state remains private/safe.
+- **Slug Safety**: Slugs are validated, reserved words are blocked, availability can be checked, and duplicate explicit slugs are rejected instead of silently republished.
+- **PDF Export**: Portfolio PDF generation/download remains available and respects portfolio visibility settings. Local storage fallback is labeled honestly.
+- **Hosting Readiness**: App-level `/u/[slug]` hosting is implemented. Custom-domain hosting and Vercel domain provisioning remain provider-ready only and are not claimed as live.
+- **Docs**: Added dynamic portfolio builder and hosting readiness docs, and updated roadmap/provider/progress documentation.
+
+---
+
 ## 2026-05-27 Skill Gap Analyzer & Learning Roadmap Sprint (Phase 13) (Completed)
 
 Implemented Phase 13 features from the master blueprint:

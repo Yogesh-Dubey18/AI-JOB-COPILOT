@@ -8,19 +8,73 @@ function slugify(value: string) {
 
 const defaultSections = {
   showEmail: false,
+  showPhone: false,
   showResume: false,
   showProjects: true,
   showSkills: true,
-  showLinks: true
+  showLinks: true,
+  showRoadmap: false
 };
 
-async function uniqueSlug(base: string, userId: string, currentProfileId?: string) {
-  const cleanBase = slugify(base);
+const reservedWords = new Set([
+  "admin", "api", "dashboard", "settings", "profile", "resume", "resumes",
+  "jobs", "applications", "interviews", "portfolio", "portfolios", "login",
+  "register", "auth", "public", "u", "help", "about", "blog", "pricing",
+  "contact", "features", "feedback"
+]);
+
+export function validateSlug(slug: string): string | null {
+  if (!slug) return "Slug is required";
+  if (slug.length < 3 || slug.length > 30) return "Slug must be between 3 and 30 characters";
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+    return "Slug must only contain lowercase letters, numbers, and single hyphens, and cannot start or end with a hyphen";
+  }
+  if (reservedWords.has(slug)) {
+    return "This slug is reserved. Please choose a more specific portfolio slug";
+  }
+  return null;
+}
+
+async function hasSlugConflict(slug: string, currentPortfolioId?: string, currentProfileId?: string) {
+  const [profile, portfolio] = await Promise.all([
+    findOneRecord("publicProfiles", { slug }),
+    findOneRecord("portfolios", { slug })
+  ]);
+  const profileConflict = profile && String(profile._id) !== String(currentProfileId || "");
+  const portfolioConflict = portfolio && String(portfolio._id) !== String(currentPortfolioId || "");
+  return Boolean(profileConflict || portfolioConflict);
+}
+
+async function assertExplicitSlugAvailable(slug: string, currentPortfolioId?: string, currentProfileId?: string) {
+  if (await hasSlugConflict(slug, currentPortfolioId, currentProfileId)) {
+    throw new ApiError(409, "This public slug is already taken. Please choose another slug.");
+  }
+}
+
+export async function checkSlugAvailability(slug: string, currentPortfolioId?: string) {
+  const cleanSlug = String(slug || "").trim();
+  const validationError = validateSlug(cleanSlug);
+  if (validationError) {
+    return { available: false, slug: cleanSlug, message: validationError };
+  }
+  const currentProfile = currentPortfolioId ? await findOneRecord("publicProfiles", { portfolioId: currentPortfolioId }) : null;
+  const available = !(await hasSlugConflict(cleanSlug, currentPortfolioId, currentProfile?._id));
+  return {
+    available,
+    slug: cleanSlug,
+    message: available ? "Slug is available." : "This public slug is already taken. Please choose another slug."
+  };
+}
+
+async function uniqueSlug(base: string) {
+  let cleanBase = slugify(base);
+  if (reservedWords.has(cleanBase)) {
+    cleanBase = `${cleanBase}-portfolio`;
+  }
   let candidate = cleanBase;
   let counter = 2;
   while (true) {
-    const existing = await findOneRecord("publicProfiles", { slug: candidate });
-    if (!existing || String(existing._id) === String(currentProfileId)) return candidate;
+    if (!(await hasSlugConflict(candidate))) return candidate;
     candidate = `${cleanBase}-${counter}`;
     counter += 1;
   }
@@ -38,16 +92,23 @@ function publicProfilePayload(userId: string, portfolio: any, input: any = {}) {
     userId,
     portfolioId: String(portfolio._id),
     slug: portfolio.slug,
-    displayName: input.displayName || portfolio.displayName || input.name || portfolio.hero || "AI Job Copilot User",
-    headline: input.headline || portfolio.headline || portfolio.hero || "Full-stack developer",
-    hero: portfolio.hero || input.hero || "Full-stack developer",
-    about: portfolio.about || input.about || "",
+    title: input.title || portfolio.title || portfolio.displayName || portfolio.hero || "Career Portfolio",
+    displayName: input.displayName || portfolio.displayName || input.name || "Portfolio Owner",
+    headline: input.headline || portfolio.headline || portfolio.hero || "Professional portfolio",
+    hero: input.hero || portfolio.hero || input.headline || portfolio.headline || "Professional portfolio",
+    about: input.about || portfolio.about || "",
     bio: input.bio || portfolio.about || "",
     skills: normalizeArray(portfolio.skills || input.skills),
     projects: normalizeArray(portfolio.projects || input.projects),
     resumeUrl: sections.showResume ? (input.resumeUrl || portfolio.resumeUrl || "") : "",
     contactEmail: sections.showEmail ? (input.contactEmail || portfolio.contactEmail || "") : "",
-    links: input.links || portfolio.links || {},
+    contactPhone: sections.showPhone ? (input.contactPhone || portfolio.contactPhone || "") : "",
+    githubUrl: sections.showLinks ? (input.githubUrl || portfolio.githubUrl || "") : "",
+    linkedinUrl: sections.showLinks ? (input.linkedinUrl || portfolio.linkedinUrl || "") : "",
+    links: {
+      githubUrl: sections.showLinks ? (input.githubUrl || portfolio.githubUrl || "") : "",
+      linkedinUrl: sections.showLinks ? (input.linkedinUrl || portfolio.linkedinUrl || "") : ""
+    },
     theme: input.theme || portfolio.theme || "classic",
     visibility: portfolio.isPublished ? "public" : "private",
     sections,
@@ -63,17 +124,32 @@ async function syncPublicProfile(userId: string, portfolio: any, input: any = {}
 }
 
 export async function generatePortfolio(userId: string, input: any) {
+  const requestedSlug = input.slug ? String(input.slug).trim() : "";
+  if (input.slug) {
+    const slugErr = validateSlug(requestedSlug);
+    if (slugErr) throw new ApiError(400, slugErr);
+    await assertExplicitSlugAvailable(requestedSlug);
+  }
   const data = await aiService.portfolioGenerator(userId, input);
-  const slug = await uniqueSlug(input.slug || data.hero || "portfolio", userId);
+  const slug = requestedSlug || await uniqueSlug(input.title || input.displayName || data.hero || "portfolio");
   const portfolio = await createRecord("portfolios", {
     userId,
+    ...data,
     slug,
+    title: input.title || data.title || input.displayName || "Career Portfolio",
+    displayName: input.displayName || data.displayName || input.name || "",
+    headline: input.headline || data.headline || "",
     isPublished: Boolean(input.isPublished),
     contactEmail: input.contactEmail,
+    contactPhone: input.contactPhone,
+    githubUrl: input.githubUrl,
+    linkedinUrl: input.linkedinUrl,
     resumeUrl: input.resumeUrl,
     theme: input.theme || "classic",
     sections: { ...defaultSections, ...(input.sections || {}) },
-    ...data
+    skills: normalizeArray(input.skills).length ? normalizeArray(input.skills) : normalizeArray(data.skills),
+    projects: normalizeArray(input.projects).length ? normalizeArray(input.projects) : normalizeArray(data.projects),
+    about: input.about || data.about || input.portfolioContext || input.message || ""
   });
   const publicProfile = await syncPublicProfile(userId, portfolio, input);
   return { ...portfolio, publicProfile, publicUrl: `/u/${publicProfile.slug}` };
@@ -103,7 +179,13 @@ export async function getPortfolio(userId: string, id: string) {
 
 export async function updatePortfolio(userId: string, id: string, input: any) {
   const existing = await getPortfolio(userId, id);
-  const nextSlug = input.slug ? await uniqueSlug(input.slug, userId, existing.publicProfile?._id) : existing.slug;
+  const requestedSlug = input.slug ? String(input.slug).trim() : "";
+  if (input.slug) {
+    const slugErr = validateSlug(requestedSlug);
+    if (slugErr) throw new ApiError(400, slugErr);
+    await assertExplicitSlugAvailable(requestedSlug, id, existing.publicProfile?._id);
+  }
+  const nextSlug = requestedSlug || existing.slug;
   const updated = await updateRecord("portfolios", id, {
     ...input,
     slug: nextSlug,
@@ -121,8 +203,22 @@ export async function getPublicPortfolio(slug: string) {
   const publicProfile = await findOneRecord("publicProfiles", { slug, isPublished: true });
   if (!publicProfile) throw new ApiError(404, "Public portfolio not found");
   const sections = { ...defaultSections, ...(publicProfile.sections || {}) };
+
+  let roadmap: any = null;
+  if (sections.showRoadmap) {
+    const plan = await findOneRecord("learningPlans", { userId: publicProfile.userId });
+    if (plan) {
+      roadmap = {
+        targetRole: plan.targetRole,
+        progress: plan.progress,
+        prioritySkills: plan.prioritySkills
+      };
+    }
+  }
+
   return {
     slug: publicProfile.slug,
+    title: publicProfile.title,
     displayName: publicProfile.displayName,
     headline: publicProfile.headline,
     hero: publicProfile.hero,
@@ -133,7 +229,11 @@ export async function getPublicPortfolio(slug: string) {
     projects: sections.showProjects ? publicProfile.projects || [] : [],
     resumeUrl: sections.showResume ? publicProfile.resumeUrl || "" : "",
     contactEmail: sections.showEmail ? publicProfile.contactEmail || "" : "",
+    contactPhone: sections.showPhone ? publicProfile.contactPhone || "" : "",
+    githubUrl: sections.showLinks ? publicProfile.githubUrl || "" : "",
+    linkedinUrl: sections.showLinks ? publicProfile.linkedinUrl || "" : "",
     links: sections.showLinks ? publicProfile.links || {} : {},
+    roadmap,
     sections,
     updatedAt: publicProfile.updatedAt
   };

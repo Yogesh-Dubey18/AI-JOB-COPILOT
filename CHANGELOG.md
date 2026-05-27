@@ -4,6 +4,15 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.30 - Dynamic Portfolio Builder & Public Slugs (2026-05-27)
+
+- **Public Portfolio Slugs**: Implemented `/u/[slug]` as a recruiter-safe public portfolio route with unavailable/private/unpublished handling and privacy-filtered public data.
+- **Portfolio Builder Upgrade**: Expanded `/portfolio-generator` with title, headline, about summary, skills, projects, GitHub, LinkedIn, resume PDF URL, visibility controls, slug editor, and public preview link.
+- **Slug Safety**: Added backend slug availability checks, reserved-word blocking, validation, and duplicate explicit slug rejection.
+- **Privacy Controls**: Kept portfolios private by default and added opt-in visibility for email, phone, resume PDF, roadmap achievements, and social links.
+- **Portfolio PDF Export**: Preserved portfolio PDF generation/download and documented local storage fallback versus S3/R2 private storage requirements.
+- **Hosting Honesty**: Documented custom-domain hosting as provider-ready only with no fake Vercel domain provisioning claims.
+
 ### v2.0.29 — Skill Gap Analyzer & Learning Roadmap (2026-05-27)
 
 - **Skill Gap Analyzer Workspace**: Implemented `/skill-roadmap` protected route performing direct comparisons between resume parsed skills and job required skills.

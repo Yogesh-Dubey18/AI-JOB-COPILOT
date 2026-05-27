@@ -25,6 +25,7 @@ AI Job Copilot is provider-ready. Live external integrations must be enabled onl
 | Coursera / Udemy | Courses | Provider-ready | Skill gap course links |
 | GitHub API | Dev Tools | Provider-ready | Project analyzer |
 | Chrome Extension | Browser | Provider-ready | Job capture from boards |
+| Portfolio custom domains | Hosting | Provider-ready only | Optional custom domains for public portfolio slugs |
 
 ---
 
@@ -211,6 +212,32 @@ STORAGE_ACCESS_KEY_ID=
 STORAGE_SECRET_ACCESS_KEY=
 STORAGE_SIGNED_URL_TTL_SECONDS=900
 ```
+
+Portfolio PDF downloads use the same storage boundary. If local storage fallback is active, portfolio PDFs can be reachable through direct local upload URLs. S3/R2 private storage with signed URLs is required before claiming durable production portfolio file hosting.
+
+---
+
+## Portfolio Slug Hosting
+
+Public portfolio slugs are implemented inside the app at `/u/[slug]`.
+
+**Status**: App-level public slugs are implemented. Custom-domain hosting is provider-ready only.
+
+Current behavior:
+- Published portfolios can be viewed at `/u/[slug]`.
+- Missing, private, or unpublished slugs show a safe unavailable state.
+- Public responses are privacy-filtered and do not expose private contact data unless enabled by the user.
+- The app does not provision Vercel custom domains or subdomains.
+
+Future optional env placeholders if custom-domain automation is implemented later:
+
+```env
+VERCEL_TOKEN=
+VERCEL_TEAM_ID=
+PORTFOLIO_BASE_DOMAIN=
+```
+
+Do not set these as "live" until domain ownership checks, DNS configuration, abuse controls, and verification tests are implemented.
 
 ---
 

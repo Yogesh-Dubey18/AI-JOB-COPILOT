@@ -14,7 +14,7 @@ This document tracks the implementation progress of every phase from the advance
 | **Phase 4: Job Aggregator & Dedup** | **Completed** | Manual URL/text import, duplicate checks by title/company/location, parsed fields, and apply readiness scoring. |
 | **Phase 5: Client-Side Apply Assistant** | **Completed** | Manual copy/fill helper panel with safety review disclaimer, tone selector, and vault/timeline integration. |
 | **Phase 6: AI Answer Synthesizer** | **Completed** | Dynamic tone-based generation for 10 question types with deterministic fallbacks when AI is mock. |
-| **Phase 7: Portfolio SEO** | **Completed** | Server-side metadata, OG/Twitter tags, and canonical URL structure. |
+| **Phase 7: Dynamic Portfolio Builder, Public Slugs, and SEO** | **Completed** | Builder fields, privacy controls, slug validation, public `/u/[slug]`, safe unavailable state, PDF export, and server-side metadata. |
 | **Phase 8: CRM & Email Sync** | **Completed** | Recruiter CRM with contact linking, notes, and activity timeline logging. |
 | **Phase 9: Multi-Agent Orchestration** | **Completed** | Next-Best-Action prioritization engine and guided workflow cards UI. |
 | **Phase 10: Browser Extension** | **Partially completed** | Chrome extension layout at `extension/` for user-initiated manual job capture. |
@@ -61,9 +61,15 @@ This document tracks the implementation progress of every phase from the advance
 - [x] Save custom answers to vault database -> **Completed**
 - [x] Formal/fresher/technical tone selector -> **Completed**
 
-### 7. Portfolio SEO
+### 7. Dynamic Portfolio Builder, Public Slugs, and SEO
 - [x] Next.js App Router dynamic metadata for `/u/[slug]` -> **Completed**
 - [x] OG title, description, profile types, and canonical URLs -> **Completed**
+- [x] Protected builder at `/portfolio-generator` -> **Completed**
+- [x] User-controlled public/private status and field visibility controls -> **Completed**
+- [x] Slug validation, reserved-word blocking, availability checks, and duplicate rejection -> **Completed**
+- [x] Safe unavailable public page state for missing, private, or unpublished slugs -> **Completed**
+- [x] Portfolio PDF generation and download using existing export service -> **Completed**
+- [x] Custom-domain hosting documented as provider-ready only -> **Completed**
 
 ### 8. CRM / Email Sync
 - [x] Kanban tracking board and application stage timeline -> **Completed**
@@ -93,4 +99,3 @@ This document tracks the implementation progress of every phase from the advance
 ---
 
 *Last Updated: 2026-05-27 | Progress tracking file aligned with main branch.*
-

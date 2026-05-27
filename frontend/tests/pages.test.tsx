@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Providers } from "@/app/providers";
@@ -343,6 +343,14 @@ describe("frontend pages", () => {
 
   it("portfolio generator page renders warning banner, preview card, and triggers PDF export", async () => {
     const fetchMock = vi.fn().mockImplementation((url) => {
+      if (String(url).includes("/portfolios/slug/")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ success: true, data: { available: true, slug: "test-developer" } })
+        });
+      }
       if (String(url).includes("/portfolios")) {
         return Promise.resolve({
           ok: true,
@@ -352,6 +360,7 @@ describe("frontend pages", () => {
             {
               _id: "portfolio-1",
               slug: "test-developer",
+              title: "Test Developer Portfolio",
               displayName: "Test Developer",
               headline: "Full Stack Dev",
               theme: "classic",
@@ -391,10 +400,20 @@ describe("frontend pages", () => {
     expect(screen.getByRole("heading", { name: "Portfolio generator" })).toBeInTheDocument();
     expect(screen.getByTestId("storage-warning")).toBeInTheDocument();
     expect(screen.getByText(/Storage & Access Notice/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not provision a hosted domain/i)).toBeInTheDocument();
+    expect(screen.queryByText(/permanent public hosting/i)).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("My Full-Stack Developer Portfolio")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("public-slug-name")).toBeInTheDocument();
+    expect(screen.getByText("Show contact email")).toBeInTheDocument();
+    expect(screen.getByText("Show phone number")).toBeInTheDocument();
+    expect(screen.getByText("Show resume download")).toBeInTheDocument();
+    expect(screen.getByText("Show learning achievements")).toBeInTheDocument();
 
     // 2. Render portfolio preview
     await waitFor(() => {
       expect(screen.getByText("test-developer")).toBeInTheDocument();
+      expect(screen.getByText("Test Developer Portfolio")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Preview Public Portfolio/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Generate Portfolio PDF/i })).toBeInTheDocument();
     });
 
@@ -1183,5 +1202,206 @@ describe("interview prep page", () => {
     const practiceLink = screen.getByRole("link", { name: /Practice interview questions/i });
     expect(practiceLink).toBeInTheDocument();
     expect(practiceLink).toHaveAttribute("href", "/interviews/prep?mode=technical");
+  });
+});
+
+describe("public portfolio page /u/[slug]", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn()
+      }))
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it("renders public portfolio page, showing approved public fields and hiding private fields", async () => {
+    vi.stubGlobal("fetch", (url: string) => {
+      if (url.includes("/portfolios/public/")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            slug: "test-slug",
+            title: "Test Candidate Portfolio",
+            displayName: "Test Candidate",
+            headline: "Senior Web Engineer",
+            about: "I build amazing apps.",
+            theme: "bold",
+            skills: ["TypeScript", "React"],
+            projects: [
+              { title: "Project Alpha", description: "Awesome app", technologies: "Next.js" }
+            ],
+            resumeUrl: "https://example.com/my-resume.pdf",
+            contactEmail: "candidate@example.com",
+            contactPhone: "",
+            githubUrl: "https://github.com/test",
+            linkedinUrl: "",
+            roadmap: {
+              targetRole: "Senior React Developer",
+              progress: 75,
+              prioritySkills: ["TypeScript"]
+            },
+            sections: {
+              showEmail: true,
+              showPhone: false,
+              showResume: true,
+              showProjects: true,
+              showSkills: true,
+              showLinks: true,
+              showRoadmap: true
+            }
+          })
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
+
+    renderWithProviders(<PublicPortfolioPage params={{ slug: "test-slug" }} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Test Candidate" })).toBeInTheDocument();
+      expect(screen.getByText("Test Candidate Portfolio")).toBeInTheDocument();
+      expect(screen.getByText("Senior Web Engineer")).toBeInTheDocument();
+      expect(screen.getByText("I build amazing apps.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("link", { name: /Email Me/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Download Resume/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /GitHub/i })).toBeInTheDocument();
+
+    expect(screen.queryByRole("link", { name: /LinkedIn/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Phone/i)).not.toBeInTheDocument();
+
+    expect(screen.getByText("Learning Progress")).toBeInTheDocument();
+    expect(screen.getByText("75%")).toBeInTheDocument();
+  });
+});
+
+describe("portfolio builder empty state and custom builder input toggles", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn()
+      }))
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it("handles empty state and shows custom form settings, toggles and slug error alerts", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", (url: string) => {
+      if (url.includes("/portfolios/slug/")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({ success: true, data: { available: true } }) });
+      if (url.includes("/portfolios")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
+      if (url.includes("/resumes")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
+      if (url.includes("/profile")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => null });
+      if (url.includes("/career-vault")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
+      if (url.includes("/ai/skill-gap/plans")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
+      return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({}) });
+    });
+
+    renderWithProviders(<PortfolioGeneratorPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("No profile or resume data found")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Upload resume/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Add skills/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Add projects/i })).toBeInTheDocument();
+    });
+
+    cleanup();
+
+    vi.stubGlobal("fetch", (url: string) => {
+      if (url.includes("/portfolios/slug/")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({ success: true, data: { available: true, slug: "test-dev" } })
+        });
+      }
+      if (url.includes("/portfolios")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => [
+            {
+              _id: "portfolio-1",
+              slug: "test-dev",
+              title: "Test Dev Portfolio",
+              displayName: "Test Dev",
+              headline: "Web Designer",
+              theme: "compact",
+              isPublished: false,
+              skills: ["JavaScript"]
+            }
+          ]
+        });
+      }
+      if (url.includes("/resumes")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => [{ _id: "res-1", fileName: "MyResume.pdf", parsedData: { name: "Test Dev", email: "test@dev.com" } }]
+        });
+      }
+      if (url.includes("/profile")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({ headline: "Web Designer", skills: ["JavaScript"] })
+        });
+      }
+      if (url.includes("/career-vault")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [{ type: "project", title: "Portfolio Builder", description: "Public slug system", skills: ["Next.js"] }] });
+      if (url.includes("/ai/skill-gap/plans")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [{ targetRole: "Frontend Engineer", prioritySkills: ["TypeScript"], progress: 20 }] });
+      return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({}) });
+    });
+
+    renderWithProviders(<PortfolioGeneratorPage />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Full name")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("My Full-Stack Developer Portfolio")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("public-slug-name")).toBeInTheDocument();
+      expect(screen.getAllByText("Skills").length).toBeGreaterThan(0);
+      expect(screen.getByText("Projects")).toBeInTheDocument();
+      expect(screen.getByText("Show contact email")).toBeInTheDocument();
+      expect(screen.getByText("Show phone number")).toBeInTheDocument();
+      expect(screen.getByText("Show learning achievements")).toBeInTheDocument();
+      expect(screen.getByText("Make portfolio publicly visible")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Preview Public Portfolio/i })).toBeInTheDocument();
+    });
+
+    const slugInput = screen.getByPlaceholderText("public-slug-name");
+    fireEvent.change(slugInput, { target: { value: "abc!" } });
+    await waitFor(() => {
+      expect(screen.getByText(/Slug can only contain/i)).toBeInTheDocument();
+    });
   });
 });

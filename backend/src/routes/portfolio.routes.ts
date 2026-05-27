@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { generatePortfolio, getPortfolio, listPortfolios, publishPortfolio, updatePortfolio } from "../services/portfolio.service.js";
+import { checkSlugAvailability, generatePortfolio, getPortfolio, listPortfolios, publishPortfolio, updatePortfolio } from "../services/portfolio.service.js";
 import { getPublicProfileBySlug } from "../services/public-profile.service.js";
 
 const router = Router();
@@ -15,6 +15,11 @@ router.use(requireAuth);
 
 router.get("/", asyncHandler(async (req, res) => {
   res.json({ success: true, data: await listPortfolios(req.user!.id) });
+}));
+
+router.get("/slug/:slug", asyncHandler(async (req, res) => {
+  const portfolioId = Array.isArray(req.query.portfolioId) ? req.query.portfolioId[0] : req.query.portfolioId;
+  res.json({ success: true, data: await checkSlugAvailability(param(req.params.slug), typeof portfolioId === "string" ? portfolioId : undefined) });
 }));
 
 router.post("/generate", asyncHandler(async (req, res) => {

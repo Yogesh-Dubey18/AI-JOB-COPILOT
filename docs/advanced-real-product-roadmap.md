@@ -23,6 +23,10 @@
 | Answer vault + salary templates | ✅ Complete |
 | Company research | ✅ Complete |
 | Portfolio generator + public slug | ✅ Complete |
+| Dynamic portfolio builder privacy controls | Complete |
+| Public `/u/[slug]` route with safe unavailable state | Complete |
+| Portfolio slug validation and duplicate rejection | Complete |
+| Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
 | Career mentor chat | ✅ Complete |
@@ -70,6 +74,11 @@
 | Canonical URL for public portfolio slugs | ✅ Complete |
 | Twitter card metadata | ✅ Complete |
 | Server-side metadata with graceful fallback | ✅ Complete |
+| Public/private portfolio status controls | Complete |
+| Email, phone, resume, roadmap, and social link visibility controls | Complete |
+| Slug editor, reserved-word blocking, and duplicate rejection | Complete |
+| Portfolio PDF export from builder | Complete |
+| Custom-domain hosting | Provider-ready only |
 
 ---
 
@@ -120,6 +129,7 @@
 | Gmail OAuth sync (email classification) | Google OAuth + user consent |
 | Stripe subscription billing | Stripe account + webhook |
 | S3/R2 resume storage | AWS or Cloudflare R2 credentials |
+| Custom portfolio domains | Vercel/DNS provider credentials, ownership checks, and abuse controls |
 | Google OAuth login | Google OAuth credentials |
 | AI-enhanced scoring | OpenAI or Gemini API key |
 | Sentry error monitoring | Sentry DSN |
@@ -145,7 +155,7 @@
 ## Roadmap Priorities (Next)
 
 1. **Resume compare view** — diff between original and tailored version using changeSummary
-2. **Tone selector** — formal/fresher/technical tone for AI-generated cover letters and answers
+2. **Portfolio storage hardening** - private S3/R2 storage and signed URLs for resume/PDF downloads
 3. **Application stage flow chart** — Sankey or funnel chart for CRM analytics
 4. **Notification reminders** — email alerts for follow-ups when SendGrid configured
 5. **Job CSV batch import** — approved, legally-obtained job list upload
