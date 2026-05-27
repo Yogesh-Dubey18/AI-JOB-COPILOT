@@ -59,6 +59,7 @@ export default function InterviewsPage() {
 
       {/* Quick links */}
       <div className="mb-5 flex flex-wrap gap-2">
+        <Link href="/interviews/prep"><Button><Bot className="h-4 w-4" /> Advanced Prep</Button></Link>
         <Link href="/mock-interview"><Button variant="outline"><Bot className="h-4 w-4" /> Mock interview</Button></Link>
         <Link href="/answer-vault"><Button variant="outline"><MessageSquare className="h-4 w-4" /> Answer vault</Button></Link>
         <Link href="/career-mentor-chat"><Button variant="outline"><Bot className="h-4 w-4" /> Career mentor</Button></Link>

@@ -47,6 +47,19 @@ export default function GuidedWorkflowPage() {
   const profileRolesCount = profile.data?.targetRoles?.length ?? 0;
   const answersCount = answerVault.data?.length ?? 0;
 
+  // Interview prep status (deterministic heuristic)
+  const hasSalaryAnswer = (answerVault.data || []).some((v: any) => /salary|compensation|ctc|pay/i.test(v.question));
+  const hasProjectAnswer = (answerVault.data || []).some((v: any) => /project|built|created|developed/i.test(v.question));
+  const interviewPrepStatus =
+    interviewsCount > 0 || (answersCount >= 3 && hasSalaryAnswer && hasProjectAnswer)
+      ? "Ready for mock interview"
+      : answersCount >= 3
+      ? "Answers saved"
+      : answersCount > 0
+      ? "Questions prepared"
+      : "Not started";
+  const interviewPrepDone = interviewPrepStatus === "Ready for mock interview";
+
   const isStep1Done = resumesCount > 0;
   const isStep2Done = appsCount > 0;
   const isStep3Done = kitsCount > 0;
@@ -228,6 +241,35 @@ export default function GuidedWorkflowPage() {
           </div>
         </div>
       )}
+
+      {/* Interview Prep Status Card */}
+      <div className="mb-6">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 text-primary" />
+          Interview Preparation Status
+        </h2>
+        <div className={`rounded-md border p-4 ${interviewPrepDone ? "border-emerald-200 bg-emerald-50/10 dark:border-emerald-800" : "border-muted"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-sm">{interviewPrepStatus}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {interviewPrepDone
+                  ? "You have prepared answers and logged interviews. Run a mock interview to finalize."
+                  : interviewPrepStatus === "Answers saved"
+                  ? "Great start! Add a salary expectation and project explanation answer to advance."
+                  : interviewPrepStatus === "Questions prepared"
+                  ? "Save at least 3 prepared answers to the Answer Vault."
+                  : "Open Advanced Interview Prep to start building your STAR answers."}
+              </p>
+            </div>
+            <Link href="/interviews/prep">
+              <Button variant={interviewPrepDone ? "outline" : "primary"}>
+                {interviewPrepDone ? "View Prep" : "Start Prep"}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {/* Traditional Step-by-Step Workflow */}
       <div className="space-y-6">

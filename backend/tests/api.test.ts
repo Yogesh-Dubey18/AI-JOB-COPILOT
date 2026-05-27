@@ -827,26 +827,15 @@ describe("AI Job Copilot API", () => {
   it("generates application kits with different tones and labels fallback honestly", async () => {
     const agent = await authAgent();
 
-    // Create a mock resume version and job first
-    const resume = await createRecord("resumes", {
-      userId: "test-user-id",
-      fileName: "resume.pdf",
-      rawText: "React developer",
-      parsedData: { skills: ["React", "Node.js"] }
-    });
+    // Create a resume version and job directly (bypass HTTP upload requirement)
     const user = await findOneRecord("users", { email: "test@example.com" });
     const resumeVer = await createRecord("resumeVersions", {
-      userId: user._id,
-      baseResumeId: resume._id,
-      title: "React Version",
-      content: { skills: ["React", "Node.js"] }
+      userId: user!._id,
+      title: "React Developer Version",
+      content: { skills: ["React", "TypeScript"] }
     });
-
-    const job = await createRecord("jobs", {
-      title: "Senior React Developer",
-      company: "Innovate Co",
-      skillsRequired: ["React", "TypeScript"]
-    });
+    const jobRes = await agent.get("/api/jobs").expect(200);
+    const job = jobRes.body.data.items[0];
 
     // Generate Kit with Professional Tone
     const kitResProf = await agent
@@ -895,4 +884,95 @@ describe("AI Job Copilot API", () => {
     expect(data.referralMessage).toBeDefined();
     expect(data.interviewPrepPlan).toBeDefined();
   });
+
+  it("returns all 10 interview prep modes", async () => {
+    const agent = await authAgent();
+    const res = await agent.get("/api/interviews/prep/modes").expect(200);
+    expect(res.body.success).toBe(true);
+    const modes = res.body.data;
+    expect(Array.isArray(modes)).toBe(true);
+    expect(modes.length).toBe(10);
+    const ids = modes.map((m: any) => m.id);
+    expect(ids).toContain("hr");
+    expect(ids).toContain("technical");
+    expect(ids).toContain("react");
+    expect(ids).toContain("node");
+    expect(ids).toContain("mern");
+    expect(ids).toContain("javascript");
+    expect(ids).toContain("project");
+    expect(ids).toContain("fresher");
+    expect(ids).toContain("salary");
+    expect(ids).toContain("assignment");
+  });
+
+  it("returns fallback question bank for each prep mode", async () => {
+    const agent = await authAgent();
+    for (const mode of ["hr", "react", "salary", "fresher"]) {
+      const res = await agent.get(`/api/interviews/prep/question-bank/${mode}`).expect(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.isFallback).toBe(true);
+      expect(res.body.data.questions.length).toBeGreaterThan(0);
+      expect(res.body.data.questions[0].question).toBeTruthy();
+      expect(res.body.data.questions[0].hint).toBeTruthy();
+      expect(res.body.data.label).toMatch(/Fallback Template Mode/i);
+    }
+  });
+
+  it("validates STAR template generation requires mode and question", async () => {
+    const agent = await authAgent();
+    // Missing both fields
+    const bad = await agent.post("/api/interviews/prep/star-template").send({}).expect(400);
+    expect(bad.body.success).toBe(false);
+    // Valid request
+    const good = await agent
+      .post("/api/interviews/prep/star-template")
+      .send({ mode: "project", question: "Walk me through your most complex project." })
+      .expect(200);
+    expect(good.body.success).toBe(true);
+    expect(good.body.data.situation).toBeTruthy();
+    expect(good.body.data.task).toBeTruthy();
+    expect(good.body.data.action).toBeTruthy();
+    expect(good.body.data.result).toBeTruthy();
+    expect(good.body.data.polishedAnswer).toBeTruthy();
+    expect(good.body.data.isFallback).toBe(true);
+  });
+
+  it("saves STAR answer to Answer Vault via prep endpoint", async () => {
+    const agent = await authAgent();
+    // Missing fields should 400
+    const bad = await agent.post("/api/interviews/prep/save-to-vault").send({ question: "Tell me about yourself." }).expect(400);
+    expect(bad.body.success).toBe(false);
+    // Valid save
+    const good = await agent.post("/api/interviews/prep/save-to-vault").send({
+      question: "Tell me about yourself.",
+      answer: "I am a MERN stack developer with 3 years of experience...",
+      mode: "hr"
+    }).expect(201);
+    expect(good.body.success).toBe(true);
+    expect(good.body.data.category).toMatch(/Interview Prep/i);
+    // Verify it appears in vault listing
+    const list = await agent.get("/api/answer-vault").expect(200);
+    expect(list.body.data.some((v: any) => v.question === "Tell me about yourself.")).toBe(true);
+  });
+
+  it("returns advanced interview readiness heuristic score", async () => {
+    const agent = await authAgent();
+    const res = await agent.get("/api/interviews/prep/readiness").expect(200);
+    expect(res.body.success).toBe(true);
+    expect(typeof res.body.data.readinessScore).toBe("number");
+    expect(res.body.data.readinessScore).toBeGreaterThanOrEqual(0);
+    expect(res.body.data.readinessScore).toBeLessThanOrEqual(100);
+    expect(res.body.data.scores).toBeTruthy();
+    expect(res.body.data.disclaimer).toMatch(/heuristic/i);
+    expect(res.body.data.voiceNote).toMatch(/provider-ready/i);
+  });
+
+  it("returns interview prep context with empty state when no job selected", async () => {
+    const agent = await authAgent();
+    const res = await agent.get("/api/interviews/prep/context").expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.hasContext).toBe(false);
+    expect(res.body.data.message).toBeTruthy();
+  });
 });
+

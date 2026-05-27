@@ -4,7 +4,21 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
-### v2.0.27 — AI Answer Synthesizer and CRM Recruiter Linking Sprint (2026-05-26)
+### v2.0.28 — Advanced Interview Preparation & Mock Interview Builder (2026-05-26)
+
+- **10 Interview Prep Modes**: Added HR, Technical, React frontend, Node/Express, MERN full stack, JavaScript basics, Project explanation, Fresher behavioral, Salary discussion, and Assignment discussion modes.
+- **Question Bank**: 5–7 deterministic fallback questions per mode with structured hints. Honestly labeled as "Fallback Template Mode — AI not configured" when provider keys are absent.
+- **STAR Answer Builder**: Four-field builder (Situation, Task, Action, Result) with a final polished answer draft. Users can generate templates, edit freely, copy, save to Answer Vault, or attach to Application Timeline.
+- **Interview Readiness Score**: Heuristic self-assessment score (0–100) based on 7 preparation factors. Includes an explicit disclaimer that the score does not guarantee interview success.
+- **Job/Company Context**: Contextual prep card showing company name, role, required skills, suggested topics, and salary notes when a job/application is selected. Safe empty state shown otherwise.
+- **Guided Workflow Integration**: Added an Interview Preparation Status tracker card to the Guided Workflow page showing four stages: Not started, Questions prepared, Answers saved, Ready for mock interview.
+- **Voice Note**: "Voice mock interview is provider-ready / future enhancement. Text mock interview is available now." No voice recording implemented.
+- **Advanced Prep Route**: Created `/interviews/prep` as a protected workspace; linked from `/interviews` with an "Advanced Prep" button.
+- **Backend API**: Added 6 new `/api/interviews/prep/*` endpoints (modes, question-bank, star-template, save-to-vault, readiness, context) — all authenticated, no secrets, fully tested.
+- **Testing**: 7 new backend API tests; 1 comprehensive frontend page test; 1 new E2E protected route redirect test.
+- **Documentation**: Created `docs/advanced-interview-prep.md` with full feature, API, safety, and limitations documentation.
+
+
 
 - **Tone-Based Answer Synthesizer**: Expanded AI kit generator to support 7 distinct tones (Professional, Fresher-friendly, Technical, Confident, Polite follow-up, Short recruiter DM, Formal email) and 10 screening question types.
 - **Safe AI Fallback System**: Implemented dynamic context-aware templates for mock/unconfigured AI modes that shape answers based on tone, job details, and matching skills. Honestly labeled outputs as "Fallback Template Mode" on the UI.

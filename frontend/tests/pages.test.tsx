@@ -992,3 +992,105 @@ describe("apply assistant page", () => {
     });
   });
 });
+
+import InterviewPrepPage from "@/app/interviews/prep/page";
+
+describe("interview prep page", () => {
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it("renders interview prep page with mode selector, STAR builder, fallback label, and no auto-apply", async () => {
+    const fetchMock = mockApiResponse([]);
+    fetchMock.mockImplementation((url: unknown) => {
+      const u = String(url);
+      if (u.includes("/interviews/prep/modes")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ([
+            { id: "hr", label: "HR interview", icon: "👥" },
+            { id: "react", label: "React frontend interview", icon: "⚛️" },
+            { id: "salary", label: "Salary discussion", icon: "💰" }
+          ])
+        });
+      }
+      if (u.includes("/interviews/prep/question-bank")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({
+            mode: "hr",
+            isFallback: true,
+            label: "Fallback Template Mode — AI not configured",
+            disclaimer: "These questions are deterministic templates.",
+            questions: [
+              { question: "Tell me about yourself.", hint: "Use Present → skills → why company." },
+              { question: "Why should we hire you?", hint: "Map 3 skills to job requirements." }
+            ]
+          })
+        });
+      }
+      if (u.includes("/interviews/prep/readiness")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({
+            readinessScore: 15,
+            readinessLevel: "Just getting started",
+            scores: [{ label: "Resume uploaded", score: 0, done: false, advice: "Upload your resume" }],
+            disclaimer: "This score is a self-assessment heuristic only. It does not guarantee interview success.",
+            voiceNote: "Voice mock interview is provider-ready / future enhancement. Text mock interview is available now."
+          })
+        });
+      }
+      if (u.includes("/interviews/prep/context")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({
+            hasContext: false,
+            message: "No job or application selected. Select or import a job to get context-specific preparation tips.",
+            job: null, company: null, suggestedTopics: [], salaryNotes: []
+          })
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
+    });
+
+    renderWithProviders(<InterviewPrepPage />);
+
+    // Heading present
+    expect(screen.getByRole("heading", { name: /Advanced interview preparation/i })).toBeInTheDocument();
+
+    // Manual Review warning
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/Manual Review Required/i)).toBeInTheDocument();
+
+    // No auto-apply or auto-send language
+    expect(screen.queryByText(/auto-apply/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/auto-send/i)).not.toBeInTheDocument();
+
+    // Voice note
+    expect(screen.getByText(/Voice mock interview is provider-ready/i)).toBeInTheDocument();
+    expect(screen.getByText(/Text mock interview is available now/i)).toBeInTheDocument();
+
+    // Mode selector loads
+    await waitFor(() => {
+      expect(screen.getByText("HR interview")).toBeInTheDocument();
+    });
+
+    // Fallback label visible
+    await waitFor(() => {
+      expect(screen.getAllByText(/Fallback Template Mode/i).length).toBeGreaterThan(0);
+    });
+
+    // STAR builder controls present
+    expect(screen.getByText(/STAR Answer Builder/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Generate Template/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Copy/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save to Vault/i })).toBeInTheDocument();
+
+    // Readiness disclaimer
+    await waitFor(() => {
+      expect(screen.getByText(/heuristic/i)).toBeInTheDocument();
+    });
+  });
+});
