@@ -1,7 +1,7 @@
 # AI Job Copilot — Advanced Real Product Roadmap
 
 > **Version**: v2 Beta+ (post-audit)
-> **Last updated**: 2026-05-26
+> **Last updated**: 2026-05-27
 > **Principle**: Every feature must be honest, user-controlled, compliant, and production-safe. No fake metrics. No auto-apply. No scraping.
 
 ---
@@ -26,6 +26,8 @@
 | Dynamic portfolio builder privacy controls | Complete |
 | Public `/u/[slug]` route with safe unavailable state | Complete |
 | Portfolio slug validation and duplicate rejection | Complete |
+| Portfolio version history | Complete |
+| Project case-study proof mapping | Complete |
 | Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
@@ -78,6 +80,9 @@
 | Email, phone, resume, roadmap, and social link visibility controls | Complete |
 | Slug editor, reserved-word blocking, and duplicate rejection | Complete |
 | Portfolio PDF export from builder | Complete |
+| Portfolio version save/list/compare/restore | Complete |
+| Recruiter-facing project case studies | Complete |
+| Skill-to-proof mapping with privacy controls | Complete |
 | Custom-domain hosting | Provider-ready only |
 
 ---
@@ -153,6 +158,18 @@
 ---
 
 ## Roadmap Priorities (Next)
+
+Recommended priority update after portfolio proof mapping:
+
+1. **Portfolio storage hardening** - private S3/R2 storage and signed URLs for resume/PDF downloads, portfolio screenshots, and proof files
+2. **GitHub proof verification provider-ready integration** - optional GitHub API checks for repository existence and README quality without fake stats
+3. **Resume compare view** - diff between original and tailored version using changeSummary
+4. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
+5. **Notification reminders** - email alerts for follow-ups when SendGrid configured
+6. **Job CSV batch import** - approved, legally-obtained job list upload
+7. **Rate limit documentation** - approved polling limits per provider
+
+Previous roadmap order retained below for historical context:
 
 1. **Resume compare view** — diff between original and tailored version using changeSummary
 2. **Portfolio storage hardening** - private S3/R2 storage and signed URLs for resume/PDF downloads

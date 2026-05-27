@@ -351,6 +351,25 @@ describe("frontend pages", () => {
           json: async () => ({ success: true, data: { available: true, slug: "test-developer" } })
         });
       }
+      if (String(url).includes("/portfolios/portfolio-1/versions")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: [
+              {
+                id: "version-1",
+                title: "Recruiter draft",
+                changeSummary: "Saved before proof updates.",
+                visibilityStatus: "private",
+                createdAt: "2026-05-27T10:00:00.000Z"
+              }
+            ]
+          })
+        });
+      }
       if (String(url).includes("/portfolios")) {
         return Promise.resolve({
           ok: true,
@@ -408,6 +427,11 @@ describe("frontend pages", () => {
     expect(screen.getByText("Show phone number")).toBeInTheDocument();
     expect(screen.getByText("Show resume download")).toBeInTheDocument();
     expect(screen.getByText("Show learning achievements")).toBeInTheDocument();
+    expect(screen.getByText("Show public case studies")).toBeInTheDocument();
+    expect(screen.getByText("Show public proof mapping")).toBeInTheDocument();
+    expect(screen.getByText(/Do not claim skills, results, or metrics/i)).toBeInTheDocument();
+    expect(screen.getByTestId("case-study-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("proof-mapping-cards")).toBeInTheDocument();
 
     // 2. Render portfolio preview
     await waitFor(() => {
@@ -415,6 +439,9 @@ describe("frontend pages", () => {
       expect(screen.getByText("Test Developer Portfolio")).toBeInTheDocument();
       expect(screen.getByRole("link", { name: /Preview Public Portfolio/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Generate Portfolio PDF/i })).toBeInTheDocument();
+      expect(screen.getByTestId("version-history")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Save current version/i })).toBeInTheDocument();
+      expect(screen.getByText("Recruiter draft")).toBeInTheDocument();
     });
 
     // 3. Trigger PDF export
@@ -1248,6 +1275,37 @@ describe("public portfolio page /u/[slug]", () => {
             projects: [
               { title: "Project Alpha", description: "Awesome app", technologies: "Next.js" }
             ],
+            projectCaseStudies: [
+              {
+                id: "case-1",
+                projectName: "Project Alpha",
+                problemSolved: "Made job search evidence easier to explain.",
+                techStack: ["Next.js", "Node.js"],
+                contribution: "Built public-safe case study cards.",
+                keyFeatures: ["Privacy filters"],
+                challenges: "Avoiding hidden reviewer notes",
+                solutionApproach: "Public projection filters",
+                resultLearning: "Proof should stay honest and explainable.",
+                proofStatus: "self-reported",
+                publicProofNote: "Can walk through the architecture.",
+                privateProofNotes: "Private reviewer notes",
+                githubUrl: "",
+                liveDemoUrl: ""
+              }
+            ],
+            proofMappings: [
+              {
+                id: "proof-1",
+                skillName: "React",
+                projectName: "Project Alpha",
+                resumeBullet: "Built public portfolio proof cards.",
+                confidence: "strong",
+                publicNote: "Mapped to visible project work.",
+                privateNotes: "Private proof mapping note",
+                githubUrl: "",
+                liveDemoUrl: ""
+              }
+            ],
             resumeUrl: "https://example.com/my-resume.pdf",
             contactEmail: "candidate@example.com",
             contactPhone: "",
@@ -1291,6 +1349,14 @@ describe("public portfolio page /u/[slug]", () => {
 
     expect(screen.getByText("Learning Progress")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(screen.getByText("Project Case Studies")).toBeInTheDocument();
+    expect(screen.getAllByText("Project Alpha").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Proof badges are user-maintained/i)).toBeInTheDocument();
+    expect(screen.getByText("Skill Proof Map")).toBeInTheDocument();
+    expect(screen.getAllByText("React").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Private reviewer notes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Private proof mapping note/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/guaranteed/i)).not.toBeInTheDocument();
   });
 });
 
@@ -1347,6 +1413,12 @@ describe("portfolio builder empty state and custom builder input toggles", () =>
         return Promise.resolve({
           ok: true, status: 200, headers: new Headers(),
           json: async () => ({ success: true, data: { available: true, slug: "test-dev" } })
+        });
+      }
+      if (url.includes("/portfolios/portfolio-1/versions")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({ success: true, data: [] })
         });
       }
       if (url.includes("/portfolios")) {

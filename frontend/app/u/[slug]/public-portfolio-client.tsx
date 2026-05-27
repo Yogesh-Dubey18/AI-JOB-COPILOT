@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Award, BriefcaseBusiness, ExternalLink, Github, Linkedin, Mail, Phone } from "lucide-react";
+import { Award, BriefcaseBusiness, ExternalLink, Github, Linkedin, Mail, Phone, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -209,6 +209,122 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                       </article>
                     );
                   })}
+                </div>
+              </section>
+            ) : null}
+
+            {data.projectCaseStudies?.length ? (
+              <section className="space-y-4">
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight">Project Case Studies</h2>
+                  <p className={`text-xs ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>
+                    Proof badges are user-maintained and do not imply third-party verification.
+                  </p>
+                </div>
+                <div className="grid gap-4">
+                  {data.projectCaseStudies.map((project: any, index: number) => (
+                    <article key={project.id || project.projectName || index} className={`rounded-lg p-5 ${cardClass}`}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-bold text-lg tracking-tight">{project.projectName}</h3>
+                          {project.problemSolved ? (
+                            <p className={`mt-1 text-sm leading-6 ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>{project.problemSolved}</p>
+                          ) : null}
+                        </div>
+                        <Badge className={data.theme === "bold" ? "bg-slate-800 text-slate-200" : ""}>
+                          {project.proofStatus === "verified" ? "User-marked verified" : project.proofStatus || "self-reported"}
+                        </Badge>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {project.contribution ? (
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide">Contribution</p>
+                            <p className={`text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>{project.contribution}</p>
+                          </div>
+                        ) : null}
+                        {project.solutionApproach ? (
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide">Solution Approach</p>
+                            <p className={`text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>{project.solutionApproach}</p>
+                          </div>
+                        ) : null}
+                        {project.challenges ? (
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide">Challenges</p>
+                            <p className={`text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>{project.challenges}</p>
+                          </div>
+                        ) : null}
+                        {project.resultLearning ? (
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide">Result / Learning</p>
+                            <p className={`text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>{project.resultLearning}</p>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {project.keyFeatures?.length ? (
+                        <div className="mt-4 flex flex-wrap gap-1.5">
+                          {project.keyFeatures.map((feature: string) => <Badge key={feature}>{feature}</Badge>)}
+                        </div>
+                      ) : null}
+
+                      {project.techStack?.length ? (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {project.techStack.map((tech: string) => (
+                            <span key={tech} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted/65 text-muted-foreground">{tech}</span>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {project.publicProofNote ? (
+                        <p className={`mt-4 rounded-md border p-3 text-xs ${data.theme === "bold" ? "border-slate-800 text-slate-300" : "text-muted-foreground"}`}>
+                          {project.publicProofNote}
+                        </p>
+                      ) : null}
+
+                      {(project.githubUrl || project.liveDemoUrl || project.screenshotsUrl) ? (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {project.githubUrl ? <a href={project.githubUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">GitHub</a> : null}
+                          {project.liveDemoUrl ? <a href={project.liveDemoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">Live demo</a> : null}
+                          {project.screenshotsUrl ? <a href={project.screenshotsUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">Screenshots</a> : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {data.proofMappings?.length ? (
+              <section className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="mt-1 h-5 w-5 text-primary" />
+                  <div>
+                    <h2 className="text-xl font-bold tracking-tight">Skill Proof Map</h2>
+                    <p className={`text-xs ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>
+                      Confidence levels are based on owner-provided project and resume context.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {data.proofMappings.map((mapping: any, index: number) => (
+                    <article key={mapping.id || mapping.skillName || index} className={`rounded-lg p-4 ${cardClass}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-semibold">{mapping.skillName}</h3>
+                        <Badge>{mapping.confidence || "medium"} confidence</Badge>
+                      </div>
+                      {mapping.projectName ? <p className={`mt-2 text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>Project: {mapping.projectName}</p> : null}
+                      {mapping.resumeBullet ? <p className={`mt-2 text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>{mapping.resumeBullet}</p> : null}
+                      {mapping.publicNote ? <p className={`mt-2 text-xs ${data.theme === "bold" ? "text-slate-500" : "text-muted-foreground"}`}>{mapping.publicNote}</p> : null}
+                      {(mapping.githubUrl || mapping.liveDemoUrl) ? (
+                        <div className="mt-3 flex gap-3">
+                          {mapping.githubUrl ? <a href={mapping.githubUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">GitHub proof</a> : null}
+                          {mapping.liveDemoUrl ? <a href={mapping.liveDemoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">Live proof</a> : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
                 </div>
               </section>
             ) : null}

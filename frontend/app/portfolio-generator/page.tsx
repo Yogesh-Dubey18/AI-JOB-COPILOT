@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Copy, Download, Eye, FileJson, Globe2, Palette, Sparkles, Upload, Wrench } from "lucide-react";
+import { AlertCircle, Copy, Download, Eye, FileJson, GitCompare, Globe2, Palette, RotateCcw, ShieldCheck, Sparkles, Upload, Wrench } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,10 @@ function fileHref(fileUrl: string) {
   return fileUrl?.startsWith("http") ? fileUrl : `${backendOrigin}${fileUrl}`;
 }
 
+function localId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 type PortfolioForm = {
   slug: string;
   title: string;
@@ -31,6 +35,8 @@ type PortfolioForm = {
   resumeUrl: string;
   skillsText: string;
   projectsText: string;
+  projectCaseStudies: ProjectCaseStudyForm[];
+  proofMappings: ProofMappingForm[];
   theme: "classic" | "compact" | "bold";
   isPublished: boolean;
   sections: {
@@ -41,7 +47,44 @@ type PortfolioForm = {
     showSkills: boolean;
     showLinks: boolean;
     showRoadmap: boolean;
+    showCaseStudies: boolean;
+    showProofMappings: boolean;
   };
+};
+
+type ProjectCaseStudyForm = {
+  id: string;
+  projectName: string;
+  problemSolved: string;
+  techStackText: string;
+  contribution: string;
+  keyFeaturesText: string;
+  challenges: string;
+  solutionApproach: string;
+  resultLearning: string;
+  githubUrl: string;
+  liveDemoUrl: string;
+  screenshotsUrl: string;
+  proofStatus: "verified" | "self-reported" | "missing";
+  isPublic: boolean;
+  publicProofNote: string;
+  privateProofNotes: string;
+  showPublicProofNotes: boolean;
+};
+
+type ProofMappingForm = {
+  id: string;
+  skillName: string;
+  projectName: string;
+  resumeBullet: string;
+  githubUrl: string;
+  liveDemoUrl: string;
+  confidence: "strong" | "medium" | "weak";
+  isPublic: boolean;
+  publicNote: string;
+  privateNotes: string;
+  showPublicNotes: boolean;
+  showResumeBullet: boolean;
 };
 
 const defaultForm: PortfolioForm = {
@@ -56,6 +99,8 @@ const defaultForm: PortfolioForm = {
   resumeUrl: "",
   skillsText: "",
   projectsText: "",
+  projectCaseStudies: [],
+  proofMappings: [],
   theme: "classic",
   isPublished: false,
   sections: {
@@ -65,7 +110,9 @@ const defaultForm: PortfolioForm = {
     showProjects: true,
     showSkills: true,
     showLinks: true,
-    showRoadmap: false
+    showRoadmap: false,
+    showCaseStudies: true,
+    showProofMappings: false
   }
 };
 
@@ -94,11 +141,107 @@ function parseProjects(value: string) {
   }).filter(Boolean);
 }
 
+function parseList(value: string) {
+  return value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+}
+
 function projectsToText(projects: any[] = []) {
   return projects.map((project) => {
     if (typeof project === "string") return project;
     return [project.title || project.name, project.description, project.techStack || project.technologies].filter(Boolean).join(" | ");
   }).filter(Boolean).join("\n");
+}
+
+function toCaseStudyForm(project?: any): ProjectCaseStudyForm {
+  return {
+    id: project?.id || localId(),
+    projectName: project?.projectName || project?.title || project?.name || "",
+    problemSolved: project?.problemSolved || project?.description || "",
+    techStackText: Array.isArray(project?.techStack) ? project.techStack.join(", ") : project?.techStack || project?.technologies || "",
+    contribution: project?.contribution || project?.role || project?.userRole || "",
+    keyFeaturesText: Array.isArray(project?.keyFeatures) ? project.keyFeatures.join("\n") : project?.keyFeatures || project?.features || "",
+    challenges: project?.challenges || project?.challengesFaced || "",
+    solutionApproach: project?.solutionApproach || project?.solution || "",
+    resultLearning: project?.resultLearning || project?.result || project?.learning || "",
+    githubUrl: project?.githubUrl || "",
+    liveDemoUrl: project?.liveDemoUrl || project?.demoUrl || "",
+    screenshotsUrl: project?.screenshotsUrl || project?.screenshotUrl || "",
+    proofStatus: project?.proofStatus === "verified" || project?.proofStatus === "missing" ? project.proofStatus : "self-reported",
+    isPublic: Boolean(project?.isPublic),
+    publicProofNote: project?.publicProofNote || "",
+    privateProofNotes: project?.privateProofNotes || project?.proofNotes || "",
+    showPublicProofNotes: Boolean(project?.showPublicProofNotes)
+  };
+}
+
+function toProofMappingForm(mapping?: any): ProofMappingForm {
+  return {
+    id: mapping?.id || localId(),
+    skillName: mapping?.skillName || mapping?.skill || "",
+    projectName: mapping?.projectName || mapping?.project || "",
+    resumeBullet: mapping?.resumeBullet || "",
+    githubUrl: mapping?.githubUrl || "",
+    liveDemoUrl: mapping?.liveDemoUrl || mapping?.demoUrl || "",
+    confidence: mapping?.confidence === "strong" || mapping?.confidence === "weak" ? mapping.confidence : "medium",
+    isPublic: Boolean(mapping?.isPublic),
+    publicNote: mapping?.publicNote || "",
+    privateNotes: mapping?.privateNotes || mapping?.notes || "",
+    showPublicNotes: Boolean(mapping?.showPublicNotes),
+    showResumeBullet: mapping?.showResumeBullet !== false
+  };
+}
+
+function caseStudiesToPayload(projects: ProjectCaseStudyForm[]) {
+  return projects.filter((project) => project.projectName.trim()).map((project) => ({
+    id: project.id,
+    projectName: project.projectName.trim(),
+    problemSolved: project.problemSolved.trim(),
+    techStack: parseList(project.techStackText),
+    contribution: project.contribution.trim(),
+    keyFeatures: parseList(project.keyFeaturesText),
+    challenges: project.challenges.trim(),
+    solutionApproach: project.solutionApproach.trim(),
+    resultLearning: project.resultLearning.trim(),
+    githubUrl: project.githubUrl.trim(),
+    liveDemoUrl: project.liveDemoUrl.trim(),
+    screenshotsUrl: project.screenshotsUrl.trim(),
+    proofStatus: project.proofStatus,
+    isPublic: project.isPublic,
+    publicProofNote: project.publicProofNote.trim(),
+    privateProofNotes: project.privateProofNotes.trim(),
+    showPublicProofNotes: project.showPublicProofNotes
+  }));
+}
+
+function proofMappingsToPayload(mappings: ProofMappingForm[]) {
+  return mappings.filter((mapping) => mapping.skillName.trim()).map((mapping) => ({
+    id: mapping.id,
+    skillName: mapping.skillName.trim(),
+    projectName: mapping.projectName.trim(),
+    resumeBullet: mapping.resumeBullet.trim(),
+    githubUrl: mapping.githubUrl.trim(),
+    liveDemoUrl: mapping.liveDemoUrl.trim(),
+    confidence: mapping.confidence,
+    isPublic: mapping.isPublic,
+    publicNote: mapping.publicNote.trim(),
+    privateNotes: mapping.privateNotes.trim(),
+    showPublicNotes: mapping.showPublicNotes,
+    showResumeBullet: mapping.showResumeBullet
+  }));
+}
+
+function buildSuggestedProofMappings(skillsText: string, caseStudies: ProjectCaseStudyForm[]) {
+  return parseSkills(skillsText).slice(0, 10).map((skill) => {
+    const project = caseStudies.find((item) => parseList(item.techStackText).some((tech) => tech.toLowerCase() === skill.toLowerCase()));
+    return toProofMappingForm({
+      skillName: skill,
+      projectName: project?.projectName || "",
+      githubUrl: project?.githubUrl || "",
+      liveDemoUrl: project?.liveDemoUrl || "",
+      confidence: project ? "medium" : "weak",
+      privateNotes: project ? "Suggested from project tech stack. Review before making public." : "Add a project, resume bullet, GitHub link, or live demo to strengthen this proof."
+    });
+  });
 }
 
 export default function PortfolioGeneratorPage() {
@@ -107,6 +250,9 @@ export default function PortfolioGeneratorPage() {
   const [context, setContext] = useState("React, Node.js, Express, MongoDB developer working on web apps.");
   const [exportJson, setExportJson] = useState<any>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
+  const [versionTitle, setVersionTitle] = useState("Recruiter-ready draft");
+  const [changeSummary, setChangeSummary] = useState("Captured current portfolio content before proof or visibility changes.");
+  const [compareResult, setCompareResult] = useState<any>(null);
 
   const portfolios = useQuery({ queryKey: ["portfolios"], queryFn: () => api.get<any[]>("/portfolios"), retry: false });
   const resumesQuery = useQuery({ queryKey: ["resumes"], queryFn: () => api.get<any[]>("/resumes"), retry: false });
@@ -118,6 +264,12 @@ export default function PortfolioGeneratorPage() {
   const careerVaultEntries = useMemo(() => Array.isArray(careerVaultQuery.data) ? careerVaultQuery.data : [], [careerVaultQuery.data]);
   const roadmapPlans = useMemo(() => Array.isArray(roadmapQuery.data) ? roadmapQuery.data : [], [roadmapQuery.data]);
   const selectedPortfolio = items[0];
+  const versions = useQuery({
+    queryKey: ["portfolio-versions", selectedPortfolio?._id],
+    queryFn: () => api.get<any[]>(`/portfolios/${selectedPortfolio._id}/versions`),
+    enabled: Boolean(selectedPortfolio?._id),
+    retry: false
+  });
   const slugCheck = useQuery({
     queryKey: ["portfolio-slug", form.slug, selectedPortfolio?._id],
     queryFn: () => api.get<any>(`/portfolios/slug/${form.slug}${selectedPortfolio?._id ? `?portfolioId=${selectedPortfolio._id}` : ""}`),
@@ -135,6 +287,20 @@ export default function PortfolioGeneratorPage() {
     if (items.length === 0 && (profileQuery.data || resumesQuery.data || careerVaultEntries.length || roadmapPlans.length)) {
       const p = profileQuery.data || {};
       const r = resumesQuery.data?.[0]?.parsedData || {};
+      const sourceProjects = [
+        ...(r.projects || []),
+        ...(careerVaultEntries.filter((entry: any) => entry.type === "project").map((entry: any) => ({
+          title: entry.title,
+          description: entry.description || entry.impact,
+          techStack: (entry.skills || []).join(", ")
+        })))
+      ];
+      const seededCaseStudies = sourceProjects.length ? sourceProjects.map(toCaseStudyForm) : [];
+      const seededSkills = [
+        ...(r.skills || []),
+        ...(p.skills || []),
+        ...((roadmapPlans[0]?.prioritySkills || []) as string[])
+      ].filter(Boolean).join(", ");
       setForm((prev) => ({
         ...prev,
         title: prev.title || `${r.name || p.fullName || "My"} Career Portfolio`,
@@ -145,19 +311,10 @@ export default function PortfolioGeneratorPage() {
         githubUrl: prev.githubUrl || p.githubUrl || "",
         linkedinUrl: prev.linkedinUrl || p.linkedinUrl || "",
         resumeUrl: prev.resumeUrl || resumesQuery.data?.[0]?.fileUrl || "",
-        skillsText: prev.skillsText || [
-          ...(r.skills || []),
-          ...(p.skills || []),
-          ...((roadmapPlans[0]?.prioritySkills || []) as string[])
-        ].filter(Boolean).join(", "),
-        projectsText: prev.projectsText || projectsToText([
-          ...(r.projects || []),
-          ...(careerVaultEntries.filter((entry: any) => entry.type === "project").map((entry: any) => ({
-            title: entry.title,
-            description: entry.description || entry.impact,
-            techStack: (entry.skills || []).join(", ")
-          })))
-        ])
+        skillsText: prev.skillsText || seededSkills,
+        projectsText: prev.projectsText || projectsToText(sourceProjects),
+        projectCaseStudies: prev.projectCaseStudies.length ? prev.projectCaseStudies : seededCaseStudies,
+        proofMappings: prev.proofMappings.length ? prev.proofMappings : buildSuggestedProofMappings(seededSkills, seededCaseStudies)
       }));
     }
   }, [profileQuery.data, resumesQuery.data, careerVaultEntries, roadmapPlans, items.length]);
@@ -178,6 +335,8 @@ export default function PortfolioGeneratorPage() {
       sections: form.sections,
       skills: parseSkills(form.skillsText),
       projects: parseProjects(form.projectsText),
+      projectCaseStudies: caseStudiesToPayload(form.projectCaseStudies),
+      proofMappings: proofMappingsToPayload(form.proofMappings),
       about: context,
       message: context,
       portfolioContext: context
@@ -219,10 +378,34 @@ export default function PortfolioGeneratorPage() {
     }
   });
 
+  const saveVersion = useMutation({
+    mutationFn: (portfolioId: string) => api.post<any>(`/portfolios/${portfolioId}/versions`, { versionTitle, changeSummary }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio-versions"] });
+    }
+  });
+
+  const restoreVersion = useMutation({
+    mutationFn: ({ portfolioId, versionId }: { portfolioId: string; versionId: string }) =>
+      api.post<any>(`/portfolios/${portfolioId}/versions/${versionId}/restore`, {}),
+    onSuccess: (data) => {
+      setExportJson(data);
+      setCompareResult(null);
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-versions"] });
+    }
+  });
+
+  const compareVersion = useMutation({
+    mutationFn: ({ portfolioId, versionId }: { portfolioId: string; versionId: string }) =>
+      api.get<any>(`/portfolios/${portfolioId}/versions/${versionId}/compare`),
+    onSuccess: (data) => setCompareResult(data)
+  });
+
   const latestPortfolio = generate.data || items[0];
   const serverSlugError = slugCheck.data && typeof slugCheck.data.available === "boolean" && !slugCheck.data.available ? slugCheck.data.message || "This public slug is already taken." : null;
   const effectiveSlugError = slugError || serverSlugError;
-  const saveError = generate.error || update.error || publish.error;
+  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error;
 
   function publicUrl(slug: string) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -242,6 +425,8 @@ export default function PortfolioGeneratorPage() {
   };
 
   const loadPortfolioForEditing = (portfolio: any) => {
+    const existingCaseStudies = (portfolio.projectCaseStudies?.length ? portfolio.projectCaseStudies : portfolio.projects || []).map(toCaseStudyForm);
+    const existingProofMappings = (portfolio.proofMappings?.length ? portfolio.proofMappings : buildSuggestedProofMappings((portfolio.skills || []).join(", "), existingCaseStudies)).map(toProofMappingForm);
     setForm({
       slug: portfolio.slug || "",
       title: portfolio.title || `${portfolio.displayName || portfolio.hero || "My"} Career Portfolio`,
@@ -254,6 +439,8 @@ export default function PortfolioGeneratorPage() {
       resumeUrl: portfolio.resumeUrl || "",
       skillsText: (portfolio.skills || []).join(", "),
       projectsText: projectsToText(portfolio.projects || []),
+      projectCaseStudies: existingCaseStudies,
+      proofMappings: existingProofMappings,
       theme: portfolio.theme || "classic",
       isPublished: Boolean(portfolio.isPublished),
       sections: {
@@ -263,11 +450,43 @@ export default function PortfolioGeneratorPage() {
         showProjects: Boolean(portfolio.sections?.showProjects ?? true),
         showSkills: Boolean(portfolio.sections?.showSkills ?? true),
         showLinks: Boolean(portfolio.sections?.showLinks ?? true),
-        showRoadmap: Boolean(portfolio.sections?.showRoadmap)
+        showRoadmap: Boolean(portfolio.sections?.showRoadmap),
+        showCaseStudies: Boolean(portfolio.sections?.showCaseStudies ?? true),
+        showProofMappings: Boolean(portfolio.sections?.showProofMappings)
       }
     });
     setContext(portfolio.about || "");
     setSlugError(null);
+  };
+
+  const updateCaseStudy = (id: string, patch: Partial<ProjectCaseStudyForm>) => {
+    setForm((prev) => ({
+      ...prev,
+      projectCaseStudies: prev.projectCaseStudies.map((project) => project.id === id ? { ...project, ...patch } : project)
+    }));
+  };
+
+  const updateProofMapping = (id: string, patch: Partial<ProofMappingForm>) => {
+    setForm((prev) => ({
+      ...prev,
+      proofMappings: prev.proofMappings.map((mapping) => mapping.id === id ? { ...mapping, ...patch } : mapping)
+    }));
+  };
+
+  const addCaseStudy = () => {
+    setForm((prev) => ({ ...prev, projectCaseStudies: [...prev.projectCaseStudies, toCaseStudyForm()] }));
+  };
+
+  const addProofMapping = () => {
+    setForm((prev) => ({ ...prev, proofMappings: [...prev.proofMappings, toProofMappingForm()] }));
+  };
+
+  const removeCaseStudy = (id: string) => {
+    setForm((prev) => ({ ...prev, projectCaseStudies: prev.projectCaseStudies.filter((project) => project.id !== id) }));
+  };
+
+  const removeProofMapping = (id: string) => {
+    setForm((prev) => ({ ...prev, proofMappings: prev.proofMappings.filter((mapping) => mapping.id !== id) }));
   };
 
   // Safe Empty State Rendering
@@ -387,6 +606,180 @@ export default function PortfolioGeneratorPage() {
               </div>
             </div>
 
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <p className="font-semibold">Proof honesty rule</p>
+              <p>Do not claim skills, results, or metrics that you cannot explain or prove.</p>
+            </div>
+
+            <div className="space-y-3" data-testid="case-study-editor">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Project Case-Study Builder</p>
+                  <p className="text-xs text-muted-foreground">Keep each project recruiter-ready and mark public only after review.</p>
+                </div>
+                <Button type="button" variant="outline" onClick={addCaseStudy}>Add case study</Button>
+              </div>
+
+              {form.projectCaseStudies.length ? form.projectCaseStudies.map((project, index) => (
+                <div key={project.id} className="rounded-md border bg-card/50 p-3 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">Project case study #{index + 1}</p>
+                    <Button type="button" variant="ghost" onClick={() => removeCaseStudy(project.id)}>Remove</Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Project name</label>
+                      <Input value={project.projectName} onChange={(event) => updateCaseStudy(project.id, { projectName: event.target.value })} placeholder="AI Job Copilot" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Tech stack</label>
+                      <Input value={project.techStackText} onChange={(event) => updateCaseStudy(project.id, { techStackText: event.target.value })} placeholder="React, Node.js, MongoDB" />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-xs font-semibold text-muted-foreground">Problem solved</label>
+                      <Textarea rows={2} value={project.problemSolved} onChange={(event) => updateCaseStudy(project.id, { problemSolved: event.target.value })} placeholder="What user or business problem did this solve?" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Your role / contribution</label>
+                      <Textarea rows={2} value={project.contribution} onChange={(event) => updateCaseStudy(project.id, { contribution: event.target.value })} placeholder="What did you personally build or improve?" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Key features</label>
+                      <Textarea rows={2} value={project.keyFeaturesText} onChange={(event) => updateCaseStudy(project.id, { keyFeaturesText: event.target.value })} placeholder={"Public slugs\nPDF export\nPrivacy controls"} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Challenges faced</label>
+                      <Textarea rows={2} value={project.challenges} onChange={(event) => updateCaseStudy(project.id, { challenges: event.target.value })} placeholder="Mention tradeoffs, bugs, or constraints you can discuss." />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Solution approach</label>
+                      <Textarea rows={2} value={project.solutionApproach} onChange={(event) => updateCaseStudy(project.id, { solutionApproach: event.target.value })} placeholder="How did you solve it?" />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-xs font-semibold text-muted-foreground">Result / learning</label>
+                      <Textarea rows={2} value={project.resultLearning} onChange={(event) => updateCaseStudy(project.id, { resultLearning: event.target.value })} placeholder="Use learnings unless you have real measurable results." />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">GitHub link</label>
+                      <Input value={project.githubUrl} onChange={(event) => updateCaseStudy(project.id, { githubUrl: event.target.value })} placeholder="https://github.com/user/repo" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Live demo link</label>
+                      <Input value={project.liveDemoUrl} onChange={(event) => updateCaseStudy(project.id, { liveDemoUrl: event.target.value })} placeholder="https://demo.example.com" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Screenshots link</label>
+                      <Input value={project.screenshotsUrl} onChange={(event) => updateCaseStudy(project.id, { screenshotsUrl: event.target.value })} placeholder="Existing safe screenshot URL" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Proof status</label>
+                      <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={project.proofStatus} onChange={(event) => updateCaseStudy(project.id, { proofStatus: event.target.value as ProjectCaseStudyForm["proofStatus"] })}>
+                        <option value="self-reported">Self-reported</option>
+                        <option value="verified">User-marked verified</option>
+                        <option value="missing">Missing proof</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Private proof notes</label>
+                      <Textarea rows={2} value={project.privateProofNotes} onChange={(event) => updateCaseStudy(project.id, { privateProofNotes: event.target.value })} placeholder="Private notes for interview prep. Never shown publicly." />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Public proof note</label>
+                      <Textarea rows={2} value={project.publicProofNote} onChange={(event) => updateCaseStudy(project.id, { publicProofNote: event.target.value })} placeholder="Optional note that is safe to show." />
+                    </div>
+                  </div>
+                  <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <label className="flex items-center gap-2 rounded-md border p-2">
+                      <input type="checkbox" checked={project.isPublic} onChange={() => updateCaseStudy(project.id, { isPublic: !project.isPublic })} />
+                      <span>Approve this case study for public portfolio</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-2">
+                      <input type="checkbox" checked={project.showPublicProofNotes} onChange={() => updateCaseStudy(project.id, { showPublicProofNotes: !project.showPublicProofNotes })} />
+                      <span>Show public proof note</span>
+                    </label>
+                  </div>
+                </div>
+              )) : (
+                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No case studies yet. Add a project case study or seed from resume/career vault data.</div>
+              )}
+            </div>
+
+            <div className="space-y-3" data-testid="proof-mapping-cards">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Skill-to-Proof Mapping</p>
+                  <p className="text-xs text-muted-foreground">Map skills to projects, resume bullets, and proof links without inventing outcomes.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={() => setForm((prev) => ({ ...prev, proofMappings: buildSuggestedProofMappings(prev.skillsText, prev.projectCaseStudies) }))}>Suggest mappings</Button>
+                  <Button type="button" variant="outline" onClick={addProofMapping}>Add proof mapping</Button>
+                </div>
+              </div>
+
+              {form.proofMappings.length ? form.proofMappings.map((mapping, index) => (
+                <div key={mapping.id} className="rounded-md border bg-card/50 p-3 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">Proof mapping #{index + 1}</p>
+                    <Button type="button" variant="ghost" onClick={() => removeProofMapping(mapping.id)}>Remove</Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Skill name</label>
+                      <Input value={mapping.skillName} onChange={(event) => updateProofMapping(mapping.id, { skillName: event.target.value })} placeholder="React" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Project where used</label>
+                      <Input value={mapping.projectName} onChange={(event) => updateProofMapping(mapping.id, { projectName: event.target.value })} placeholder="AI Job Copilot" />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-xs font-semibold text-muted-foreground">Resume bullet where mentioned</label>
+                      <Textarea rows={2} value={mapping.resumeBullet} onChange={(event) => updateProofMapping(mapping.id, { resumeBullet: event.target.value })} placeholder="Built privacy-safe portfolio builder with Next.js and Express." />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">GitHub proof link</label>
+                      <Input value={mapping.githubUrl} onChange={(event) => updateProofMapping(mapping.id, { githubUrl: event.target.value })} placeholder="https://github.com/user/repo" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Live proof link</label>
+                      <Input value={mapping.liveDemoUrl} onChange={(event) => updateProofMapping(mapping.id, { liveDemoUrl: event.target.value })} placeholder="https://demo.example.com" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Confidence</label>
+                      <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={mapping.confidence} onChange={(event) => updateProofMapping(mapping.id, { confidence: event.target.value as ProofMappingForm["confidence"] })}>
+                        <option value="strong">Strong</option>
+                        <option value="medium">Medium</option>
+                        <option value="weak">Weak</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Private proof notes</label>
+                      <Textarea rows={2} value={mapping.privateNotes} onChange={(event) => updateProofMapping(mapping.id, { privateNotes: event.target.value })} placeholder="Private prep note. Never shown publicly." />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-xs font-semibold text-muted-foreground">Public proof note</label>
+                      <Input value={mapping.publicNote} onChange={(event) => updateProofMapping(mapping.id, { publicNote: event.target.value })} placeholder="Optional safe note for recruiters." />
+                    </div>
+                  </div>
+                  <div className="grid gap-2 text-sm sm:grid-cols-3">
+                    <label className="flex items-center gap-2 rounded-md border p-2">
+                      <input type="checkbox" checked={mapping.isPublic} onChange={() => updateProofMapping(mapping.id, { isPublic: !mapping.isPublic })} />
+                      <span>Show mapping publicly</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-2">
+                      <input type="checkbox" checked={mapping.showPublicNotes} onChange={() => updateProofMapping(mapping.id, { showPublicNotes: !mapping.showPublicNotes })} />
+                      <span>Show public note</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-2">
+                      <input type="checkbox" checked={mapping.showResumeBullet} onChange={() => updateProofMapping(mapping.id, { showResumeBullet: !mapping.showResumeBullet })} />
+                      <span>Show resume bullet</span>
+                    </label>
+                  </div>
+                </div>
+              )) : (
+                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No proof mappings yet. Add one manually or generate suggestions from your skills and project tech stack.</div>
+              )}
+            </div>
+
             <div>
               <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase"><Palette className="h-4 w-4" />Theme Selection</p>
               <div className="flex flex-wrap gap-2">
@@ -438,6 +831,22 @@ export default function PortfolioGeneratorPage() {
                     onChange={() => setForm({ ...form, sections: { ...form.sections, showLinks: !form.sections.showLinks } })}
                   />
                   <span>Show social links</span>
+                </label>
+                <label className="flex items-center gap-2 rounded-md border p-2 bg-card/50">
+                  <input
+                    type="checkbox"
+                    checked={form.sections.showCaseStudies}
+                    onChange={() => setForm({ ...form, sections: { ...form.sections, showCaseStudies: !form.sections.showCaseStudies } })}
+                  />
+                  <span>Show public case studies</span>
+                </label>
+                <label className="flex items-center gap-2 rounded-md border p-2 bg-card/50">
+                  <input
+                    type="checkbox"
+                    checked={form.sections.showProofMappings}
+                    onChange={() => setForm({ ...form, sections: { ...form.sections, showProofMappings: !form.sections.showProofMappings } })}
+                  />
+                  <span>Show public proof mapping</span>
                 </label>
                 <label className="flex items-center gap-2 rounded-md border p-2 bg-card/50 sm:col-span-2">
                   <input
@@ -510,6 +919,71 @@ export default function PortfolioGeneratorPage() {
                       <Download className="h-4 w-4" /> Download PDF
                     </a>
                   )}
+                </div>
+
+                <div className="rounded-md border p-4 space-y-3" data-testid="version-history">
+                  <div className="flex items-start gap-2">
+                    <ShieldCheck className="mt-1 h-4 w-4 text-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold">Portfolio Version History</p>
+                      <p className="text-xs text-muted-foreground">Saved versions keep a private snapshot. Restore keeps the current slug and does not force public visibility changes.</p>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Input value={versionTitle} onChange={(event) => setVersionTitle(event.target.value)} placeholder="Version title" aria-label="Version title" />
+                    <Input value={changeSummary} onChange={(event) => setChangeSummary(event.target.value)} placeholder="Change summary" aria-label="Change summary" />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saveVersion.isPending}
+                    onClick={() => saveVersion.mutate(latestPortfolio._id || latestPortfolio.id)}
+                  >
+                    <ShieldCheck className="h-4 w-4" /> {saveVersion.isPending ? "Saving Version..." : "Save current version"}
+                  </Button>
+
+                  {versions.data?.length ? (
+                    <div className="space-y-2">
+                      {versions.data.map((version: any) => (
+                        <div key={version.id} className="rounded-md border bg-muted/20 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-semibold">{version.title}</p>
+                              <p className="text-xs text-muted-foreground">{version.changeSummary || "No change summary provided."}</p>
+                              <p className="text-xs text-muted-foreground">{new Date(version.createdAt).toLocaleString()} · {version.visibilityStatus}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                disabled={compareVersion.isPending}
+                                onClick={() => compareVersion.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, versionId: version.id })}
+                              >
+                                <GitCompare className="h-4 w-4" /> Compare
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={restoreVersion.isPending}
+                                onClick={() => restoreVersion.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, versionId: version.id })}
+                              >
+                                <RotateCcw className="h-4 w-4" /> Restore
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No saved portfolio versions yet.</p>
+                  )}
+
+                  {compareResult?.changedFields?.length ? (
+                    <div className="rounded-md bg-muted p-3 text-xs">
+                      <p className="mb-1 font-semibold">Changed fields compared with current portfolio:</p>
+                      <p>{compareResult.changedFields.map((field: any) => field.field).join(", ")}</p>
+                    </div>
+                  ) : null}
                 </div>
               </>
             ) : (

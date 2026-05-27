@@ -14,7 +14,7 @@ This document tracks the implementation progress of every phase from the advance
 | **Phase 4: Job Aggregator & Dedup** | **Completed** | Manual URL/text import, duplicate checks by title/company/location, parsed fields, and apply readiness scoring. |
 | **Phase 5: Client-Side Apply Assistant** | **Completed** | Manual copy/fill helper panel with safety review disclaimer, tone selector, and vault/timeline integration. |
 | **Phase 6: AI Answer Synthesizer** | **Completed** | Dynamic tone-based generation for 10 question types with deterministic fallbacks when AI is mock. |
-| **Phase 7: Dynamic Portfolio Builder, Public Slugs, and SEO** | **Completed** | Builder fields, privacy controls, slug validation, public `/u/[slug]`, safe unavailable state, PDF export, and server-side metadata. |
+| **Phase 7: Dynamic Portfolio Builder, Public Slugs, Version History, and SEO** | **Completed** | Builder fields, privacy controls, slug validation, public `/u/[slug]`, safe unavailable state, PDF export, version snapshots, project case studies, proof mapping, and server-side metadata. |
 | **Phase 8: CRM & Email Sync** | **Completed** | Recruiter CRM with contact linking, notes, and activity timeline logging. |
 | **Phase 9: Multi-Agent Orchestration** | **Completed** | Next-Best-Action prioritization engine and guided workflow cards UI. |
 | **Phase 10: Browser Extension** | **Partially completed** | Chrome extension layout at `extension/` for user-initiated manual job capture. |
@@ -70,6 +70,10 @@ This document tracks the implementation progress of every phase from the advance
 - [x] Safe unavailable public page state for missing, private, or unpublished slugs -> **Completed**
 - [x] Portfolio PDF generation and download using existing export service -> **Completed**
 - [x] Custom-domain hosting documented as provider-ready only -> **Completed**
+- [x] Portfolio version history save/list/compare/restore workflow -> **Completed**
+- [x] Project case-study schema and editor -> **Completed**
+- [x] Skill-to-proof mapping with confidence and public approval controls -> **Completed**
+- [x] Public portfolio filters for private proof notes and private case studies -> **Completed**
 
 ### 8. CRM / Email Sync
 - [x] Kanban tracking board and application stage timeline -> **Completed**

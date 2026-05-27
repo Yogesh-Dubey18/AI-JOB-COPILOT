@@ -4,6 +4,19 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-27 Portfolio Version History + Project Case-Study Proof Mapping (Completed)
+
+Implemented the next safe portfolio phase without starting Stripe, subscription tiers, job-board provider activation, release tagging, or fake hosting/provider claims.
+
+- **Version History**: Added protected save/list/compare/restore endpoints for portfolio versions. Restore keeps the current slug and preserves current public/private visibility by default.
+- **Case-Study Builder**: Expanded `/portfolio-generator` with structured project case-study fields for problem, tech stack, contribution, features, challenges, solution, result/learning, links, screenshots, and proof status.
+- **Proof Mapping**: Added skill-to-proof mapping cards connecting skills to projects, resume bullets, GitHub/live links, and confidence labels.
+- **Privacy Controls**: Added public approval flags for case studies and proof mappings. Private proof notes are owner-only and excluded from public portfolio output.
+- **Public Route**: `/u/[slug]` now renders approved public case studies and proof mappings with owner-maintained proof badges, without fake verification or fake metrics.
+- **Docs**: Added portfolio version history and project proof mapping docs, and updated the portfolio builder, roadmap, progress tracker, final summary, and changelog docs.
+
+---
+
 ## 2026-05-27 Dynamic Portfolio Builder & Public Slugs (Completed)
 
 Implemented the Dynamic Portfolio Builder & Public Slugs phase without starting Stripe, subscription tiers, job-board provider activation, or custom-domain provisioning.

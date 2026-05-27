@@ -4,6 +4,15 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.31 - Portfolio Version History & Project Proof Mapping (2026-05-27)
+
+- **Portfolio Version History**: Added owner-scoped save/list/compare/restore endpoints and builder UI for portfolio snapshots with version title, created date, visibility status, and change summary.
+- **Safe Restore**: Restoring a version preserves the current slug and keeps current public/private visibility by default to avoid accidental publishing.
+- **Project Case Studies**: Added structured case-study editing for problem solved, tech stack, contribution, features, challenges, solution, result/learning, GitHub/live/screenshot links, and proof status.
+- **Proof Mapping**: Added skill-to-proof mapping cards tying skills to projects, resume bullets, optional proof links, and confidence labels.
+- **Public Privacy Filters**: Updated `/u/[slug]` output to show only public-approved case studies and proof mappings while excluding private proof notes and private mappings.
+- **No Fake Proof Policy**: Added user-facing warnings and docs clarifying that proof statuses are owner-maintained and must not imply fake metrics, fake provider verification, or fake testimonials.
+
 ### v2.0.30 - Dynamic Portfolio Builder & Public Slugs (2026-05-27)
 
 - **Public Portfolio Slugs**: Implemented `/u/[slug]` as a recruiter-safe public portfolio route with unavailable/private/unpublished handling and privacy-filtered public data.

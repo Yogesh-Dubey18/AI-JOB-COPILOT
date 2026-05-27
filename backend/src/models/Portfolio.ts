@@ -11,6 +11,9 @@ const PortfolioSchema = new Schema(
     about: String,
     skills: [String],
     projects: [Schema.Types.Mixed],
+    projectCaseStudies: [Schema.Types.Mixed],
+    proofMappings: [Schema.Types.Mixed],
+    versionHistory: [Schema.Types.Mixed],
     resumeUrl: String,
     contactEmail: String,
     contactPhone: String,
@@ -24,7 +27,9 @@ const PortfolioSchema = new Schema(
       showProjects: { type: Boolean, default: true },
       showSkills: { type: Boolean, default: true },
       showLinks: { type: Boolean, default: true },
-      showRoadmap: { type: Boolean, default: false }
+      showRoadmap: { type: Boolean, default: false },
+      showCaseStudies: { type: Boolean, default: true },
+      showProofMappings: { type: Boolean, default: false }
     },
     isPublished: { type: Boolean, default: false, index: true }
   },

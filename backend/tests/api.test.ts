@@ -1072,6 +1072,124 @@ describe("AI Job Copilot API", () => {
 
     await request(app).get("/api/portfolios/public/jane-designer").expect(404);
   });
-});
 
+  it("saves, lists, compares, and restores portfolio versions without forcing public visibility", async () => {
+    const agent = await authAgent();
+    const created = await agent.post("/api/portfolios/generate").send({
+      slug: "versioned-portfolio",
+      title: "Version One Portfolio",
+      displayName: "Versioned Dev",
+      headline: "React Developer",
+      isPublished: false,
+      skills: ["React"],
+      projects: [{ title: "Portfolio Builder", description: "Built a portfolio flow", techStack: "React" }]
+    }).expect(201);
+
+    const portfolioId = created.body.data._id;
+    const version = await agent.post(`/api/portfolios/${portfolioId}/versions`).send({
+      versionTitle: "Recruiter draft",
+      changeSummary: "Initial recruiter-safe version before proof edits."
+    }).expect(201);
+    expect(version.body.data.title).toBe("Recruiter draft");
+    expect(version.body.data.visibilityStatus).toBe("private");
+
+    const versions = await agent.get(`/api/portfolios/${portfolioId}/versions`).expect(200);
+    expect(versions.body.data).toHaveLength(1);
+    expect(versions.body.data[0].changeSummary).toMatch(/Initial recruiter-safe/);
+
+    await agent.patch(`/api/portfolios/${portfolioId}`).send({
+      title: "Version Two Portfolio",
+      isPublished: true,
+      skills: ["React", "TypeScript"]
+    }).expect(200);
+
+    const comparison = await agent.get(`/api/portfolios/${portfolioId}/versions/${version.body.data.id}/compare`).expect(200);
+    expect(comparison.body.data.changedFields.some((field: any) => field.field === "title")).toBe(true);
+    expect(comparison.body.data.changedFields.some((field: any) => field.field === "skills")).toBe(true);
+
+    const restored = await agent.post(`/api/portfolios/${portfolioId}/versions/${version.body.data.id}/restore`).send({}).expect(200);
+    expect(restored.body.data.title).toBe("Version One Portfolio");
+    expect(restored.body.data.skills).toEqual(["React"]);
+    expect(restored.body.data.slug).toBe("versioned-portfolio");
+    expect(restored.body.data.isPublished).toBe(true);
+  });
+
+  it("stores project case studies and proof mappings while public output excludes private proof fields", async () => {
+    const agent = await authAgent();
+    await agent.post("/api/portfolios/generate").send({
+      slug: "proof-portfolio",
+      title: "Proof Portfolio",
+      displayName: "Proof Dev",
+      headline: "MERN Developer",
+      isPublished: true,
+      sections: {
+        showProjects: true,
+        showCaseStudies: true,
+        showProofMappings: true,
+        showLinks: false
+      },
+      projectCaseStudies: [
+        {
+          projectName: "AI Job Copilot",
+          problemSolved: "Helped organize a job search workflow.",
+          techStack: ["React", "Node.js"],
+          contribution: "Built the portfolio module.",
+          keyFeatures: ["Public slugs", "PDF exports"],
+          challenges: "Privacy controls",
+          solutionApproach: "Explicit user-controlled visibility.",
+          resultLearning: "Learned safer public profile design.",
+          githubUrl: "https://github.com/example/private-proof",
+          liveDemoUrl: "https://demo.example.com",
+          proofStatus: "self-reported",
+          isPublic: true,
+          privateProofNotes: "Private reviewer notes",
+          publicProofNote: "Can explain architecture and tradeoffs.",
+          showPublicProofNotes: true
+        },
+        {
+          projectName: "Private Project",
+          problemSolved: "Internal details",
+          isPublic: false,
+          privateProofNotes: "Should never be public"
+        }
+      ],
+      proofMappings: [
+        {
+          skillName: "React",
+          projectName: "AI Job Copilot",
+          resumeBullet: "Built recruiter-safe portfolio screens.",
+          githubUrl: "https://github.com/example/private-proof",
+          confidence: "strong",
+          isPublic: true,
+          privateNotes: "Private proof note",
+          publicNote: "Mapped to visible case-study work.",
+          showPublicNotes: true
+        },
+        {
+          skillName: "Docker",
+          projectName: "Internal Deployment",
+          privateNotes: "Private deployment proof",
+          confidence: "weak",
+          isPublic: false
+        }
+      ]
+    }).expect(201);
+
+    const publicProfile = await request(app).get("/api/portfolios/public/proof-portfolio").expect(200);
+    expect(publicProfile.body.data.userId).toBeUndefined();
+    expect(publicProfile.body.data.projectCaseStudies).toHaveLength(1);
+    expect(publicProfile.body.data.projectCaseStudies[0].projectName).toBe("AI Job Copilot");
+    expect(publicProfile.body.data.projectCaseStudies[0].proofStatus).toBe("self-reported");
+    expect(publicProfile.body.data.projectCaseStudies[0].publicProofNote).toMatch(/architecture/);
+    expect(publicProfile.body.data.projectCaseStudies[0].privateProofNotes).toBeUndefined();
+    expect(publicProfile.body.data.projectCaseStudies[0].githubUrl).toBe("");
+    expect(JSON.stringify(publicProfile.body.data)).not.toMatch(/Private reviewer|Should never be public|Private deployment/);
+
+    expect(publicProfile.body.data.proofMappings).toHaveLength(1);
+    expect(publicProfile.body.data.proofMappings[0].skillName).toBe("React");
+    expect(publicProfile.body.data.proofMappings[0].confidence).toBe("strong");
+    expect(publicProfile.body.data.proofMappings[0].privateNotes).toBeUndefined();
+    expect(publicProfile.body.data.proofMappings[0].githubUrl).toBe("");
+  });
+});
 

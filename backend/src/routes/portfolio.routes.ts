@@ -1,7 +1,18 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { checkSlugAvailability, generatePortfolio, getPortfolio, listPortfolios, publishPortfolio, updatePortfolio } from "../services/portfolio.service.js";
+import {
+  checkSlugAvailability,
+  comparePortfolioVersion,
+  generatePortfolio,
+  getPortfolio,
+  listPortfolioVersions,
+  listPortfolios,
+  publishPortfolio,
+  restorePortfolioVersion,
+  savePortfolioVersion,
+  updatePortfolio
+} from "../services/portfolio.service.js";
 import { getPublicProfileBySlug } from "../services/public-profile.service.js";
 
 const router = Router();
@@ -24,6 +35,22 @@ router.get("/slug/:slug", asyncHandler(async (req, res) => {
 
 router.post("/generate", asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: await generatePortfolio(req.user!.id, req.body) });
+}));
+
+router.get("/:id/versions", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listPortfolioVersions(req.user!.id, param(req.params.id)) });
+}));
+
+router.post("/:id/versions", asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, data: await savePortfolioVersion(req.user!.id, param(req.params.id), req.body) });
+}));
+
+router.get("/:id/versions/:versionId/compare", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await comparePortfolioVersion(req.user!.id, param(req.params.id), param(req.params.versionId)) });
+}));
+
+router.post("/:id/versions/:versionId/restore", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await restorePortfolioVersion(req.user!.id, param(req.params.id), param(req.params.versionId), req.body) });
 }));
 
 router.get("/:id", asyncHandler(async (req, res) => {

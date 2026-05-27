@@ -1,6 +1,7 @@
 import { aiService } from "../ai/ai.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
+import { randomUUID } from "node:crypto";
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "portfolio";
@@ -13,8 +14,30 @@ const defaultSections = {
   showProjects: true,
   showSkills: true,
   showLinks: true,
-  showRoadmap: false
+  showRoadmap: false,
+  showCaseStudies: true,
+  showProofMappings: false
 };
+
+const versionedFields = [
+  "title",
+  "displayName",
+  "hero",
+  "headline",
+  "about",
+  "skills",
+  "projects",
+  "projectCaseStudies",
+  "proofMappings",
+  "resumeUrl",
+  "contactEmail",
+  "contactPhone",
+  "githubUrl",
+  "linkedinUrl",
+  "theme",
+  "sections",
+  "isPublished"
+];
 
 const reservedWords = new Set([
   "admin", "api", "dashboard", "settings", "profile", "resume", "resumes",
@@ -86,8 +109,194 @@ function normalizeArray(value: any): any[] {
   return [];
 }
 
+function normalizeString(value: any): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeStringList(value: any): string[] {
+  if (Array.isArray(value)) return value.map(normalizeString).filter(Boolean);
+  if (typeof value === "string") {
+    return value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeProofStatus(value: any): "verified" | "self-reported" | "missing" {
+  return value === "verified" || value === "missing" ? value : "self-reported";
+}
+
+function normalizeConfidence(value: any): "strong" | "medium" | "weak" {
+  return value === "strong" || value === "weak" ? value : "medium";
+}
+
+function normalizeCaseStudy(raw: any) {
+  if (typeof raw === "string") {
+    return {
+      id: randomUUID(),
+      projectName: raw,
+      proofStatus: "self-reported",
+      isPublic: false,
+      showPublicProofNotes: false
+    };
+  }
+
+  const techStack = normalizeStringList(raw?.techStack || raw?.technologies);
+  return {
+    id: normalizeString(raw?.id) || randomUUID(),
+    projectName: normalizeString(raw?.projectName || raw?.title || raw?.name),
+    problemSolved: normalizeString(raw?.problemSolved || raw?.description),
+    techStack,
+    contribution: normalizeString(raw?.contribution || raw?.role || raw?.userRole),
+    keyFeatures: normalizeStringList(raw?.keyFeatures || raw?.features),
+    challenges: normalizeString(raw?.challenges || raw?.challengesFaced),
+    solutionApproach: normalizeString(raw?.solutionApproach || raw?.solution),
+    resultLearning: normalizeString(raw?.resultLearning || raw?.result || raw?.learning),
+    githubUrl: normalizeString(raw?.githubUrl),
+    liveDemoUrl: normalizeString(raw?.liveDemoUrl || raw?.demoUrl),
+    screenshotsUrl: normalizeString(raw?.screenshotsUrl || raw?.screenshotUrl),
+    proofStatus: normalizeProofStatus(raw?.proofStatus),
+    isPublic: Boolean(raw?.isPublic),
+    publicProofNote: normalizeString(raw?.publicProofNote),
+    privateProofNotes: normalizeString(raw?.privateProofNotes || raw?.proofNotes),
+    showPublicProofNotes: Boolean(raw?.showPublicProofNotes)
+  };
+}
+
+function normalizeCaseStudies(value: any): any[] {
+  return normalizeArray(value)
+    .map(normalizeCaseStudy)
+    .filter((project) => project.projectName);
+}
+
+function normalizeProofMapping(raw: any) {
+  return {
+    id: normalizeString(raw?.id) || randomUUID(),
+    skillName: normalizeString(raw?.skillName || raw?.skill),
+    projectName: normalizeString(raw?.projectName || raw?.project),
+    resumeBullet: normalizeString(raw?.resumeBullet),
+    githubUrl: normalizeString(raw?.githubUrl),
+    liveDemoUrl: normalizeString(raw?.liveDemoUrl || raw?.demoUrl),
+    confidence: normalizeConfidence(raw?.confidence),
+    isPublic: Boolean(raw?.isPublic),
+    publicNote: normalizeString(raw?.publicNote),
+    privateNotes: normalizeString(raw?.privateNotes || raw?.notes),
+    showPublicNotes: Boolean(raw?.showPublicNotes),
+    showResumeBullet: raw?.showResumeBullet !== false
+  };
+}
+
+function normalizeProofMappings(value: any): any[] {
+  return normalizeArray(value)
+    .map(normalizeProofMapping)
+    .filter((mapping) => mapping.skillName);
+}
+
+function buildCaseStudiesFromProjects(projects: any[]): any[] {
+  return normalizeArray(projects).map((project) => {
+    const source = typeof project === "object" ? project : { title: String(project) };
+    return normalizeCaseStudy({
+      projectName: source.title || source.name,
+      problemSolved: source.description || "",
+      techStack: source.techStack || source.technologies || [],
+      proofStatus: "self-reported",
+      isPublic: false
+    });
+  }).filter((project) => project.projectName);
+}
+
+function buildProofMappings(skills: any[], caseStudies: any[], existingMappings: any[] = []): any[] {
+  const normalizedExisting = normalizeProofMappings(existingMappings);
+  if (normalizedExisting.length) return normalizedExisting;
+
+  return normalizeStringList(skills).slice(0, 12).map((skill) => {
+    const matchingProject = caseStudies.find((project) =>
+      normalizeStringList(project.techStack).some((tech) => tech.toLowerCase() === skill.toLowerCase())
+    );
+    return normalizeProofMapping({
+      skillName: skill,
+      projectName: matchingProject?.projectName || "",
+      githubUrl: matchingProject?.githubUrl || "",
+      liveDemoUrl: matchingProject?.liveDemoUrl || "",
+      confidence: matchingProject ? "medium" : "weak",
+      isPublic: false,
+      privateNotes: matchingProject ? "Self-reported from portfolio project details." : "Add a project, resume bullet, GitHub link, or live demo to strengthen this proof."
+    });
+  });
+}
+
+function sanitizePublicProject(project: any, sections: typeof defaultSections) {
+  if (typeof project !== "object" || project == null) return project;
+  const linksAllowed = Boolean(sections.showLinks);
+  const { privateProofNotes, proofNotes, internalNotes, ...safeProject } = project;
+  return {
+    ...safeProject,
+    githubUrl: linksAllowed ? normalizeString(project.githubUrl) : "",
+    liveDemoUrl: linksAllowed ? normalizeString(project.liveDemoUrl || project.demoUrl) : "",
+    screenshotsUrl: linksAllowed ? normalizeString(project.screenshotsUrl || project.screenshotUrl) : ""
+  };
+}
+
+function publicCaseStudies(projectCaseStudies: any[], sections: typeof defaultSections) {
+  if (!sections.showProjects || !sections.showCaseStudies) return [];
+  return normalizeCaseStudies(projectCaseStudies)
+    .filter((project) => project.isPublic)
+    .map((project) => ({
+      id: project.id,
+      isPublic: true,
+      projectName: project.projectName,
+      problemSolved: project.problemSolved,
+      techStack: project.techStack,
+      contribution: project.contribution,
+      keyFeatures: project.keyFeatures,
+      challenges: project.challenges,
+      solutionApproach: project.solutionApproach,
+      resultLearning: project.resultLearning,
+      proofStatus: project.proofStatus,
+      publicProofNote: project.showPublicProofNotes ? project.publicProofNote : "",
+      showPublicProofNotes: Boolean(project.showPublicProofNotes),
+      githubUrl: sections.showLinks ? project.githubUrl : "",
+      liveDemoUrl: sections.showLinks ? project.liveDemoUrl : "",
+      screenshotsUrl: sections.showLinks ? project.screenshotsUrl : ""
+    }));
+}
+
+function publicProofMappings(proofMappings: any[], sections: typeof defaultSections) {
+  if (!sections.showProofMappings) return [];
+  return normalizeProofMappings(proofMappings)
+    .filter((mapping) => mapping.isPublic)
+    .map((mapping) => ({
+      id: mapping.id,
+      isPublic: true,
+      skillName: mapping.skillName,
+      projectName: mapping.projectName,
+      resumeBullet: mapping.showResumeBullet ? mapping.resumeBullet : "",
+      confidence: mapping.confidence,
+      publicNote: mapping.showPublicNotes ? mapping.publicNote : "",
+      showPublicNotes: Boolean(mapping.showPublicNotes),
+      showResumeBullet: mapping.showResumeBullet !== false,
+      githubUrl: sections.showLinks ? mapping.githubUrl : "",
+      liveDemoUrl: sections.showLinks ? mapping.liveDemoUrl : ""
+    }));
+}
+
+function versionSnapshot(portfolio: any) {
+  return Object.fromEntries(versionedFields.map((field) => [field, portfolio[field]]));
+}
+
+function publicVersion(version: any) {
+  return {
+    id: version.id,
+    title: version.title,
+    changeSummary: version.changeSummary,
+    visibilityStatus: version.visibilityStatus,
+    createdAt: version.createdAt
+  };
+}
+
 function publicProfilePayload(userId: string, portfolio: any, input: any = {}) {
   const sections = { ...defaultSections, ...(portfolio.sections || {}), ...(input.sections || {}) };
+  const caseStudies = normalizeCaseStudies(portfolio.projectCaseStudies || input.projectCaseStudies);
+  const proofMappings = normalizeProofMappings(portfolio.proofMappings || input.proofMappings);
   return {
     userId,
     portfolioId: String(portfolio._id),
@@ -99,7 +308,9 @@ function publicProfilePayload(userId: string, portfolio: any, input: any = {}) {
     about: input.about || portfolio.about || "",
     bio: input.bio || portfolio.about || "",
     skills: normalizeArray(portfolio.skills || input.skills),
-    projects: normalizeArray(portfolio.projects || input.projects),
+    projects: sections.showProjects ? normalizeArray(portfolio.projects || input.projects).map((project) => sanitizePublicProject(project, sections)) : [],
+    projectCaseStudies: publicCaseStudies(caseStudies, sections),
+    proofMappings: publicProofMappings(proofMappings, sections),
     resumeUrl: sections.showResume ? (input.resumeUrl || portfolio.resumeUrl || "") : "",
     contactEmail: sections.showEmail ? (input.contactEmail || portfolio.contactEmail || "") : "",
     contactPhone: sections.showPhone ? (input.contactPhone || portfolio.contactPhone || "") : "",
@@ -132,6 +343,12 @@ export async function generatePortfolio(userId: string, input: any) {
   }
   const data = await aiService.portfolioGenerator(userId, input);
   const slug = requestedSlug || await uniqueSlug(input.title || input.displayName || data.hero || "portfolio");
+  const normalizedSkills = normalizeArray(input.skills).length ? normalizeArray(input.skills) : normalizeArray(data.skills);
+  const normalizedProjects = normalizeArray(input.projects).length ? normalizeArray(input.projects) : normalizeArray(data.projects);
+  const normalizedCaseStudies = normalizeCaseStudies(input.projectCaseStudies).length
+    ? normalizeCaseStudies(input.projectCaseStudies)
+    : buildCaseStudiesFromProjects(normalizedProjects);
+  const normalizedProofMappings = buildProofMappings(normalizedSkills, normalizedCaseStudies, input.proofMappings);
   const portfolio = await createRecord("portfolios", {
     userId,
     ...data,
@@ -147,8 +364,11 @@ export async function generatePortfolio(userId: string, input: any) {
     resumeUrl: input.resumeUrl,
     theme: input.theme || "classic",
     sections: { ...defaultSections, ...(input.sections || {}) },
-    skills: normalizeArray(input.skills).length ? normalizeArray(input.skills) : normalizeArray(data.skills),
-    projects: normalizeArray(input.projects).length ? normalizeArray(input.projects) : normalizeArray(data.projects),
+    skills: normalizedSkills,
+    projects: normalizedProjects,
+    projectCaseStudies: normalizedCaseStudies,
+    proofMappings: normalizedProofMappings,
+    versionHistory: [],
     about: input.about || data.about || input.portfolioContext || input.message || ""
   });
   const publicProfile = await syncPublicProfile(userId, portfolio, input);
@@ -186,8 +406,17 @@ export async function updatePortfolio(userId: string, id: string, input: any) {
     await assertExplicitSlugAvailable(requestedSlug, id, existing.publicProfile?._id);
   }
   const nextSlug = requestedSlug || existing.slug;
+  const updatePayload: any = { ...input };
+  if ("skills" in input) updatePayload.skills = normalizeArray(input.skills);
+  if ("projects" in input) updatePayload.projects = normalizeArray(input.projects);
+  if ("projectCaseStudies" in input) {
+    updatePayload.projectCaseStudies = normalizeCaseStudies(input.projectCaseStudies);
+  }
+  if ("proofMappings" in input) {
+    updatePayload.proofMappings = normalizeProofMappings(input.proofMappings);
+  }
   const updated = await updateRecord("portfolios", id, {
-    ...input,
+    ...updatePayload,
     slug: nextSlug,
     sections: { ...defaultSections, ...(existing.sections || {}), ...(input.sections || {}) }
   });
@@ -197,6 +426,77 @@ export async function updatePortfolio(userId: string, id: string, input: any) {
 
 export async function publishPortfolio(userId: string, id: string, input: any = {}) {
   return updatePortfolio(userId, id, { ...input, isPublished: input.isPublished !== false });
+}
+
+export async function savePortfolioVersion(userId: string, id: string, input: any = {}) {
+  const portfolio = await getPortfolio(userId, id);
+  const version = {
+    id: randomUUID(),
+    title: normalizeString(input.versionTitle || input.title) || `${portfolio.title || portfolio.displayName || "Portfolio"} snapshot`,
+    changeSummary: normalizeString(input.changeSummary) || "Manual saved portfolio snapshot.",
+    visibilityStatus: portfolio.isPublished ? "public" : "private",
+    createdAt: new Date().toISOString(),
+    snapshot: versionSnapshot(portfolio)
+  };
+  const versionHistory = [version, ...normalizeArray(portfolio.versionHistory)].slice(0, 25);
+  await updateRecord("portfolios", id, { versionHistory });
+  return publicVersion(version);
+}
+
+export async function listPortfolioVersions(userId: string, id: string) {
+  const portfolio = await getPortfolio(userId, id);
+  return normalizeArray(portfolio.versionHistory).map(publicVersion);
+}
+
+function findPortfolioVersion(portfolio: any, versionId: string) {
+  const version = normalizeArray(portfolio.versionHistory).find((item) => String(item.id) === String(versionId));
+  if (!version) throw new ApiError(404, "Portfolio version not found");
+  return version;
+}
+
+export async function comparePortfolioVersion(userId: string, id: string, versionId: string) {
+  const portfolio = await getPortfolio(userId, id);
+  const version = findPortfolioVersion(portfolio, versionId);
+  const snapshot = version.snapshot || {};
+  const changedFields = versionedFields
+    .filter((field) => JSON.stringify(snapshot[field] ?? null) !== JSON.stringify(portfolio[field] ?? null))
+    .map((field) => ({
+      field,
+      current: portfolio[field] ?? null,
+      previous: snapshot[field] ?? null
+    }));
+
+  return {
+    version: publicVersion(version),
+    changedFields
+  };
+}
+
+export async function restorePortfolioVersion(userId: string, id: string, versionId: string, input: any = {}) {
+  const portfolio = await getPortfolio(userId, id);
+  const version = findPortfolioVersion(portfolio, versionId);
+  const snapshot = version.snapshot || {};
+  const restorePayload = versionedFields.reduce((acc: Record<string, any>, field) => {
+    if (field in snapshot) acc[field] = snapshot[field];
+    return acc;
+  }, {});
+
+  restorePayload.slug = portfolio.slug;
+  restorePayload.versionHistory = portfolio.versionHistory || [];
+  restorePayload.sections = { ...defaultSections, ...(snapshot.sections || {}) };
+  if (input.restoreVisibility !== true) {
+    restorePayload.isPublished = Boolean(portfolio.isPublished);
+  }
+
+  const restored = await updateRecord("portfolios", id, restorePayload);
+  if (!restored) throw new ApiError(404, "Portfolio not found");
+  const publicProfile = await syncPublicProfile(userId, restored, restored);
+  return {
+    ...restored,
+    restoredVersion: publicVersion(version),
+    publicProfile,
+    publicUrl: `/u/${publicProfile.slug}`
+  };
 }
 
 export async function getPublicPortfolio(slug: string) {
@@ -226,7 +526,9 @@ export async function getPublicPortfolio(slug: string) {
     bio: publicProfile.bio,
     theme: publicProfile.theme || "classic",
     skills: sections.showSkills ? publicProfile.skills || [] : [],
-    projects: sections.showProjects ? publicProfile.projects || [] : [],
+    projects: sections.showProjects ? (publicProfile.projects || []).map((project: any) => sanitizePublicProject(project, sections)) : [],
+    projectCaseStudies: publicCaseStudies(publicProfile.projectCaseStudies || [], sections),
+    proofMappings: publicProofMappings(publicProfile.proofMappings || [], sections),
     resumeUrl: sections.showResume ? publicProfile.resumeUrl || "" : "",
     contactEmail: sections.showEmail ? publicProfile.contactEmail || "" : "",
     contactPhone: sections.showPhone ? publicProfile.contactPhone || "" : "",
