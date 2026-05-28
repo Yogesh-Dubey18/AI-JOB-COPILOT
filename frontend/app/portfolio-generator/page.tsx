@@ -87,6 +87,20 @@ type ProofMappingForm = {
   showResumeBullet: boolean;
 };
 
+type PortfolioProofFile = {
+  fileId: string;
+  projectId?: string;
+  proofMappingId?: string;
+  fileType: string;
+  originalFilename: string;
+  mimeType: string;
+  size: number;
+  visibility: "private" | "publicApproved";
+  downloadUrl?: string;
+  signedUrlExpiresInSeconds?: number;
+  storageStatusLabel?: string;
+};
+
 const defaultForm: PortfolioForm = {
   slug: "portfolio-slug",
   title: "",
@@ -253,6 +267,10 @@ export default function PortfolioGeneratorPage() {
   const [versionTitle, setVersionTitle] = useState("Recruiter-ready draft");
   const [changeSummary, setChangeSummary] = useState("Captured current portfolio content before proof or visibility changes.");
   const [compareResult, setCompareResult] = useState<any>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofTarget, setProofTarget] = useState("");
+  const [proofVisibility, setProofVisibility] = useState<"private" | "publicApproved">("private");
+  const [proofUploadMessage, setProofUploadMessage] = useState("");
 
   const portfolios = useQuery({ queryKey: ["portfolios"], queryFn: () => api.get<any[]>("/portfolios"), retry: false });
   const resumesQuery = useQuery({ queryKey: ["resumes"], queryFn: () => api.get<any[]>("/resumes"), retry: false });
@@ -408,9 +426,71 @@ export default function PortfolioGeneratorPage() {
   });
 
   const latestPortfolio = generate.data || items[0];
+  const portfolioFiles = useQuery({
+    queryKey: ["portfolio-files", latestPortfolio?._id || latestPortfolio?.id],
+    queryFn: () => api.get<PortfolioProofFile[]>(`/portfolios/${latestPortfolio._id || latestPortfolio.id}/files`),
+    enabled: Boolean(latestPortfolio?._id || latestPortfolio?.id),
+    retry: false
+  });
+  const proofTargetOptions = useMemo(() => {
+    const caseStudies: ProjectCaseStudyForm[] = (latestPortfolio?.projectCaseStudies?.length ? latestPortfolio.projectCaseStudies : form.projectCaseStudies).map(toCaseStudyForm);
+    const mappings: ProofMappingForm[] = (latestPortfolio?.proofMappings?.length ? latestPortfolio.proofMappings : form.proofMappings).map(toProofMappingForm);
+    return [
+      ...caseStudies.map((project) => ({ value: `project:${project.id}`, label: `Case study: ${project.projectName || "Untitled project"}` })),
+      ...mappings.map((mapping) => ({ value: `mapping:${mapping.id}`, label: `Skill proof: ${mapping.skillName || "Untitled skill"}` }))
+    ];
+  }, [form.projectCaseStudies, form.proofMappings, latestPortfolio]);
+
+  const uploadProofFile = useMutation({
+    mutationFn: (portfolioId: string) => {
+      if (!proofFile) throw new Error("Select a proof file before uploading.");
+      const body = new FormData();
+      body.append("proofFile", proofFile);
+      body.append("visibility", proofVisibility);
+      const [targetType, targetId] = proofTarget.split(":");
+      if (targetType === "project" && targetId) body.append("projectId", targetId);
+      if (targetType === "mapping" && targetId) body.append("proofMappingId", targetId);
+      return api.post<PortfolioProofFile>(`/portfolios/${portfolioId}/files/upload`, body);
+    },
+    onSuccess: (data) => {
+      setProofUploadMessage(`${data.originalFilename || "Proof file"} uploaded as ${data.visibility === "publicApproved" ? "public approved" : "private"}.`);
+      setProofFile(null);
+      queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    }
+  });
+
+  const updateProofFileVisibility = useMutation({
+    mutationFn: ({ portfolioId, fileId, visibility }: { portfolioId: string; fileId: string; visibility: "private" | "publicApproved" }) =>
+      api.patch<PortfolioProofFile>(`/portfolios/${portfolioId}/files/${fileId}`, { visibility }),
+    onSuccess: (data) => {
+      setProofUploadMessage(`${data.originalFilename || "Proof file"} visibility updated to ${data.visibility === "publicApproved" ? "public approved" : "private"}.`);
+      queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    }
+  });
+
+  const refreshProofFileUrl = useMutation({
+    mutationFn: ({ portfolioId, fileId }: { portfolioId: string; fileId: string }) =>
+      api.get<PortfolioProofFile>(`/portfolios/${portfolioId}/files/${fileId}/signed-url`),
+    onSuccess: (data) => {
+      setProofUploadMessage(`Signed URL refreshed for ${data.originalFilename || "proof file"}; expires in ${data.signedUrlExpiresInSeconds || 900} seconds.`);
+      queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+    }
+  });
+
+  const deleteProofFile = useMutation({
+    mutationFn: ({ portfolioId, fileId }: { portfolioId: string; fileId: string }) =>
+      api.delete<any>(`/portfolios/${portfolioId}/files/${fileId}`),
+    onSuccess: () => {
+      setProofUploadMessage("Proof file deleted and detached from portfolio proof cards.");
+      queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    }
+  });
   const serverSlugError = slugCheck.data && typeof slugCheck.data.available === "boolean" && !slugCheck.data.available ? slugCheck.data.message || "This public slug is already taken." : null;
   const effectiveSlugError = slugError || serverSlugError;
-  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error;
+  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error || uploadProofFile.error || updateProofFileVisibility.error || deleteProofFile.error || refreshProofFileUrl.error;
 
   function publicUrl(slug: string) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -636,6 +716,105 @@ export default function PortfolioGeneratorPage() {
                 <Badge>S3/R2 provider-ready only</Badge>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{signedUrlText}</p>
+            </div>
+
+            <div className="rounded-md border bg-card/50 p-4 text-sm space-y-4" data-testid="proof-file-upload-section">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Proof File Upload</p>
+                  <h3 className="font-semibold">Attach screenshots or PDFs to project proof</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Allowed file types: PNG, JPG, WEBP, PDF. Max file size: 5MB per file.</p>
+                  <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">Private proof files are only shared publicly when you approve them.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge>{storageBadgeText}</Badge>
+                  <Badge>Private by default</Badge>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Select proof file</label>
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,application/pdf"
+                    onChange={(event) => setProofFile(event.target.files?.[0] || null)}
+                    aria-label="Upload proof file"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Attach to project or proof mapping</label>
+                  <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={proofTarget} onChange={(event) => setProofTarget(event.target.value)} aria-label="Attach proof file target">
+                    <option value="">Portfolio-level file only</option>
+                    {proofTargetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Visibility</label>
+                  <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={proofVisibility} onChange={(event) => setProofVisibility(event.target.value as "private" | "publicApproved")} aria-label="Proof file visibility">
+                    <option value="private">Private</option>
+                    <option value="publicApproved">Public approved</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={!latestPortfolio || !proofFile || uploadProofFile.isPending}
+                    onClick={() => uploadProofFile.mutate(latestPortfolio._id || latestPortfolio.id)}
+                  >
+                    {uploadProofFile.isPending ? "Uploading proof file..." : "Upload proof file"}
+                  </Button>
+                </div>
+              </div>
+
+              {!latestPortfolio ? (
+                <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Generate or save a portfolio before uploading proof files.</p>
+              ) : null}
+              {proofUploadMessage ? (
+                <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-primary">{proofUploadMessage}</p>
+              ) : null}
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Current Proof Files</p>
+                {portfolioFiles.data?.length ? portfolioFiles.data.map((file) => (
+                  <div key={file.fileId} className="rounded-md border p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">{file.originalFilename || file.fileType}</p>
+                        <p className="text-xs text-muted-foreground">{file.mimeType} - {Math.ceil((file.size || 0) / 1024)} KB - signed links expire in {file.signedUrlExpiresInSeconds || 900}s</p>
+                        <p className="text-xs text-muted-foreground">Owner-maintained proof: {file.projectId || file.proofMappingId ? "file-backed attachment" : "portfolio-level file"}. Not third-party verified.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge>{file.visibility === "publicApproved" ? "Public approved" : "Private"}</Badge>
+                        <Badge>{file.storageStatusLabel || storageStatusLabel}</Badge>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <select
+                        className="h-9 rounded-md border bg-background px-3 text-xs"
+                        value={file.visibility}
+                        onChange={(event) => updateProofFileVisibility.mutate({
+                          portfolioId: latestPortfolio._id || latestPortfolio.id,
+                          fileId: file.fileId,
+                          visibility: event.target.value as "private" | "publicApproved"
+                        })}
+                        aria-label={`Visibility for ${file.originalFilename || file.fileId}`}
+                      >
+                        <option value="private">Private</option>
+                        <option value="publicApproved">Public approved</option>
+                      </select>
+                      {file.downloadUrl ? (
+                        <a href={fileHref(file.downloadUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-xs font-semibold hover:bg-muted">Download signed URL</a>
+                      ) : null}
+                      <Button type="button" variant="outline" className="h-9 px-3 text-xs" onClick={() => refreshProofFileUrl.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Refresh signed URL</Button>
+                      <Button type="button" variant="ghost" className="h-9 px-3 text-xs" onClick={() => deleteProofFile.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Delete/detach</Button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="rounded-md border border-dashed p-4 text-xs text-muted-foreground">No proof files uploaded yet. Uploads remain private until you explicitly choose Public approved.</div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3" data-testid="case-study-editor">

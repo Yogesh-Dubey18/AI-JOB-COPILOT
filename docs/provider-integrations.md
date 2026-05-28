@@ -217,6 +217,15 @@ STORAGE_SIGNED_URL_TTL_SECONDS=900
 
 Portfolio file metadata is owner-scoped and private by default. The public portfolio route can return file links only when metadata visibility is `publicApproved`.
 
+Portfolio proof file upload:
+- Supports user-initiated PNG, JPG/JPEG, WEBP, and PDF uploads.
+- Enforces a 5MB size limit.
+- Validates MIME type, extension, and file signature.
+- Defaults every uploaded file to private metadata.
+- Allows owner-controlled visibility changes to `publicApproved`.
+- Provides owner-gated signed URL/download refresh and delete/detach actions.
+- Does not mark proof as third-party verified.
+
 Local fallback:
 - Uses app-served `/uploads/...` links when the existing app supports the file.
 - Is not production-durable.
@@ -228,7 +237,7 @@ S3/R2 provider-ready behavior:
 - Uses `STORAGE_SIGNED_URL_TTL_SECONDS`, defaulting to `900` seconds.
 - Must be verified manually before status is changed to Live.
 
-Never expose absolute local disk paths, private bucket URLs, access keys, or secret keys to the frontend.
+Never expose absolute local disk paths, private bucket URLs, access keys, secret keys, or internal storage keys in public portfolio output.
 
 ---
 

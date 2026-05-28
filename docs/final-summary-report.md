@@ -4,6 +4,20 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-28 User-Initiated Portfolio Proof File Upload UX (Completed)
+
+Implemented the next safe portfolio phase without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake provider success, fake hosted-domain claims, or fake project proof.
+
+- **Backend Upload Boundary**: Added owner-scoped proof file upload, list, visibility update, signed URL refresh, attach, and delete/detach routes for portfolio files.
+- **File Validation**: Proof uploads allow PNG, JPG/JPEG, WEBP, and PDF only, enforce a 5MB limit, reject executable signatures, and validate file signatures against MIME/extension claims.
+- **Private By Default**: Uploaded proof files default to `private` metadata and require explicit `publicApproved` visibility before they can appear on `/u/[slug]`.
+- **Builder UX**: `/portfolio-generator` now includes a proof file upload section, project/proof mapping attachment selector, visibility toggle, storage status badge, signed URL/download action, and delete/detach control.
+- **Public Portfolio Safety**: `/u/[slug]` only renders public-approved proof file links, hides private files completely, and avoids leaking local paths, private bucket URLs, private notes, or internal storage keys.
+- **Provider Honesty**: Local fallback remains labeled as not production-durable. S3/R2 remains provider-ready until real credentials and signed URL behavior are configured and verified.
+- **Docs**: Added [Portfolio Proof File Upload](portfolio-proof-file-upload.md) and updated storage hardening, dynamic portfolio builder, project proof mapping, provider integration, roadmap, final summary, and changelog docs.
+
+---
+
 ## 2026-05-27 Portfolio Storage Hardening With Private S3/R2 Signed URLs (Completed)
 
 Implemented the next safe portfolio storage phase without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake provider success, or fake hosted-domain claims.

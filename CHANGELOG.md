@@ -4,6 +4,15 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.33 - User-Initiated Portfolio Proof File Upload UX (2026-05-28)
+
+- **Proof File Upload API**: Added owner-scoped upload, list, visibility update, signed URL refresh, attach, and delete/detach routes for portfolio proof files.
+- **File Validation**: Limited proof uploads to PNG, JPG/JPEG, WEBP, and PDF files up to 5MB with MIME, extension, and magic-number validation.
+- **Private By Default**: New proof files are private unless the user explicitly marks them `publicApproved`; `/u/[slug]` hides private files completely.
+- **Builder Upload UX**: Added proof file upload guidance, attachment target selection, private-by-default status, visibility controls, signed URL/download actions, and delete/detach controls to `/portfolio-generator`.
+- **Public Portfolio Safety**: Public portfolios show only public-approved file links and avoid leaking local paths, private bucket URLs, private notes, or internal storage keys.
+- **Provider Honesty**: Kept local fallback labeled as non-durable and S3/R2 as provider-ready until real credentials and signed URL behavior are verified. No fake hosted domain or fake proof claims added.
+
 ### v2.0.32 - Portfolio Storage Hardening With Signed URL Readiness (2026-05-27)
 
 - **Private File Metadata**: Added owner-scoped portfolio file metadata for resume PDFs, portfolio PDFs, screenshots, proof files, and generated portfolio assets.

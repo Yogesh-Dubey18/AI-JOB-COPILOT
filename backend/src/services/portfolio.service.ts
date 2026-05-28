@@ -245,6 +245,17 @@ function publicFileReferences(files: any[] = []) {
     .filter((file: any) => file.visibility === "publicApproved");
 }
 
+function upsertProofFile(files: any[] = [], fileRef: any) {
+  const safeFile = sanitizePortfolioFileReferences([fileRef])[0];
+  if (!safeFile) return sanitizePortfolioFileReferences(files);
+  const existing = sanitizePortfolioFileReferences(files).filter((file: any) => String(file.fileId) !== String(safeFile.fileId));
+  return [...existing, safeFile];
+}
+
+function removeProofFile(files: any[] = [], fileId: string) {
+  return sanitizePortfolioFileReferences(files).filter((file: any) => String(file.fileId) !== String(fileId));
+}
+
 function publicCaseStudies(projectCaseStudies: any[], sections: typeof defaultSections) {
   if (!sections.showProjects || !sections.showCaseStudies) return [];
   return normalizeCaseStudies(projectCaseStudies)
@@ -437,6 +448,54 @@ export async function updatePortfolio(userId: string, id: string, input: any) {
 
 export async function publishPortfolio(userId: string, id: string, input: any = {}) {
   return updatePortfolio(userId, id, { ...input, isPublished: input.isPublished !== false });
+}
+
+export async function attachPortfolioFileReference(userId: string, id: string, fileRef: any) {
+  const portfolio = await getPortfolio(userId, id);
+  const safeFile = sanitizePortfolioFileReferences([fileRef])[0];
+  if (!safeFile) throw new ApiError(400, "Valid proof file metadata is required");
+
+  let attached = false;
+  const projectCaseStudies = normalizeCaseStudies(portfolio.projectCaseStudies || []).map((project) => {
+    if (safeFile.projectId && String(project.id) === String(safeFile.projectId)) {
+      attached = true;
+      return { ...project, proofFiles: upsertProofFile(project.proofFiles, safeFile) };
+    }
+    return project;
+  });
+  const proofMappings = normalizeProofMappings(portfolio.proofMappings || []).map((mapping) => {
+    if (safeFile.proofMappingId && String(mapping.id) === String(safeFile.proofMappingId)) {
+      attached = true;
+      return { ...mapping, proofFiles: upsertProofFile(mapping.proofFiles, safeFile) };
+    }
+    return mapping;
+  });
+
+  if ((safeFile.projectId || safeFile.proofMappingId) && !attached) {
+    throw new ApiError(404, "Portfolio proof attachment target not found");
+  }
+
+  const updated = await updateRecord("portfolios", id, { projectCaseStudies, proofMappings });
+  if (!updated) throw new ApiError(404, "Portfolio not found");
+  const publicProfile = await syncPublicProfile(userId, updated, updated);
+  return { ...updated, publicProfile, publicUrl: `/u/${publicProfile.slug}` };
+}
+
+export async function detachPortfolioFileReference(userId: string, id: string, fileId: string) {
+  const portfolio = await getPortfolio(userId, id);
+  const projectCaseStudies = normalizeCaseStudies(portfolio.projectCaseStudies || []).map((project) => ({
+    ...project,
+    proofFiles: removeProofFile(project.proofFiles, fileId)
+  }));
+  const proofMappings = normalizeProofMappings(portfolio.proofMappings || []).map((mapping) => ({
+    ...mapping,
+    proofFiles: removeProofFile(mapping.proofFiles, fileId)
+  }));
+
+  const updated = await updateRecord("portfolios", id, { projectCaseStudies, proofMappings });
+  if (!updated) throw new ApiError(404, "Portfolio not found");
+  const publicProfile = await syncPublicProfile(userId, updated, updated);
+  return { ...updated, publicProfile, publicUrl: `/u/${publicProfile.slug}` };
 }
 
 export async function savePortfolioVersion(userId: string, id: string, input: any = {}) {

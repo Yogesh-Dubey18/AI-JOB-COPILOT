@@ -1297,6 +1297,80 @@ describe("AI Job Copilot API", () => {
     expect(publicProfile.body.data.proofMappings[0].proofFiles).toHaveLength(1);
     expect(publicProfile.body.data.proofMappings[0].proofFiles[0].fileId).toBe("public-mapping-file");
     expect(publicProfile.body.data.proofMappings[0].proofFiles[0].downloadUrl).toBe("/uploads/proof/public-mapping.pdf");
-    expect(publicJson).not.toMatch(/private-case|private-mapping|private-bucket|C:\\|absolutePath|localPath/);
+    expect(publicJson).not.toMatch(/private-case|private-mapping|private-bucket|storageKey|C:\\|absolutePath|localPath/);
+  });
+
+  it("uploads user-initiated proof files privately by default and gates signed URLs by ownership", async () => {
+    const agent = await authAgent();
+    const created = await agent.post("/api/portfolios/generate").send({
+      slug: "upload-proof-portfolio",
+      title: "Upload Proof Portfolio",
+      displayName: "Upload Proof Dev",
+      headline: "Full-stack developer",
+      isPublished: true,
+      sections: {
+        showProjects: true,
+        showCaseStudies: true,
+        showProofMappings: true,
+        showLinks: true
+      },
+      projectCaseStudies: [
+        {
+          id: "case-upload",
+          projectName: "Upload UX",
+          problemSolved: "Attached proof files safely.",
+          proofStatus: "self-reported",
+          isPublic: true
+        }
+      ]
+    }).expect(201);
+    const portfolioId = created.body.data._id;
+    const pngBuffer = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from("proof")
+    ]);
+
+    await agent.post(`/api/portfolios/${portfolioId}/files/upload`)
+      .field("projectId", "case-upload")
+      .attach("proofFile", Buffer.from("not allowed"), { filename: "proof.txt", contentType: "text/plain" })
+      .expect(400);
+
+    await agent.post(`/api/portfolios/${portfolioId}/files/upload`)
+      .field("projectId", "case-upload")
+      .attach("proofFile", Buffer.alloc(5.1 * 1024 * 1024), { filename: "big.png", contentType: "image/png" })
+      .expect(400);
+
+    const uploaded = await agent.post(`/api/portfolios/${portfolioId}/files/upload`)
+      .field("projectId", "case-upload")
+      .attach("proofFile", pngBuffer, { filename: "proof.png", contentType: "image/png" })
+      .expect(201);
+
+    expect(uploaded.body.data.visibility).toBe("private");
+    expect(uploaded.body.data.fileType).toBe("screenshot");
+    expect(uploaded.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+    expect(JSON.stringify(uploaded.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
+
+    const privatePublicProfile = await request(app).get("/api/portfolios/public/upload-proof-portfolio").expect(200);
+    expect(privatePublicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(0);
+
+    const otherAgent = request.agent(app);
+    await otherAgent.post("/api/auth/register").send({ fullName: "Other User", email: "other@example.com", password: "Password123!" }).expect(201);
+    await otherAgent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(404);
+
+    const signed = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(200);
+    expect(signed.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+
+    const approved = await agent.patch(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}`).send({ visibility: "publicApproved" }).expect(200);
+    expect(approved.body.data.visibility).toBe("publicApproved");
+
+    const publicProfile = await request(app).get("/api/portfolios/public/upload-proof-portfolio").expect(200);
+    expect(publicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(1);
+    expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].fileId).toBe(uploaded.body.data.fileId);
+    expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+    expect(JSON.stringify(publicProfile.body.data)).not.toMatch(/storageKey|C:\\|localPath|absolutePath|private-bucket/);
+
+    await agent.delete(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}`).expect(200);
+    const files = await agent.get(`/api/portfolios/${portfolioId}/files`).expect(200);
+    expect(files.body.data).toHaveLength(0);
   });
 });

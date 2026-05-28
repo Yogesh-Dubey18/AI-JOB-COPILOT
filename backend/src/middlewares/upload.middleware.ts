@@ -12,6 +12,13 @@ const allowedMimeTypes = new Set([
   "text/plain"
 ]);
 
+const allowedProofFileMimeTypes = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "application/pdf"
+]);
+
 export const resumeUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, uploadDir),
@@ -21,6 +28,18 @@ export const resumeUpload = multer({
   fileFilter: (_req, file, cb) => {
     if (!allowedMimeTypes.has(file.mimetype)) {
       cb(new ApiError(400, "Only PDF, DOCX, and TXT resumes are allowed"));
+      return;
+    }
+    cb(null, true);
+  }
+});
+
+export const portfolioProofUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!allowedProofFileMimeTypes.has(file.mimetype)) {
+      cb(new ApiError(400, "Only PNG, JPG, WEBP, and PDF proof files are allowed"));
       return;
     }
     cb(null, true);

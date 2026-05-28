@@ -307,6 +307,9 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                       {proofFiles.length ? (
                         <div className="mt-4 rounded-md border p-3">
                           <p className="text-xs font-semibold uppercase tracking-wide">Public-approved proof files</p>
+                          <p className={`mt-1 text-xs ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>
+                            Owner-maintained file-backed proof. This does not imply third-party verification.
+                          </p>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {proofFiles.map((file: any) => (
                               file.downloadUrl ? (

@@ -388,6 +388,30 @@ describe("frontend pages", () => {
           })
         });
       }
+      if (String(url).includes("/portfolios/portfolio-1/files")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: [
+              {
+                fileId: "proof-file-1",
+                projectId: "case-1",
+                fileType: "screenshot",
+                originalFilename: "proof.png",
+                mimeType: "image/png",
+                size: 2048,
+                visibility: "private",
+                downloadUrl: "/uploads/portfolio-proof/proof.png",
+                signedUrlExpiresInSeconds: 900,
+                storageStatusLabel: "Local fallback storage (not production-durable)"
+              }
+            ]
+          })
+        });
+      }
       if (String(url).includes("/portfolios")) {
         return Promise.resolve({
           ok: true,
@@ -402,7 +426,9 @@ describe("frontend pages", () => {
               headline: "Full Stack Dev",
               theme: "classic",
               isPublished: true,
-              skills: ["React", "Node.js"]
+              skills: ["React", "Node.js"],
+              projectCaseStudies: [{ id: "case-1", projectName: "Proof Project" }],
+              proofMappings: [{ id: "proof-1", skillName: "React" }]
             }
           ]
         });
@@ -441,6 +467,11 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Private files are only shared when you approve them/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Signed URL\/download readiness/i).length).toBeGreaterThan(0);
     expect(screen.getByTestId("proof-file-readiness")).toBeInTheDocument();
+    expect(screen.getByTestId("proof-file-upload-section")).toBeInTheDocument();
+    expect(screen.getByText(/Allowed file types: PNG, JPG, WEBP, PDF/i)).toBeInTheDocument();
+    expect(screen.getByText(/Max file size: 5MB/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Proof file visibility")).toBeInTheDocument();
+    expect(screen.getByText(/Private proof files are only shared publicly when you approve them/i)).toBeInTheDocument();
     expect(screen.getByText(/does not provision a hosted domain/i)).toBeInTheDocument();
     expect(screen.queryByText(/permanent public hosting/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/S3\/R2 Live/i)).not.toBeInTheDocument();
@@ -465,6 +496,9 @@ describe("frontend pages", () => {
       expect(screen.getByTestId("version-history")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Save current version/i })).toBeInTheDocument();
       expect(screen.getByText("Recruiter draft")).toBeInTheDocument();
+      expect(screen.getByText("proof.png")).toBeInTheDocument();
+      expect(screen.getByText(/Owner-maintained proof/i)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Download signed URL/i })).toBeInTheDocument();
     });
 
     // 3. Trigger PDF export
@@ -1405,6 +1439,7 @@ describe("public portfolio page /u/[slug]", () => {
     expect(screen.getAllByText("Project Alpha").length).toBeGreaterThan(0);
     expect(screen.getByText(/Proof badges are user-maintained/i)).toBeInTheDocument();
     expect(screen.getByText(/Public-approved proof files/i)).toBeInTheDocument();
+    expect(screen.getByText(/Owner-maintained file-backed proof/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Signed proof file: architecture-proof\.pdf \(900s\)/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Signed proof file: react-proof\.pdf/i })).toBeInTheDocument();
     expect(screen.getByText("Skill Proof Map")).toBeInTheDocument();
@@ -1480,6 +1515,12 @@ describe("portfolio builder empty state and custom builder input toggles", () =>
         });
       }
       if (url.includes("/portfolios/portfolio-1/versions")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({ success: true, data: [] })
+        });
+      }
+      if (url.includes("/portfolios/portfolio-1/files")) {
         return Promise.resolve({
           ok: true, status: 200, headers: new Headers(),
           json: async () => ({ success: true, data: [] })

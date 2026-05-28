@@ -58,3 +58,51 @@ export function validateResumeBuffer(buffer: Buffer, filename: string, mimeType:
     throw new ApiError(400, "Only PDF and DOCX resumes are supported");
   }
 }
+
+const proofFileMimeToExtensions: Record<string, string[]> = {
+  "image/png": ["png"],
+  "image/jpeg": ["jpg", "jpeg"],
+  "image/webp": ["webp"],
+  "application/pdf": ["pdf"]
+};
+
+export function validatePortfolioProofFileBuffer(buffer: Buffer, filename: string, mimeType: string): void {
+  const MAX_SIZE = 5 * 1024 * 1024;
+  if (buffer.length > MAX_SIZE) {
+    throw new ApiError(400, "File is too large. Maximum allowed size is 5MB");
+  }
+
+  if (buffer.length >= 2 && buffer[0] === 0x4d && buffer[1] === 0x5a) {
+    throw new ApiError(400, "Risky executable file formats are rejected");
+  }
+  if (buffer.length >= 4 && buffer[0] === 0x7f && buffer[1] === 0x45 && buffer[2] === 0x4c && buffer[3] === 0x46) {
+    throw new ApiError(400, "Risky executable file formats are rejected");
+  }
+
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  const allowedExtensions = proofFileMimeToExtensions[mimeType];
+  if (!allowedExtensions || !allowedExtensions.includes(ext)) {
+    throw new ApiError(400, "Only PNG, JPG, WEBP, and PDF proof files are allowed");
+  }
+
+  if (mimeType === "application/pdf") {
+    if (buffer.length < 4 || buffer[0] !== 0x25 || buffer[1] !== 0x50 || buffer[2] !== 0x44 || buffer[3] !== 0x46) {
+      throw new ApiError(400, "File content does not match the selected proof file type");
+    }
+  } else if (mimeType === "image/png") {
+    const png = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    if (buffer.length < png.length || !png.every((byte, index) => buffer[index] === byte)) {
+      throw new ApiError(400, "File content does not match the selected proof file type");
+    }
+  } else if (mimeType === "image/jpeg") {
+    if (buffer.length < 3 || buffer[0] !== 0xff || buffer[1] !== 0xd8 || buffer[2] !== 0xff) {
+      throw new ApiError(400, "File content does not match the selected proof file type");
+    }
+  } else if (mimeType === "image/webp") {
+    const riff = buffer.subarray(0, 4).toString("ascii");
+    const webp = buffer.subarray(8, 12).toString("ascii");
+    if (buffer.length < 12 || riff !== "RIFF" || webp !== "WEBP") {
+      throw new ApiError(400, "File content does not match the selected proof file type");
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Portfolio Storage Hardening
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 This phase hardens the portfolio file boundary for resume PDFs, portfolio PDFs, screenshots, generated portfolio assets, and project proof files. It adds private metadata and signed URL readiness without claiming S3/R2 is live.
 
@@ -12,6 +12,7 @@ This phase hardens the portfolio file boundary for resume PDFs, portfolio PDFs, 
 | Storage key sanitization | Implemented | Absolute local paths, bucket URLs, empty path segments, and traversal keys are rejected. |
 | Signed download/view URL readiness | Implemented | S3/R2 uses presigned URLs when configured; local fallback returns safe app upload routes. |
 | Default signed URL TTL | Implemented | Defaults to `900` seconds through `STORAGE_SIGNED_URL_TTL_SECONDS`. |
+| User-initiated proof file upload UX | Implemented | Owners can upload PNG, JPG, WEBP, and PDF proof files up to 5MB. |
 | Public portfolio file filtering | Implemented | `/u/[slug]` receives only `publicApproved` file metadata and links. |
 | Real S3/R2 bucket activation | Provider-ready | Requires credentials, bucket policy, and manual verification before marking Live. |
 | Custom hosted portfolio domains | Provider-ready only | No Vercel domain provisioning is implemented. |
@@ -45,7 +46,21 @@ Protected owner endpoints:
 GET /api/portfolios/storage/status
 GET /api/portfolios/:id/files
 POST /api/portfolios/:id/files/metadata
+POST /api/portfolios/:id/files/upload
+PATCH /api/portfolios/:id/files/:fileId
+GET /api/portfolios/:id/files/:fileId/signed-url
+POST /api/portfolios/:id/files/:fileId/attach
+DELETE /api/portfolios/:id/files/:fileId
 ```
+
+Upload rules:
+
+- Form field is `proofFile`.
+- Allowed MIME types are `image/png`, `image/jpeg`, `image/webp`, and `application/pdf`.
+- Maximum file size is 5MB.
+- Extension and magic-number/signature validation must both pass.
+- Uploaded files are stored as private metadata by default.
+- Owners can attach files to a project case study or skill proof mapping through `projectId` or `proofMappingId`.
 
 Public portfolio endpoint:
 
@@ -59,6 +74,7 @@ Public behavior:
 - `publicApproved` files can be returned with short-lived signed download/view links.
 - Expired or unavailable file links should be shown as unavailable, not broken.
 - Public file links do not imply third-party proof verification.
+- Public file payloads must not include absolute local paths, private bucket URLs, raw provider credentials, or internal storage keys.
 
 ## Signed URL Rules
 
@@ -73,6 +89,7 @@ Public behavior:
 - Public portfolios only show file links after the owner marks them `publicApproved`.
 - Email, phone, private notes, and unpublished portfolio data remain hidden unless explicitly enabled by existing visibility controls.
 - Restoring a portfolio version must not publish private files accidentally; the public projection still filters file visibility.
+- Delete/detach removes the stored object through the storage abstraction and removes portfolio proof references.
 
 ## Required Environment Placeholders
 

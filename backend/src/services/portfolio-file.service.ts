@@ -1,13 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { ApiError } from "../utils/ApiError.js";
-import { createRecord, findRecordById, findRecords } from "../utils/repository.js";
+import { createRecord, deleteRecord, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import {
+  deleteFile,
   getProvider,
   getSignedUrl,
   getSignedUrlTtlSeconds,
   getStorageStatus,
-  normalizeStorageKey
+  normalizeStorageKey,
+  uploadFile
 } from "./storage.service.js";
+import { validatePortfolioProofFileBuffer } from "./file-validation.service.js";
 
 const fileTypes = new Set(["resumePdf", "portfolioPdf", "screenshot", "proofFile", "other"]);
 const storageProviders = new Set(["local", "s3", "r2"]);
@@ -28,6 +31,17 @@ function normalizeProvider(value: any): "local" | "s3" | "r2" {
 function normalizeSize(value: any) {
   const size = Number(value);
   return Number.isFinite(size) && size > 0 ? size : 0;
+}
+
+function sanitizeFilename(filename: string) {
+  const safe = String(filename || "proof-file").replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-");
+  return safe.slice(0, 120) || "proof-file";
+}
+
+function inferProofFileType(input: any, mimeType: string) {
+  if (input?.fileType === "screenshot") return "screenshot";
+  if (input?.fileType === "proofFile") return "proofFile";
+  return mimeType.startsWith("image/") ? "screenshot" : "proofFile";
 }
 
 export function sanitizePortfolioFileReference(raw: any) {
@@ -97,7 +111,10 @@ export async function resolvePublicPortfolioFiles(files: any[] = []) {
     .filter((file): file is NonNullable<ReturnType<typeof sanitizePortfolioFileReference>> => Boolean(file && file.visibility === "publicApproved"));
 
   const resolved = await Promise.all(publicFiles.map((file) => presentPortfolioFile(file, { includeSignedUrl: true })));
-  return resolved.filter(Boolean);
+  return resolved.filter(Boolean).map((file: any) => {
+    const { storageKey, ...publicFile } = file;
+    return publicFile;
+  });
 }
 
 export function sanitizePortfolioFileReferences(files: any[] = []) {
@@ -110,6 +127,12 @@ async function assertPortfolioOwner(userId: string, portfolioId: string) {
     throw new ApiError(404, "Portfolio not found");
   }
   return portfolio;
+}
+
+async function findOwnedPortfolioFile(userId: string, portfolioId: string, fileId: string) {
+  const file = await findOneRecord("portfolioFiles", { ownerId: userId, portfolioId, fileId });
+  if (!file) throw new ApiError(404, "Portfolio proof file not found");
+  return file;
 }
 
 export async function createPortfolioFileMetadata(userId: string, portfolioId: string, input: any = {}) {
@@ -135,11 +158,73 @@ export async function createPortfolioFileMetadata(userId: string, portfolioId: s
   return presentPortfolioFile(created, { includeSignedUrl: true, allowPrivate: true });
 }
 
+export async function uploadPortfolioProofFile(userId: string, portfolioId: string, file: Express.Multer.File | undefined, input: any = {}) {
+  await assertPortfolioOwner(userId, portfolioId);
+  if (!file?.buffer) {
+    throw new ApiError(400, "Proof file is required");
+  }
+
+  validatePortfolioProofFileBuffer(file.buffer, file.originalname, file.mimetype);
+
+  const fileId = randomUUID();
+  const safeName = sanitizeFilename(file.originalname);
+  const storageKey = await uploadFile(`portfolio-proof/${userId}/${portfolioId}/${fileId}-${safeName}`, file.buffer, file.mimetype);
+  const created = await createRecord("portfolioFiles", {
+    fileId,
+    ownerId: userId,
+    portfolioId,
+    projectId: input.projectId ? String(input.projectId) : "",
+    proofMappingId: input.proofMappingId ? String(input.proofMappingId) : "",
+    fileType: inferProofFileType(input, file.mimetype),
+    storageProvider: getProvider(),
+    storageKey,
+    originalFilename: safeName,
+    mimeType: file.mimetype,
+    size: file.size || file.buffer.length,
+    visibility: normalizeVisibility(input.visibility)
+  });
+
+  return presentPortfolioFile(created, { includeSignedUrl: true, allowPrivate: true });
+}
+
 export async function listPortfolioFiles(userId: string, portfolioId: string) {
   await assertPortfolioOwner(userId, portfolioId);
   const files = await findRecords("portfolioFiles", { ownerId: userId, portfolioId }, { sort: { createdAt: -1 } });
   const presented = await Promise.all(files.map((file) => presentPortfolioFile(file, { includeSignedUrl: true, allowPrivate: true })));
   return presented.filter(Boolean);
+}
+
+export async function updatePortfolioFileVisibility(userId: string, portfolioId: string, fileId: string, visibility: any) {
+  await assertPortfolioOwner(userId, portfolioId);
+  const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  const updated = await updateRecord("portfolioFiles", String(file._id), { visibility: normalizeVisibility(visibility) });
+  return presentPortfolioFile(updated, { includeSignedUrl: true, allowPrivate: true });
+}
+
+export async function updatePortfolioFile(userId: string, portfolioId: string, fileId: string, input: any = {}) {
+  await assertPortfolioOwner(userId, portfolioId);
+  const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  const updatePayload: any = {};
+  if ("visibility" in input) updatePayload.visibility = normalizeVisibility(input.visibility);
+  if ("projectId" in input) updatePayload.projectId = input.projectId ? String(input.projectId) : "";
+  if ("proofMappingId" in input) updatePayload.proofMappingId = input.proofMappingId ? String(input.proofMappingId) : "";
+  if ("fileType" in input) updatePayload.fileType = normalizeFileType(input.fileType);
+  const updated = await updateRecord("portfolioFiles", String(file._id), updatePayload);
+  return presentPortfolioFile(updated, { includeSignedUrl: true, allowPrivate: true });
+}
+
+export async function getPortfolioFileSignedUrl(userId: string, portfolioId: string, fileId: string) {
+  await assertPortfolioOwner(userId, portfolioId);
+  const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  return presentPortfolioFile(file, { includeSignedUrl: true, allowPrivate: true });
+}
+
+export async function deletePortfolioFile(userId: string, portfolioId: string, fileId: string) {
+  await assertPortfolioOwner(userId, portfolioId);
+  const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  await deleteFile(file.storageKey);
+  await deleteRecord("portfolioFiles", String(file._id));
+  return { deleted: true, fileId };
 }
 
 export function getPortfolioStorageStatus() {

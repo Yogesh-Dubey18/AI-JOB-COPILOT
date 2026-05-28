@@ -1,7 +1,7 @@
 # AI Job Copilot — Advanced Real Product Roadmap
 
 > **Version**: v2 Beta+ (post-audit)
-> **Last updated**: 2026-05-27
+> **Last updated**: 2026-05-28
 > **Principle**: Every feature must be honest, user-controlled, compliant, and production-safe. No fake metrics. No auto-apply. No scraping.
 
 ---
@@ -30,6 +30,7 @@
 | Project case-study proof mapping | Complete |
 | Portfolio storage hardening with private metadata | Complete |
 | Public-approved signed proof file links | Complete |
+| User-initiated portfolio proof file upload UX | Complete |
 | Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
@@ -86,6 +87,7 @@
 | Portfolio version save/list/compare/restore | Complete |
 | Recruiter-facing project case studies | Complete |
 | Skill-to-proof mapping with privacy controls | Complete |
+| Proof file upload, visibility update, signed URL refresh, and delete/detach | Complete |
 | Custom-domain hosting | Provider-ready only |
 
 ---
@@ -162,10 +164,10 @@
 
 ## Roadmap Priorities (Next)
 
-Recommended priority update after portfolio storage hardening:
+Recommended priority update after user-initiated portfolio proof upload:
 
 1. **GitHub proof verification provider-ready integration** - optional GitHub API checks for repository existence and README quality without fake stats
-2. **Portfolio file upload UX** - user-initiated upload for proof files/screenshots using the private metadata and signed URL boundary
+2. **Proof file scanning provider-ready boundary** - optional malware scanning service before production S3/R2 activation
 3. **Resume compare view** - diff between original and tailored version using changeSummary
 4. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
 5. **Notification reminders** - email alerts for follow-ups when SendGrid configured

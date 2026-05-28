@@ -1,6 +1,6 @@
 # Dynamic Portfolio Builder And Public Slugs
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 This document covers the implemented Dynamic Portfolio Builder & Public Slugs phase. It is an app-level public portfolio feature, not a custom-domain hosting provider activation.
 
@@ -21,6 +21,10 @@ This document covers the implemented Dynamic Portfolio Builder & Public Slugs ph
 - Skill-to-proof mapping cards that connect skills to projects, resume bullets, and proof links.
 - Portfolio file metadata readiness for resume PDFs, portfolio PDFs, screenshots, and proof files.
 - Storage status badge and signed URL/download status text in the builder.
+- User-initiated proof file upload UX for PNG, JPG, WEBP, and PDF files up to 5MB.
+- Proof file attach controls for project case studies and skill proof mappings.
+- Proof file visibility toggle for `private` or `publicApproved`.
+- Signed URL refresh and delete/detach actions for owner-managed proof files.
 - Public portfolio filtering for `publicApproved` proof files only.
 
 ## Public Slug Behavior
@@ -62,7 +66,7 @@ The public endpoint does not expose user IDs, private resume records, auth data,
 
 Private case-study notes and private proof-mapping notes are never returned by the public endpoint. GitHub, live demo, and screenshot links for case studies are withheld when social links are disabled.
 
-Private file metadata is kept owner-scoped. Absolute local paths and private bucket URLs are not returned to the frontend. Local fallback links remain non-durable and should not be presented as production hosting.
+Private file metadata is kept owner-scoped. Absolute local paths, private bucket URLs, provider credentials, and internal storage keys are not returned by the public portfolio endpoint. Local fallback links remain non-durable and should not be presented as production hosting.
 
 ## Data Sources
 
@@ -99,6 +103,26 @@ Signed URL behavior:
 - S3/R2 signed URLs are provider-ready until credentials and bucket access are verified.
 - Local fallback returns app-served `/uploads/...` links only when the existing app supports that file.
 - Proof files are private by default and only appear on `/u/[slug]` when marked `publicApproved`.
+
+## Proof File Upload Behavior
+
+The builder accepts user-initiated proof uploads only after a portfolio exists.
+
+Supported files:
+
+- PNG
+- JPG/JPEG
+- WEBP
+- PDF
+
+Safety rules:
+
+- Maximum size is 5MB.
+- Uploaded files default to `private`.
+- Owners can attach a file to a project case study, a skill proof mapping, or keep it portfolio-level.
+- Owners can switch visibility to `publicApproved`, refresh a signed/download URL, or delete/detach the file.
+- Public portfolios show only public-approved file links and hide private files completely.
+- Uploaded files are owner-maintained proof and do not imply third-party verification.
 
 ## Provider Honesty
 
