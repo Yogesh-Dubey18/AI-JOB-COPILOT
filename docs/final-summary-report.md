@@ -18,6 +18,21 @@ Implemented the next safe portfolio phase without starting Stripe, subscription 
 
 ---
 
+## 2026-05-28 GitHub Proof Verification Provider-Ready Integration (Completed)
+
+Implemented the GitHub proof verification readiness phase without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake provider success, fake GitHub stats, or fake verification claims.
+
+- **Provider Status**: Added GitHub provider status for Live, Provider-ready, Manual fallback, and Not configured contexts. Live requires configured credentials and a successful metadata request.
+- **GitHub Parser**: Added safe `github.com/owner/repo` parsing with canonical repo URLs and invalid URL rejection.
+- **Manual Fallback**: Public repo URLs can be used as owner-maintained proof when GitHub credentials are missing; no stars, forks, commits, contributors, or verification are invented.
+- **Confidence Logic**: Added `strong`, `medium`, `weak`, and `self-reported` confidence rules based on repo metadata, README presence, keyword matches, or owner-provided context.
+- **Builder Integration**: `/portfolio-generator` now includes GitHub proof fields, `Check GitHub proof` actions, provider status badges, confidence summaries, and public visibility gates for project case studies and skill proof mappings.
+- **Public Portfolio Safety**: `/u/[slug]` shows GitHub proof links and safe metadata only when `showGitHubProof` is enabled, while private notes and hidden proof links remain excluded.
+- **GitHub Analyzer Notice**: Updated the analyzer copy to explain provider-ready metadata limits and the no-fake-stats policy.
+- **Docs**: Added [GitHub Proof Verification](github-proof-verification.md) and updated portfolio, proof mapping, provider integration, roadmap, final summary, and changelog docs.
+
+---
+
 ## 2026-05-27 Portfolio Storage Hardening With Private S3/R2 Signed URLs (Completed)
 
 Implemented the next safe portfolio storage phase without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake provider success, or fake hosted-domain claims.

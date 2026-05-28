@@ -23,7 +23,7 @@ AI Job Copilot is provider-ready. Live external integrations must be enabled onl
 | AWS S3 / R2 | Storage | Provider-ready | Resume, portfolio PDF, screenshot, and proof file storage |
 | Google Calendar | Calendar | Provider-ready | Interview reminders |
 | Coursera / Udemy | Courses | Provider-ready | Skill gap course links |
-| GitHub API | Dev Tools | Provider-ready | Project analyzer |
+| GitHub API | Dev Tools | Provider-ready / manual fallback | Portfolio proof verification and project analyzer |
 | Chrome Extension | Browser | Provider-ready | Job capture from boards |
 | Portfolio custom domains | Hosting | Provider-ready only | Optional custom domains for public portfolio slugs |
 
@@ -262,6 +262,45 @@ PORTFOLIO_BASE_DOMAIN=
 ```
 
 Do not set these as "live" until domain ownership checks, DNS configuration, abuse controls, and verification tests are implemented.
+
+---
+
+## GitHub Proof Verification
+
+GitHub proof verification supports recruiter-facing portfolio evidence without fake metrics.
+
+**Status**: Manual fallback by default; provider-ready for GitHub API metadata when credentials are configured. Mark Live only after a real metadata request succeeds.
+
+**Required env vars (backend)**:
+
+```env
+GITHUB_TOKEN=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+```
+
+Current behavior:
+
+- Public GitHub repo URLs can be entered manually in `/portfolio-generator`.
+- The backend validates `github.com/owner/repo` URLs and stores a canonical repo URL.
+- `/api/portfolios/github/status` reports Live, Provider-ready, Manual fallback, or Not configured honestly.
+- `/api/portfolios/github/check` parses owner/repo and returns confidence without inventing stars, forks, commits, contributors, or verification.
+- With `GITHUB_TOKEN` configured, the backend can fetch safe public metadata: repo name, description, languages, README presence, last updated date, public URL, default branch, and topics.
+- Public `/u/[slug]` shows GitHub proof only when the owner enables the `showGitHubProof` gate.
+
+Setup steps:
+
+1. Create a GitHub fine-grained token with read-only public repository metadata scope, or configure a GitHub OAuth app for future user-consented private repo access.
+2. Add `GITHUB_TOKEN` or OAuth client credentials to Render backend environment variables.
+3. Restart the backend.
+4. Submit a public repository URL from `/portfolio-generator`.
+5. Confirm the response includes real metadata before treating the provider as Live.
+
+Safety notes:
+
+- Private repositories require explicit user OAuth consent before access.
+- Do not scrape GitHub pages.
+- Do not display hidden repo links, private notes, fake stats, fake verification, or provider success claims.
 
 ---
 

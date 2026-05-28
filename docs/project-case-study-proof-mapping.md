@@ -17,6 +17,8 @@ Each project case study can store:
 - solution approach
 - result or learning
 - GitHub link
+- GitHub proof object when checked
+- GitHub proof public visibility gate
 - live demo link
 - screenshots link
 - attached proof files
@@ -31,8 +33,10 @@ Each skill proof mapping can store:
 - project where used
 - resume bullet where mentioned
 - GitHub or live proof link when available
+- GitHub proof object when checked
+- GitHub proof public visibility gate
 - attached proof files when available
-- confidence: `strong`, `medium`, or `weak`
+- confidence: `strong`, `medium`, `weak`, or `self-reported`
 - public approval flag
 - private notes
 - optional public note
@@ -69,6 +73,15 @@ The builder can suggest proof mappings from user-owned data:
 
 Suggested mappings are not treated as verified. They default to private and should be reviewed by the user before being shown publicly.
 
+GitHub proof confidence is calculated conservatively:
+
+- `strong`: GitHub API metadata exists, README is detected, and repository evidence matches the skill/project keywords.
+- `medium`: A valid public repo URL exists, but no API-backed README/keyword evidence has been verified.
+- `weak`: No repo/proof link exists.
+- `self-reported`: The owner says proof exists, but no verifiable source is attached.
+
+The app never invents stars, forks, commits, contributors, testimonials, project metrics, or GitHub verification.
+
 ## Public Portfolio Behavior
 
 The public `/u/[slug]` route only shows:
@@ -77,6 +90,7 @@ The public `/u/[slug]` route only shows:
 - case studies marked public
 - proof mappings marked public
 - GitHub/live/screenshot links when social links are enabled
+- GitHub proof links only when `showGitHubProof` is enabled
 - public proof notes only when explicitly enabled
 - public-approved proof files only
 
@@ -89,6 +103,9 @@ The public route does not show:
 - user IDs
 - raw resume records
 - fake proof claims
+- hidden GitHub proof links
+- fake GitHub stats
+- fake GitHub verification
 - fake metrics, testimonials, or success stories
 
 ## No Fake Proof Policy
@@ -101,8 +118,15 @@ Do not claim skills, results, or metrics that you cannot explain or prove.
 
 The `verified` proof status is user-maintained. It does not mean GitHub, LinkedIn, employers, or AI Job Copilot have independently verified the project. Public badges are rendered as proof status labels, not third-party verification claims.
 
+GitHub proof badges are also honest labels:
+
+- `GitHub-linked`: a public repo URL exists.
+- `Evidence available`: API metadata was fetched and matched evidence rules.
+- `Self-reported`: the user provided proof context without a verified source.
+- `Missing proof`: no usable proof is attached.
+
 ## Production Notes
 
-- GitHub proof can be improved later through a real GitHub API integration, but that remains provider-ready until configured.
+- GitHub proof provider readiness is implemented through URL parsing, manual fallback, and optional API metadata when credentials are configured and tested.
 - Screenshots should point only to user-approved safe assets.
 - S3/R2 private storage and signed URLs are still required before private proof files or portfolio screenshots can be stored as production-grade assets.

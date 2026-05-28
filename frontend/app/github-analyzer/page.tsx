@@ -113,8 +113,8 @@ export default function GitHubAnalyzerPage() {
         <div className="flex items-start gap-2">
           <Info className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <p className="font-semibold">GitHub API — provider-ready</p>
-            <p className="mt-0.5">Live GitHub repo metadata (stars, contributors, languages) requires a GitHub API token or OAuth. Without it, use the manual input form below. Set <code className="rounded bg-blue-100 px-1 dark:bg-blue-900">GITHUB_TOKEN</code> in your backend <code className="rounded bg-blue-100 px-1 dark:bg-blue-900">.env</code> to activate. Private repositories require user OAuth consent.</p>
+            <p className="font-semibold">GitHub API - provider-ready</p>
+            <p className="mt-0.5">Portfolio proof checks can use public repo URLs in manual fallback mode. With <code className="rounded bg-blue-100 px-1 dark:bg-blue-900">GITHUB_TOKEN</code> configured and verified, the backend may fetch safe public metadata such as README presence, languages, topics, default branch, and last updated date. Stars, forks, commit counts, and verification claims are never invented. Private repositories require user OAuth consent.</p>
           </div>
         </div>
       </div>

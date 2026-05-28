@@ -31,6 +31,8 @@
 | Portfolio storage hardening with private metadata | Complete |
 | Public-approved signed proof file links | Complete |
 | User-initiated portfolio proof file upload UX | Complete |
+| GitHub proof URL parser and manual fallback | Complete |
+| GitHub proof confidence badges and public visibility gate | Complete |
 | Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
@@ -88,6 +90,7 @@
 | Recruiter-facing project case studies | Complete |
 | Skill-to-proof mapping with privacy controls | Complete |
 | Proof file upload, visibility update, signed URL refresh, and delete/detach | Complete |
+| GitHub proof check action, provider status badge, and no-fake-stats proof summary | Complete |
 | Custom-domain hosting | Provider-ready only |
 
 ---
@@ -141,6 +144,7 @@
 | S3/R2 resume and portfolio proof storage | AWS or Cloudflare R2 credentials, private bucket, signed URL verification |
 | Custom portfolio domains | Vercel/DNS provider credentials, ownership checks, and abuse controls |
 | Google OAuth login | Google OAuth credentials |
+| Live GitHub proof metadata | `GITHUB_TOKEN` or GitHub OAuth credentials, successful metadata verification, and private repo consent rules |
 | AI-enhanced scoring | OpenAI or Gemini API key |
 | Sentry error monitoring | Sentry DSN |
 
@@ -164,15 +168,15 @@
 
 ## Roadmap Priorities (Next)
 
-Recommended priority update after user-initiated portfolio proof upload:
+Recommended priority update after GitHub proof verification readiness:
 
-1. **GitHub proof verification provider-ready integration** - optional GitHub API checks for repository existence and README quality without fake stats
-2. **Proof file scanning provider-ready boundary** - optional malware scanning service before production S3/R2 activation
-3. **Resume compare view** - diff between original and tailored version using changeSummary
-4. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
-5. **Notification reminders** - email alerts for follow-ups when SendGrid configured
-6. **Job CSV batch import** - approved, legally-obtained job list upload
-7. **Rate limit documentation** - approved polling limits per provider
+1. **Proof file scanning provider-ready boundary** - optional malware scanning service before production S3/R2 activation
+2. **Resume compare view** - diff between original and tailored version using changeSummary
+3. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
+4. **Notification reminders** - email alerts for follow-ups when SendGrid configured
+5. **Job CSV batch import** - approved, legally-obtained job list upload
+6. **Rate limit documentation** - approved polling limits per provider
+7. **GitHub OAuth private repo consent design** - provider-ready only, no private repo access without explicit user consent
 
 Previous roadmap order retained below for historical context:
 

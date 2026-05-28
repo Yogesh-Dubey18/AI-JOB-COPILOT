@@ -33,6 +33,34 @@ function fileHref(fileUrl: string) {
   return fileUrl?.startsWith("http") ? fileUrl : `${backendOrigin}${fileUrl}`;
 }
 
+function proofBadgeLabel(item: any) {
+  if (item?.proofBadge) return item.proofBadge;
+  if (item?.githubProof?.evidenceStatus === "evidence_available") return "Evidence available";
+  if (item?.githubUrl || item?.githubProof?.repoUrl) return "GitHub-linked";
+  if (item?.confidence === "weak" || item?.proofStatus === "missing") return "Missing proof";
+  return "Self-reported";
+}
+
+function GitHubProofDetails({ proof, theme }: { proof?: any; theme?: string }) {
+  if (!proof) return null;
+  const muted = theme === "bold" ? "text-slate-400" : "text-muted-foreground";
+  const metadata = proof.metadata;
+  return (
+    <div className={`mt-3 rounded-md border p-3 text-xs ${muted}`}>
+      <p className="font-semibold">GitHub proof: {proof.owner}/{proof.repo}</p>
+      {metadata ? (
+        <div className="mt-1 space-y-1">
+          <p>README: {metadata.readmePresent ? "present" : "not detected"}; default branch: {metadata.defaultBranch || "unknown"}.</p>
+          {metadata.languages?.length ? <p>Languages reported by GitHub API: {metadata.languages.join(", ")}</p> : null}
+          {proof.keywordMatches?.length ? <p>Keyword evidence: {proof.keywordMatches.join(", ")}</p> : null}
+        </div>
+      ) : (
+        <p className="mt-1">Manual repo link. No GitHub API metadata or third-party verification is shown.</p>
+      )}
+    </div>
+  );
+}
+
 export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
   const portfolio = useQuery({
     queryKey: ["public-portfolio", slug],
@@ -245,9 +273,14 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                             <p className={`mt-1 text-sm leading-6 ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>{project.problemSolved}</p>
                           ) : null}
                         </div>
-                        <Badge className={data.theme === "bold" ? "bg-slate-800 text-slate-200" : ""}>
-                          {project.proofStatus === "verified" ? "User-marked verified" : project.proofStatus || "self-reported"}
-                        </Badge>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge className={data.theme === "bold" ? "bg-slate-800 text-slate-200" : ""}>
+                            {project.proofStatus === "verified" ? "User-marked verified" : project.proofStatus || "self-reported"}
+                          </Badge>
+                          <Badge className={data.theme === "bold" ? "bg-slate-800 text-slate-200" : ""}>
+                            {proofBadgeLabel(project)}
+                          </Badge>
+                        </div>
                       </div>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -299,11 +332,12 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
 
                       {(project.githubUrl || project.liveDemoUrl || project.screenshotsUrl) ? (
                         <div className="mt-4 flex flex-wrap gap-2">
-                          {project.githubUrl ? <a href={project.githubUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">GitHub</a> : null}
+                          {project.githubUrl ? <a href={project.githubUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">GitHub proof</a> : null}
                           {project.liveDemoUrl ? <a href={project.liveDemoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">Live demo</a> : null}
                           {project.screenshotsUrl ? <a href={project.screenshotsUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">Screenshots</a> : null}
                         </div>
                       ) : null}
+                      <GitHubProofDetails proof={project.githubProof} theme={data.theme} />
                       {proofFiles.length ? (
                         <div className="mt-4 rounded-md border p-3">
                           <p className="text-xs font-semibold uppercase tracking-wide">Public-approved proof files</p>
@@ -354,7 +388,10 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                           <>
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="font-semibold">{mapping.skillName}</h3>
-                        <Badge>{mapping.confidence || "medium"} confidence</Badge>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge>{mapping.confidence === "self-reported" ? "Self-reported" : `${mapping.confidence || "medium"} confidence`}</Badge>
+                          <Badge>{proofBadgeLabel(mapping)}</Badge>
+                        </div>
                       </div>
                       {mapping.projectName ? <p className={`mt-2 text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>Project: {mapping.projectName}</p> : null}
                       {mapping.resumeBullet ? <p className={`mt-2 text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>{mapping.resumeBullet}</p> : null}
@@ -365,6 +402,7 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                           {mapping.liveDemoUrl ? <a href={mapping.liveDemoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">Live proof</a> : null}
                         </div>
                       ) : null}
+                      <GitHubProofDetails proof={mapping.githubProof} theme={data.theme} />
                       {proofFiles.length ? (
                         <div className="mt-3 flex flex-wrap gap-2">
                           {proofFiles.map((file: any) => (

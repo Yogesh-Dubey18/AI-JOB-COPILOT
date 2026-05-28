@@ -155,6 +155,17 @@ export const externalJobProviders: ExternalJobProviderConfig[] = [
     capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
     policy: "Use SendGrid API key.",
     notes: "Transactional emails."
+  },
+  {
+    id: "github",
+    name: "GitHub API",
+    type: "api-provider",
+    trustBaseline: 100,
+    requiresReview: false,
+    envVars: ["GITHUB_TOKEN", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use public repo URLs manually, or GitHub API/OAuth credentials for provider-ready metadata checks. Do not fake stars, forks, commits, or verification.",
+    notes: "Portfolio proof metadata and README/language/topic evidence checks. Manual repo URL fallback remains available without credentials."
   }
 ];
 
@@ -192,6 +203,11 @@ export function listJobSourceReadiness() {
         } else {
           status = "not_configured";
         }
+      } else if (provider.id === "github") {
+        const hasCredential = Boolean(process.env.GITHUB_TOKEN || (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET));
+        const hasPlaceholder = provider.envVars.some((name) => typeof process.env[name] !== "undefined");
+        isLive = false;
+        status = hasCredential || hasPlaceholder ? "ready" : "not_configured";
       } else {
         isLive = provider.envVars.every((name) => Boolean(process.env[name]));
         const allExists = provider.envVars.every((name) => typeof process.env[name] !== "undefined");

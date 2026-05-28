@@ -4,6 +4,16 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.34 - GitHub Proof Verification Provider-Ready Integration (2026-05-28)
+
+- **GitHub Provider Status**: Added honest GitHub proof status for Live, Provider-ready, Manual fallback, and Not configured contexts; Live requires configured credentials and a successful metadata request.
+- **Repo URL Parser**: Added safe public GitHub URL validation and owner/repo extraction with canonical repository URLs.
+- **Manual Fallback Proof**: Public repo URLs can be used as owner-maintained proof without fake stars, forks, commits, contributors, or verification claims.
+- **Confidence Logic**: Added strong, medium, weak, and self-reported confidence rules based on metadata, README presence, keyword matches, or owner-provided context.
+- **Portfolio Builder UX**: Added GitHub proof URL fields, Check GitHub proof actions, provider status badges, confidence summaries, and public visibility gates in `/portfolio-generator`.
+- **Public Portfolio Privacy**: `/u/[slug]` shows GitHub proof links and safe metadata only when `showGitHubProof` is enabled; private notes and hidden proof links remain excluded.
+- **Docs & Env**: Added GitHub proof verification documentation and backend env placeholders for `GITHUB_TOKEN`, `GITHUB_CLIENT_ID`, and `GITHUB_CLIENT_SECRET`.
+
 ### v2.0.33 - User-Initiated Portfolio Proof File Upload UX (2026-05-28)
 
 - **Proof File Upload API**: Added owner-scoped upload, list, visibility update, signed URL refresh, attach, and delete/detach routes for portfolio proof files.

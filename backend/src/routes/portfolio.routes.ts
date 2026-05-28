@@ -17,6 +17,7 @@ import {
   updatePortfolio
 } from "../services/portfolio.service.js";
 import { getPublicProfileBySlug } from "../services/public-profile.service.js";
+import { checkGitHubProof, getGitHubProviderStatus } from "../services/github-proof.service.js";
 import {
   createPortfolioFileMetadata,
   deletePortfolioFile,
@@ -52,6 +53,14 @@ router.post("/generate", asyncHandler(async (req, res) => {
 
 router.get("/storage/status", asyncHandler(async (_req, res) => {
   res.json({ success: true, data: getPortfolioStorageStatus() });
+}));
+
+router.get("/github/status", asyncHandler(async (_req, res) => {
+  res.json({ success: true, data: getGitHubProviderStatus() });
+}));
+
+router.post("/github/check", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await checkGitHubProof(req.body) });
 }));
 
 router.get("/:id/files", asyncHandler(async (req, res) => {

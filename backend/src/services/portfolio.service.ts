@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { randomUUID } from "node:crypto";
 import { resolvePublicPortfolioFiles, sanitizePortfolioFileReferences } from "./portfolio-file.service.js";
+import { publicGitHubProof, sanitizeGitHubProof } from "./github-proof.service.js";
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "portfolio";
@@ -126,8 +127,15 @@ function normalizeProofStatus(value: any): "verified" | "self-reported" | "missi
   return value === "verified" || value === "missing" ? value : "self-reported";
 }
 
-function normalizeConfidence(value: any): "strong" | "medium" | "weak" {
-  return value === "strong" || value === "weak" ? value : "medium";
+function normalizeConfidence(value: any): "strong" | "medium" | "weak" | "self-reported" {
+  return value === "strong" || value === "weak" || value === "self-reported" ? value : "medium";
+}
+
+function proofBadge(input: { githubUrl?: string; githubProof?: any; proofStatus?: string; confidence?: string }) {
+  if (input.githubProof?.evidenceStatus === "evidence_available") return "Evidence available";
+  if (input.githubUrl || input.githubProof?.repoUrl) return "GitHub-linked";
+  if (input.proofStatus === "missing" || input.confidence === "weak") return "Missing proof";
+  return "Self-reported";
 }
 
 function normalizeCaseStudy(raw: any) {
@@ -154,6 +162,8 @@ function normalizeCaseStudy(raw: any) {
     solutionApproach: normalizeString(raw?.solutionApproach || raw?.solution),
     resultLearning: normalizeString(raw?.resultLearning || raw?.result || raw?.learning),
     githubUrl: normalizeString(raw?.githubUrl),
+    githubProof: sanitizeGitHubProof(raw?.githubProof, raw?.githubUrl),
+    showGitHubProof: Boolean(raw?.showGitHubProof || raw?.githubProof?.isPublic),
     liveDemoUrl: normalizeString(raw?.liveDemoUrl || raw?.demoUrl),
     screenshotsUrl: normalizeString(raw?.screenshotsUrl || raw?.screenshotUrl),
     proofStatus: normalizeProofStatus(raw?.proofStatus),
@@ -178,6 +188,8 @@ function normalizeProofMapping(raw: any) {
     projectName: normalizeString(raw?.projectName || raw?.project),
     resumeBullet: normalizeString(raw?.resumeBullet),
     githubUrl: normalizeString(raw?.githubUrl),
+    githubProof: sanitizeGitHubProof(raw?.githubProof, raw?.githubUrl),
+    showGitHubProof: Boolean(raw?.showGitHubProof || raw?.githubProof?.isPublic),
     liveDemoUrl: normalizeString(raw?.liveDemoUrl || raw?.demoUrl),
     confidence: normalizeConfidence(raw?.confidence),
     isPublic: Boolean(raw?.isPublic),
@@ -274,7 +286,14 @@ function publicCaseStudies(projectCaseStudies: any[], sections: typeof defaultSe
       proofStatus: project.proofStatus,
       publicProofNote: project.showPublicProofNotes ? project.publicProofNote : "",
       showPublicProofNotes: Boolean(project.showPublicProofNotes),
-      githubUrl: sections.showLinks ? project.githubUrl : "",
+      showGitHubProof: Boolean(project.showGitHubProof),
+      githubUrl: sections.showLinks && project.showGitHubProof ? project.githubUrl : "",
+      githubProof: sections.showLinks && project.showGitHubProof ? publicGitHubProof({ ...project.githubProof, isPublic: true }) : null,
+      proofBadge: proofBadge({
+        githubUrl: sections.showLinks && project.showGitHubProof ? project.githubUrl : "",
+        githubProof: sections.showLinks && project.showGitHubProof ? project.githubProof : null,
+        proofStatus: project.proofStatus
+      }),
       liveDemoUrl: sections.showLinks ? project.liveDemoUrl : "",
       screenshotsUrl: sections.showLinks ? project.screenshotsUrl : "",
       proofFiles: publicFileReferences(project.proofFiles)
@@ -295,7 +314,14 @@ function publicProofMappings(proofMappings: any[], sections: typeof defaultSecti
       publicNote: mapping.showPublicNotes ? mapping.publicNote : "",
       showPublicNotes: Boolean(mapping.showPublicNotes),
       showResumeBullet: mapping.showResumeBullet !== false,
-      githubUrl: sections.showLinks ? mapping.githubUrl : "",
+      showGitHubProof: Boolean(mapping.showGitHubProof),
+      githubUrl: sections.showLinks && mapping.showGitHubProof ? mapping.githubUrl : "",
+      githubProof: sections.showLinks && mapping.showGitHubProof ? publicGitHubProof({ ...mapping.githubProof, isPublic: true }) : null,
+      proofBadge: proofBadge({
+        githubUrl: sections.showLinks && mapping.showGitHubProof ? mapping.githubUrl : "",
+        githubProof: sections.showLinks && mapping.showGitHubProof ? mapping.githubProof : null,
+        confidence: mapping.confidence
+      }),
       liveDemoUrl: sections.showLinks ? mapping.liveDemoUrl : "",
       proofFiles: publicFileReferences(mapping.proofFiles)
     }));

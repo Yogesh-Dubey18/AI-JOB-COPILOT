@@ -25,8 +25,8 @@ STORAGE_PROVIDER=s3   # s3 or r2
 STORAGE_BUCKET_NAME=your-bucket-name
 STORAGE_REGION=us-east-1
 STORAGE_ENDPOINT=https://your-r2-endpoint.cloudflarestorage.com  # Required for R2
-STORAGE_ACCESS_KEY_ID=your-access-key-id
-STORAGE_SECRET_ACCESS_KEY=your-secret-access-key
+STORAGE_ACCESS_KEY_ID=
+STORAGE_SECRET_ACCESS_KEY=
 STORAGE_SIGNED_URL_TTL_SECONDS=900
 ```
 

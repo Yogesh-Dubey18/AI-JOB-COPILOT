@@ -388,6 +388,23 @@ describe("frontend pages", () => {
           })
         });
       }
+      if (String(url).includes("/portfolios/github/status")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              provider: "github",
+              status: "fallback",
+              label: "Manual GitHub repo URL fallback; no API metadata has been verified.",
+              configured: false,
+              tested: false
+            }
+          })
+        });
+      }
       if (String(url).includes("/portfolios/portfolio-1/files")) {
         return Promise.resolve({
           ok: true,
@@ -427,8 +444,39 @@ describe("frontend pages", () => {
               theme: "classic",
               isPublished: true,
               skills: ["React", "Node.js"],
-              projectCaseStudies: [{ id: "case-1", projectName: "Proof Project" }],
-              proofMappings: [{ id: "proof-1", skillName: "React" }]
+              projectCaseStudies: [{
+                id: "case-1",
+                projectName: "Proof Project",
+                githubUrl: "https://github.com/test/proof-project",
+                showGitHubProof: true,
+                githubProof: {
+                  repoUrl: "https://github.com/test/proof-project",
+                  owner: "test",
+                  repo: "proof-project",
+                  evidenceStatus: "manual_repo_link",
+                  confidence: "medium",
+                  providerStatus: { status: "fallback", label: "Manual fallback" },
+                  metadata: null,
+                  keywordMatches: []
+                }
+              }],
+              proofMappings: [{
+                id: "proof-1",
+                skillName: "React",
+                githubUrl: "https://github.com/test/proof-project",
+                showGitHubProof: true,
+                confidence: "medium",
+                githubProof: {
+                  repoUrl: "https://github.com/test/proof-project",
+                  owner: "test",
+                  repo: "proof-project",
+                  evidenceStatus: "manual_repo_link",
+                  confidence: "medium",
+                  providerStatus: { status: "fallback", label: "Manual fallback" },
+                  metadata: null,
+                  keywordMatches: []
+                }
+              }]
             }
           ]
         });
@@ -467,6 +515,9 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Private files are only shared when you approve them/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Signed URL\/download readiness/i).length).toBeGreaterThan(0);
     expect(screen.getByTestId("proof-file-readiness")).toBeInTheDocument();
+    expect(screen.getByTestId("github-proof-readiness")).toBeInTheDocument();
+    expect(screen.getByText(/GitHub manual fallback/i)).toBeInTheDocument();
+    expect(screen.getByText(/No fake stars\/forks\/commits/i)).toBeInTheDocument();
     expect(screen.getByTestId("proof-file-upload-section")).toBeInTheDocument();
     expect(screen.getByText(/Allowed file types: PNG, JPG, WEBP, PDF/i)).toBeInTheDocument();
     expect(screen.getByText(/Max file size: 5MB/i)).toBeInTheDocument();
@@ -486,6 +537,8 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Do not claim skills, results, or metrics/i)).toBeInTheDocument();
     expect(screen.getByTestId("case-study-editor")).toBeInTheDocument();
     expect(screen.getByTestId("proof-mapping-cards")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Add case study/i }));
+    await user.click(screen.getByRole("button", { name: /Add proof mapping/i }));
 
     // 2. Render portfolio preview
     await waitFor(() => {
@@ -498,6 +551,8 @@ describe("frontend pages", () => {
       expect(screen.getByText("Recruiter draft")).toBeInTheDocument();
       expect(screen.getByText("proof.png")).toBeInTheDocument();
       expect(screen.getByText(/Owner-maintained proof/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/GitHub proof URL/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /Check GitHub proof/i }).length).toBeGreaterThan(0);
       expect(screen.getByRole("link", { name: /Download signed URL/i })).toBeInTheDocument();
     });
 
@@ -706,7 +761,8 @@ describe("frontend pages", () => {
     expect(screen.getByRole("heading", { name: /GitHub project analyzer/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/GitHub repo URL/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Project title/i)).toBeInTheDocument();
-    expect(screen.getByText(/GitHub API — provider-ready/i)).toBeInTheDocument();
+    expect(screen.getByText(/GitHub API - provider-ready/i)).toBeInTheDocument();
+    expect(screen.getByText(/Stars, forks, commit counts, and verification claims are never invented/i)).toBeInTheDocument();
   });
 
   it("github analyzer page has readme and deployment checklists", () => {
@@ -1344,9 +1400,18 @@ describe("public portfolio page /u/[slug]", () => {
                 solutionApproach: "Public projection filters",
                 resultLearning: "Proof should stay honest and explainable.",
                 proofStatus: "self-reported",
+                proofBadge: "GitHub-linked",
                 publicProofNote: "Can walk through the architecture.",
                 privateProofNotes: "Private reviewer notes",
-                githubUrl: "",
+                githubUrl: "https://github.com/test/proof-project",
+                githubProof: {
+                  repoUrl: "https://github.com/test/proof-project",
+                  owner: "test",
+                  repo: "proof-project",
+                  evidenceStatus: "manual_repo_link",
+                  confidence: "medium",
+                  metadata: null
+                },
                 liveDemoUrl: "",
                 proofFiles: [
                   {
@@ -1372,9 +1437,28 @@ describe("public portfolio page /u/[slug]", () => {
                 projectName: "Project Alpha",
                 resumeBullet: "Built public portfolio proof cards.",
                 confidence: "strong",
+                proofBadge: "Evidence available",
                 publicNote: "Mapped to visible project work.",
                 privateNotes: "Private proof mapping note",
-                githubUrl: "",
+                githubUrl: "https://github.com/test/proof-project",
+                githubProof: {
+                  repoUrl: "https://github.com/test/proof-project",
+                  owner: "test",
+                  repo: "proof-project",
+                  evidenceStatus: "evidence_available",
+                  confidence: "strong",
+                  metadata: {
+                    repoName: "proof-project",
+                    description: "React proof project",
+                    languages: ["TypeScript"],
+                    readmePresent: true,
+                    defaultBranch: "main",
+                    lastUpdated: "2026-05-28T00:00:00Z",
+                    publicUrl: "https://github.com/test/proof-project",
+                    topics: ["portfolio"]
+                  },
+                  keywordMatches: ["React"]
+                },
                 liveDemoUrl: "",
                 proofFiles: [
                   {
@@ -1428,7 +1512,7 @@ describe("public portfolio page /u/[slug]", () => {
 
     expect(screen.getByRole("link", { name: /Email Me/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Download Resume/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /GitHub/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /GitHub/i }).length).toBeGreaterThan(0);
 
     expect(screen.queryByRole("link", { name: /LinkedIn/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Phone/i)).not.toBeInTheDocument();
@@ -1438,6 +1522,11 @@ describe("public portfolio page /u/[slug]", () => {
     expect(screen.getByText("Project Case Studies")).toBeInTheDocument();
     expect(screen.getAllByText("Project Alpha").length).toBeGreaterThan(0);
     expect(screen.getByText(/Proof badges are user-maintained/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/GitHub-linked/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Evidence available/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/GitHub proof/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/README: present/i)).toBeInTheDocument();
+    expect(screen.queryByText(/stars|forks|commits/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Public-approved proof files/i)).toBeInTheDocument();
     expect(screen.getByText(/Owner-maintained file-backed proof/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Signed proof file: architecture-proof\.pdf \(900s\)/i })).toBeInTheDocument();
@@ -1482,6 +1571,7 @@ describe("portfolio builder empty state and custom builder input toggles", () =>
     vi.stubGlobal("fetch", (url: string) => {
       if (url.includes("/portfolios/slug/")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({ success: true, data: { available: true } }) });
       if (url.includes("/portfolios/storage/status")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({ success: true, data: { status: "local_fallback", label: "Local fallback storage (not production-durable)", signedUrlTtlSeconds: 900, live: false } }) });
+      if (url.includes("/portfolios/github/status")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({ success: true, data: { provider: "github", status: "fallback", label: "Manual GitHub repo URL fallback; no API metadata has been verified.", configured: false, tested: false } }) });
       if (url.includes("/portfolios")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
       if (url.includes("/resumes")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => [] });
       if (url.includes("/profile")) return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => null });
@@ -1512,6 +1602,12 @@ describe("portfolio builder empty state and custom builder input toggles", () =>
         return Promise.resolve({
           ok: true, status: 200, headers: new Headers(),
           json: async () => ({ success: true, data: { status: "local_fallback", label: "Local fallback storage (not production-durable)", signedUrlTtlSeconds: 900, live: false } })
+        });
+      }
+      if (url.includes("/portfolios/github/status")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => ({ success: true, data: { provider: "github", status: "fallback", label: "Manual GitHub repo URL fallback; no API metadata has been verified.", configured: false, tested: false } })
         });
       }
       if (url.includes("/portfolios/portfolio-1/versions")) {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Copy, Download, Eye, FileJson, GitCompare, Globe2, Palette, RotateCcw, ShieldCheck, Sparkles, Upload, Wrench } from "lucide-react";
+import { AlertCircle, Copy, Download, Eye, FileJson, GitCompare, Github, Globe2, Palette, RotateCcw, ShieldCheck, Sparkles, Upload, Wrench } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +63,8 @@ type ProjectCaseStudyForm = {
   solutionApproach: string;
   resultLearning: string;
   githubUrl: string;
+  githubProof: GitHubProof | null;
+  showGitHubProof: boolean;
   liveDemoUrl: string;
   screenshotsUrl: string;
   proofStatus: "verified" | "self-reported" | "missing";
@@ -78,13 +80,50 @@ type ProofMappingForm = {
   projectName: string;
   resumeBullet: string;
   githubUrl: string;
+  githubProof: GitHubProof | null;
+  showGitHubProof: boolean;
   liveDemoUrl: string;
-  confidence: "strong" | "medium" | "weak";
+  confidence: "strong" | "medium" | "weak" | "self-reported";
   isPublic: boolean;
   publicNote: string;
   privateNotes: string;
   showPublicNotes: boolean;
   showResumeBullet: boolean;
+};
+
+type GitHubProof = {
+  repoUrl: string;
+  owner: string;
+  repo: string;
+  providerStatus?: {
+    status: "live" | "provider_ready" | "fallback" | "not_configured";
+    label?: string;
+  };
+  metadata?: {
+    repoName: string;
+    description: string;
+    languages: string[];
+    readmePresent: boolean;
+    lastUpdated: string;
+    publicUrl: string;
+    defaultBranch: string;
+    topics: string[];
+  } | null;
+  evidenceStatus: "evidence_available" | "manual_repo_link" | "self_reported" | "missing";
+  confidence: "strong" | "medium" | "weak" | "self-reported";
+  keywordMatches?: string[];
+  checkedAt?: string;
+  warnings?: string[];
+  isPublic?: boolean;
+};
+
+type GitHubProofCheckInput = {
+  kind: "project" | "mapping";
+  id: string;
+  repoUrl: string;
+  projectName?: string;
+  skillName?: string;
+  keywords?: string[];
 };
 
 type PortfolioProofFile = {
@@ -159,6 +198,50 @@ function parseList(value: string) {
   return value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
 }
 
+function confidenceLabel(confidence?: string) {
+  if (confidence === "self-reported") return "Self-reported";
+  return `${confidence || "medium"} confidence`;
+}
+
+function githubEvidenceLabel(proof?: GitHubProof | null) {
+  if (!proof) return "Manual GitHub link";
+  if (proof.evidenceStatus === "evidence_available") return "Evidence available";
+  if (proof.evidenceStatus === "manual_repo_link") return "GitHub-linked";
+  if (proof.evidenceStatus === "self_reported") return "Self-reported";
+  return "Missing proof";
+}
+
+function GitHubProofSummary({ proof }: { proof?: GitHubProof | null }) {
+  if (!proof) {
+    return (
+      <p className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+        Add a public GitHub repo URL, then check proof to parse owner/repo and confidence. No stars, forks, commits, or verification are invented.
+      </p>
+    );
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/20 p-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge>{githubEvidenceLabel(proof)}</Badge>
+        <Badge>{confidenceLabel(proof.confidence)}</Badge>
+        <Badge>{proof.providerStatus?.status === "live" ? "GitHub Live metadata" : "Manual/provider-ready"}</Badge>
+      </div>
+      <p className="mt-2 font-semibold">{proof.owner}/{proof.repo}</p>
+      {proof.metadata ? (
+        <div className="mt-1 space-y-1 text-muted-foreground">
+          <p>README: {proof.metadata.readmePresent ? "present" : "not detected"}; default branch: {proof.metadata.defaultBranch || "unknown"}.</p>
+          {proof.metadata.languages?.length ? <p>Languages from GitHub API: {proof.metadata.languages.join(", ")}</p> : null}
+          {proof.keywordMatches?.length ? <p>Keyword matches: {proof.keywordMatches.join(", ")}</p> : <p>No README/keyword match evidence found yet.</p>}
+        </div>
+      ) : (
+        <p className="mt-1 text-muted-foreground">Manual fallback: repo URL parsed, but no GitHub API metadata has been fetched or verified.</p>
+      )}
+      {proof.warnings?.length ? <p className="mt-1 text-amber-700 dark:text-amber-300">{proof.warnings[0]}</p> : null}
+    </div>
+  );
+}
+
 function projectsToText(projects: any[] = []) {
   return projects.map((project) => {
     if (typeof project === "string") return project;
@@ -178,6 +261,8 @@ function toCaseStudyForm(project?: any): ProjectCaseStudyForm {
     solutionApproach: project?.solutionApproach || project?.solution || "",
     resultLearning: project?.resultLearning || project?.result || project?.learning || "",
     githubUrl: project?.githubUrl || "",
+    githubProof: project?.githubProof || null,
+    showGitHubProof: Boolean(project?.showGitHubProof || project?.githubProof?.isPublic),
     liveDemoUrl: project?.liveDemoUrl || project?.demoUrl || "",
     screenshotsUrl: project?.screenshotsUrl || project?.screenshotUrl || "",
     proofStatus: project?.proofStatus === "verified" || project?.proofStatus === "missing" ? project.proofStatus : "self-reported",
@@ -195,8 +280,10 @@ function toProofMappingForm(mapping?: any): ProofMappingForm {
     projectName: mapping?.projectName || mapping?.project || "",
     resumeBullet: mapping?.resumeBullet || "",
     githubUrl: mapping?.githubUrl || "",
+    githubProof: mapping?.githubProof || null,
+    showGitHubProof: Boolean(mapping?.showGitHubProof || mapping?.githubProof?.isPublic),
     liveDemoUrl: mapping?.liveDemoUrl || mapping?.demoUrl || "",
-    confidence: mapping?.confidence === "strong" || mapping?.confidence === "weak" ? mapping.confidence : "medium",
+    confidence: mapping?.confidence === "strong" || mapping?.confidence === "weak" || mapping?.confidence === "self-reported" ? mapping.confidence : "medium",
     isPublic: Boolean(mapping?.isPublic),
     publicNote: mapping?.publicNote || "",
     privateNotes: mapping?.privateNotes || mapping?.notes || "",
@@ -217,6 +304,8 @@ function caseStudiesToPayload(projects: ProjectCaseStudyForm[]) {
     solutionApproach: project.solutionApproach.trim(),
     resultLearning: project.resultLearning.trim(),
     githubUrl: project.githubUrl.trim(),
+    githubProof: project.githubProof ? { ...project.githubProof, repoUrl: project.githubUrl.trim() || project.githubProof.repoUrl, isPublic: project.showGitHubProof } : null,
+    showGitHubProof: project.showGitHubProof,
     liveDemoUrl: project.liveDemoUrl.trim(),
     screenshotsUrl: project.screenshotsUrl.trim(),
     proofStatus: project.proofStatus,
@@ -234,6 +323,8 @@ function proofMappingsToPayload(mappings: ProofMappingForm[]) {
     projectName: mapping.projectName.trim(),
     resumeBullet: mapping.resumeBullet.trim(),
     githubUrl: mapping.githubUrl.trim(),
+    githubProof: mapping.githubProof ? { ...mapping.githubProof, repoUrl: mapping.githubUrl.trim() || mapping.githubProof.repoUrl, isPublic: mapping.showGitHubProof } : null,
+    showGitHubProof: mapping.showGitHubProof,
     liveDemoUrl: mapping.liveDemoUrl.trim(),
     confidence: mapping.confidence,
     isPublic: mapping.isPublic,
@@ -278,12 +369,22 @@ export default function PortfolioGeneratorPage() {
   const careerVaultQuery = useQuery({ queryKey: ["career-vault"], queryFn: () => api.get<any[]>("/career-vault"), retry: false });
   const roadmapQuery = useQuery({ queryKey: ["learning-plans"], queryFn: () => api.get<any[]>("/ai/skill-gap/plans"), retry: false });
   const storageStatus = useQuery({ queryKey: ["portfolio-storage-status"], queryFn: () => api.get<any>("/portfolios/storage/status"), retry: false });
+  const githubStatus = useQuery({ queryKey: ["portfolio-github-status"], queryFn: () => api.get<any>("/portfolios/github/status"), retry: false });
 
   const items = portfolios.data || [];
   const storageInfo = storageStatus.data || {};
   const storageBadgeText = storageInfo.status === "provider_ready" ? "Provider-ready signed URLs" : "Local fallback";
   const storageStatusLabel = typeof storageInfo.label === "string" ? storageInfo.label : "Local fallback storage (not production-durable)";
   const signedUrlText = `Signed URL/download readiness: ${storageInfo.signedUrlTtlSeconds || 900} second TTL when S3/R2 is configured; local fallback uses app-served /uploads links.`;
+  const githubInfo = githubStatus.data || {};
+  const githubBadgeText = githubInfo.status === "live"
+    ? "GitHub Live"
+    : githubInfo.status === "provider_ready"
+      ? "GitHub provider-ready"
+      : githubInfo.status === "not_configured"
+        ? "GitHub not configured"
+        : "GitHub manual fallback";
+  const githubStatusText = githubInfo.label || "Manual GitHub repo URL fallback; no API metadata has been verified.";
   const careerVaultEntries = useMemo(() => Array.isArray(careerVaultQuery.data) ? careerVaultQuery.data : [], [careerVaultQuery.data]);
   const roadmapPlans = useMemo(() => Array.isArray(roadmapQuery.data) ? roadmapQuery.data : [], [roadmapQuery.data]);
   const selectedPortfolio = items[0];
@@ -488,9 +589,29 @@ export default function PortfolioGeneratorPage() {
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
     }
   });
+  const checkGitHubProof = useMutation({
+    mutationFn: ({ repoUrl, projectName, skillName, keywords }: GitHubProofCheckInput) =>
+      api.post<GitHubProof>("/portfolios/github/check", { repoUrl, projectName, skillName, keywords }),
+    onSuccess: (proof, variables) => {
+      if (variables.kind === "project") {
+        updateCaseStudy(variables.id, {
+          githubUrl: proof.repoUrl,
+          githubProof: proof
+        });
+      }
+      if (variables.kind === "mapping") {
+        updateProofMapping(variables.id, {
+          githubUrl: proof.repoUrl,
+          githubProof: proof,
+          confidence: proof.confidence
+        });
+      }
+      setProofUploadMessage(`GitHub proof checked for ${proof.owner}/${proof.repo}: ${proof.confidence} confidence (${proof.providerStatus?.status || "fallback"}).`);
+    }
+  });
   const serverSlugError = slugCheck.data && typeof slugCheck.data.available === "boolean" && !slugCheck.data.available ? slugCheck.data.message || "This public slug is already taken." : null;
   const effectiveSlugError = slugError || serverSlugError;
-  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error || uploadProofFile.error || updateProofFileVisibility.error || deleteProofFile.error || refreshProofFileUrl.error;
+  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error || uploadProofFile.error || updateProofFileVisibility.error || deleteProofFile.error || refreshProofFileUrl.error || checkGitHubProof.error;
 
   function publicUrl(slug: string) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -718,6 +839,20 @@ export default function PortfolioGeneratorPage() {
               <p className="mt-2 text-xs text-muted-foreground">{signedUrlText}</p>
             </div>
 
+            <div className="rounded-md border bg-muted/20 p-3 text-sm" data-testid="github-proof-readiness">
+              <div className="flex flex-wrap items-center gap-2">
+                <Github className="h-4 w-4 text-primary" />
+                <p className="font-semibold">GitHub Proof Readiness</p>
+                <Badge>{githubBadgeText}</Badge>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{githubStatusText}</p>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                <Badge>Manual fallback allowed</Badge>
+                <Badge>No fake stars/forks/commits</Badge>
+                <Badge>Show publicly only when approved</Badge>
+              </div>
+            </div>
+
             <div className="rounded-md border bg-card/50 p-4 text-sm space-y-4" data-testid="proof-file-upload-section">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -865,9 +1000,26 @@ export default function PortfolioGeneratorPage() {
                       <label className="text-xs font-semibold text-muted-foreground">Result / learning</label>
                       <Textarea rows={2} value={project.resultLearning} onChange={(event) => updateCaseStudy(project.id, { resultLearning: event.target.value })} placeholder="Use learnings unless you have real measurable results." />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-muted-foreground">GitHub link</label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-muted-foreground">GitHub proof URL</label>
                       <Input value={project.githubUrl} onChange={(event) => updateCaseStudy(project.id, { githubUrl: event.target.value })} placeholder="https://github.com/user/repo" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 px-2 text-xs"
+                        disabled={!project.githubUrl.trim() || checkGitHubProof.isPending}
+                        onClick={() => checkGitHubProof.mutate({
+                          kind: "project",
+                          id: project.id,
+                          repoUrl: project.githubUrl,
+                          projectName: project.projectName,
+                          keywords: parseList(project.techStackText)
+                        })}
+                      >
+                        <Github className="h-3.5 w-3.5" />
+                        {checkGitHubProof.isPending ? "Checking..." : "Check GitHub proof"}
+                      </Button>
+                      <GitHubProofSummary proof={project.githubProof} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-muted-foreground">Live demo link</label>
@@ -902,6 +1054,10 @@ export default function PortfolioGeneratorPage() {
                     <label className="flex items-center gap-2 rounded-md border p-2">
                       <input type="checkbox" checked={project.showPublicProofNotes} onChange={() => updateCaseStudy(project.id, { showPublicProofNotes: !project.showPublicProofNotes })} />
                       <span>Show public proof note</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-2 sm:col-span-2">
+                      <input type="checkbox" checked={project.showGitHubProof} onChange={() => updateCaseStudy(project.id, { showGitHubProof: !project.showGitHubProof })} />
+                      <span>Show GitHub proof publicly</span>
                     </label>
                   </div>
                 </div>
@@ -941,9 +1097,27 @@ export default function PortfolioGeneratorPage() {
                       <label className="text-xs font-semibold text-muted-foreground">Resume bullet where mentioned</label>
                       <Textarea rows={2} value={mapping.resumeBullet} onChange={(event) => updateProofMapping(mapping.id, { resumeBullet: event.target.value })} placeholder="Built privacy-safe portfolio builder with Next.js and Express." />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <label className="text-xs font-semibold text-muted-foreground">GitHub proof link</label>
                       <Input value={mapping.githubUrl} onChange={(event) => updateProofMapping(mapping.id, { githubUrl: event.target.value })} placeholder="https://github.com/user/repo" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 px-2 text-xs"
+                        disabled={!mapping.githubUrl.trim() || checkGitHubProof.isPending}
+                        onClick={() => checkGitHubProof.mutate({
+                          kind: "mapping",
+                          id: mapping.id,
+                          repoUrl: mapping.githubUrl,
+                          projectName: mapping.projectName,
+                          skillName: mapping.skillName,
+                          keywords: [mapping.skillName, mapping.projectName].filter(Boolean)
+                        })}
+                      >
+                        <Github className="h-3.5 w-3.5" />
+                        {checkGitHubProof.isPending ? "Checking..." : "Check GitHub proof"}
+                      </Button>
+                      <GitHubProofSummary proof={mapping.githubProof} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-muted-foreground">Live proof link</label>
@@ -955,6 +1129,7 @@ export default function PortfolioGeneratorPage() {
                         <option value="strong">Strong</option>
                         <option value="medium">Medium</option>
                         <option value="weak">Weak</option>
+                        <option value="self-reported">Self-reported</option>
                       </select>
                     </div>
                     <div className="space-y-1">
@@ -978,6 +1153,10 @@ export default function PortfolioGeneratorPage() {
                     <label className="flex items-center gap-2 rounded-md border p-2">
                       <input type="checkbox" checked={mapping.showResumeBullet} onChange={() => updateProofMapping(mapping.id, { showResumeBullet: !mapping.showResumeBullet })} />
                       <span>Show resume bullet</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-2 sm:col-span-3">
+                      <input type="checkbox" checked={mapping.showGitHubProof} onChange={() => updateProofMapping(mapping.id, { showGitHubProof: !mapping.showGitHubProof })} />
+                      <span>Show GitHub proof publicly</span>
                     </label>
                   </div>
                 </div>

@@ -42,7 +42,7 @@ Add these variables in the **Environment** section of your Web Service in the Re
 - [ ] `GOOGLE_CALENDAR_CLIENT_SECRET` — Google Calendar Client Secret.
 
 ### 8. GitHub API
-- [ ] `GITHUB_TOKEN` — Classic Personal Access Token (`ghp_...`) with `public_repo` scope.
+- [ ] `GITHUB_TOKEN` - GitHub token with read-only public repository metadata scope.
 
 ---
 

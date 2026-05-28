@@ -1192,6 +1192,95 @@ describe("AI Job Copilot API", () => {
     expect(publicProfile.body.data.proofMappings[0].githubUrl).toBe("");
   });
 
+  it("checks GitHub proof readiness and only exposes public-approved GitHub proof links", async () => {
+    const agent = await authAgent();
+    const status = await agent.get("/api/portfolios/github/status").expect(200);
+    expect(status.body.data.provider).toBe("github");
+    expect(status.body.data.status).not.toBe("live");
+
+    await agent.post("/api/portfolios/github/check").send({ repoUrl: "https://example.com/test/repo" }).expect(400);
+
+    const checked = await agent.post("/api/portfolios/github/check").send({
+      repoUrl: "https://github.com/example/manual-proof",
+      projectName: "React Portfolio",
+      skillName: "React"
+    }).expect(200);
+    expect(checked.body.data.repoUrl).toBe("https://github.com/example/manual-proof");
+    expect(checked.body.data.confidence).toBe("medium");
+    expect(JSON.stringify(checked.body.data)).not.toMatch(/stars|forks|commits|verifiedByGitHub/i);
+
+    await agent.post("/api/portfolios/generate").send({
+      slug: "github-proof-portfolio",
+      title: "GitHub Proof Portfolio",
+      displayName: "GitHub Proof Dev",
+      headline: "Evidence-minded engineer",
+      isPublished: true,
+      sections: {
+        showProjects: true,
+        showCaseStudies: true,
+        showProofMappings: true,
+        showLinks: true
+      },
+      projectCaseStudies: [
+        {
+          projectName: "Public GitHub Proof",
+          problemSolved: "Mapped repository proof to recruiter-facing case studies.",
+          githubUrl: "https://github.com/example/manual-proof",
+          githubProof: {
+            repoUrl: "https://github.com/example/manual-proof",
+            evidenceStatus: "manual_repo_link",
+            confidence: "medium",
+            privateNotes: "Private GitHub reviewer note",
+            isPublic: true
+          },
+          showGitHubProof: true,
+          proofStatus: "self-reported",
+          isPublic: true
+        }
+      ],
+      proofMappings: [
+        {
+          skillName: "React",
+          projectName: "Private GitHub Proof",
+          githubUrl: "https://github.com/example/private-proof",
+          githubProof: {
+            repoUrl: "https://github.com/example/private-proof",
+            evidenceStatus: "manual_repo_link",
+            confidence: "medium",
+            privateNotes: "Hidden mapping note",
+            isPublic: false
+          },
+          showGitHubProof: false,
+          confidence: "medium",
+          isPublic: true
+        },
+        {
+          skillName: "Node.js",
+          projectName: "Public GitHub Proof",
+          githubUrl: "https://github.com/example/manual-proof",
+          githubProof: {
+            repoUrl: "https://github.com/example/manual-proof",
+            evidenceStatus: "manual_repo_link",
+            confidence: "medium",
+            isPublic: true
+          },
+          showGitHubProof: true,
+          confidence: "medium",
+          isPublic: true
+        }
+      ]
+    }).expect(201);
+
+    const publicProfile = await request(app).get("/api/portfolios/public/github-proof-portfolio").expect(200);
+    const publicJson = JSON.stringify(publicProfile.body.data);
+    expect(publicProfile.body.data.projectCaseStudies[0].githubUrl).toBe("https://github.com/example/manual-proof");
+    expect(publicProfile.body.data.projectCaseStudies[0].githubProof.privateNotes).toBeUndefined();
+    expect(publicProfile.body.data.projectCaseStudies[0].proofBadge).toBe("GitHub-linked");
+    expect(publicProfile.body.data.proofMappings.find((mapping: any) => mapping.skillName === "React").githubUrl).toBe("");
+    expect(publicProfile.body.data.proofMappings.find((mapping: any) => mapping.skillName === "Node.js").githubUrl).toBe("https://github.com/example/manual-proof");
+    expect(publicJson).not.toMatch(/Private GitHub reviewer|Hidden mapping note|private-proof|stars|forks|commits|verifiedByGitHub/i);
+  });
+
   it("hardens portfolio file metadata and only exposes public-approved proof files", async () => {
     const agent = await authAgent();
     const status = await agent.get("/api/portfolios/storage/status").expect(200);

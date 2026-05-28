@@ -152,7 +152,7 @@ This document lists all external integration providers within the **AI Job Copil
 * **Current Status**: **Provider-ready** (falls back to static mock checklists).
 * **Required Env Vars**: `GITHUB_TOKEN`
 * **Configuration Dashboard**: Render (Backend)
-* **How to Verify**: Submit repository link in GitHub Analyzer. Verify live repo stats are fetched.
+* **How to Verify**: Submit a public repository link through `/api/portfolios/github/check` or the Portfolio Generator. Verify safe metadata such as README presence, languages, topics, default branch, and last updated date. Do not mark stars, forks, commits, or verification claims as fetched unless a future feature explicitly adds verified fields.
 * **User-Facing Feature**: GitHub Project Complexity Analyzer.
 * **Security Risk**: Token scope exposure. Personal access token must only possess `public_repo` read scope.
 * **Manual Setup Needed**: Create classic access token in GitHub developer settings.

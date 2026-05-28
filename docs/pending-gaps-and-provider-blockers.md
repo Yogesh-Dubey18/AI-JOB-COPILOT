@@ -41,8 +41,8 @@ This document maps all technical gaps, unconfigured integrations, required API a
    STORAGE_PROVIDER=s3  # or r2
    STORAGE_BUCKET_NAME=ai-job-copilot-resumes
    STORAGE_REGION=us-east-1
-   STORAGE_ACCESS_KEY_ID=your_access_key_id
-   STORAGE_SECRET_ACCESS_KEY=your_secret_access_key
+   STORAGE_ACCESS_KEY_ID=
+   STORAGE_SECRET_ACCESS_KEY=
    ```
 5. Restart the backend. Confirm uploaded files generate presigned URLs ending in expiry tokens.
 
@@ -57,7 +57,7 @@ This document maps all technical gaps, unconfigured integrations, required API a
    ```bash
    EMAIL_PROVIDER=sendgrid
    EMAIL_FROM=support@yourdomain.com
-   SENDGRID_API_KEY=SG.your_api_key_here
+   SENDGRID_API_KEY=
    ```
 6. Retest by triggering the "Forgot Password" flow and verifying receipt.
 
@@ -76,8 +76,8 @@ This document maps all technical gaps, unconfigured integrations, required API a
 5. Copy the generated `Client ID` and `Client Secret`.
 6. Add environment variables:
    ```bash
-   GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=GOCSPX-your_client_secret
+   GOOGLE_CLIENT_ID=
+   GOOGLE_CLIENT_SECRET=
    GOOGLE_REDIRECT_URI=https://ai-job-copilot-backend-l6ut.onrender.com/api/auth/google/callback
    ```
 7. Verify that the Google sign-in button is active.
@@ -87,12 +87,12 @@ This document maps all technical gaps, unconfigured integrations, required API a
 ### 4. OpenAI / Gemini AI Integration
 1. Register an account at **platform.openai.com** (or **aistudio.google.com**).
 2. Attach a credit card to set billing thresholds.
-3. Generate a new API Key (e.g. `sk-...`).
+3. Generate a new API key from the provider dashboard.
 4. Set variables:
    ```bash
    AI_PROVIDER=openai  # or gemini
-   OPENAI_API_KEY=sk-your_openai_key
-   # or GEMINI_API_KEY=your_gemini_key
+   OPENAI_API_KEY=
+   # or GEMINI_API_KEY=
    ```
 5. Run resume ATS scans to confirm real-time suggestions generate correctly.
 
@@ -107,11 +107,11 @@ This document maps all technical gaps, unconfigured integrations, required API a
 4. Navigate to **Developers** -> **Webhooks**:
    - Add endpoint: `https://ai-job-copilot-backend-l6ut.onrender.com/api/billing/webhook`
    - Select events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
-5. Copy the **Signing Secret** (`whsec_...`).
+5. Copy the webhook signing secret from Stripe.
 6. Set variables in Render:
    ```bash
-   STRIPE_SECRET_KEY=sk_test_your_secret_key
-   STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+   STRIPE_SECRET_KEY=
+   STRIPE_WEBHOOK_SECRET=
    STRIPE_PRICE_PRO=price_12345_pro
    STRIPE_PRICE_PREMIUM=price_12345_premium
    ```

@@ -106,14 +106,14 @@ FRONTEND_URL=https://ai-job-copilot-frontend.vercel.app
 ### OpenAI Activation
 1. Log in at [platform.openai.com](https://platform.openai.com)
 2. API Keys → Create new secret key
-3. Set `OPENAI_API_KEY=sk-...` in backend `.env`
+3. Set `OPENAI_API_KEY=` in backend `.env` using a real secret from the provider dashboard.
 4. Verify billing is set up (usage limits recommended)
 5. Test: POST `/api/ai/test` with a simple message
 
 ### Gemini Activation (alternative)
 1. Go to [aistudio.google.com](https://aistudio.google.com)
 2. Get API key
-3. Set `GEMINI_API_KEY=AIza...` in backend `.env`
+3. Set `GEMINI_API_KEY=` in backend `.env` using a real secret from Google AI Studio.
 4. The backend will use Gemini if `OPENAI_API_KEY` is not set
 
 ---
@@ -148,13 +148,13 @@ FRONTEND_URL=https://ai-job-copilot-frontend.vercel.app
 2. Developers → API Keys → Copy Publishable Key and Secret Key
 3. Set in backend `.env`:
    ```
-   STRIPE_SECRET_KEY=sk_live_...
-   STRIPE_PUBLISHABLE_KEY=pk_live_...
+   STRIPE_SECRET_KEY=
+   STRIPE_PUBLISHABLE_KEY=
    ```
 4. Webhooks → Add endpoint: `https://ai-job-copilot-backend-l6ut.onrender.com/api/billing/webhook`
 5. Select events: `customer.subscription.updated`, `customer.subscription.deleted`, `checkout.session.completed`, `invoice.payment_failed`
-6. Copy Webhook Secret → Set `STRIPE_WEBHOOK_SECRET=whsec_...`
-7. Set frontend: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...` in Vercel environment variables
+6. Copy Webhook Secret and set `STRIPE_WEBHOOK_SECRET=` in Render.
+7. Set frontend `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=` in Vercel environment variables.
 8. Test with Stripe test cards before going live
 
 ---
@@ -236,13 +236,13 @@ FRONTEND_URL=https://ai-job-copilot-frontend.vercel.app
 ## Provider 9 — GitHub API
 
 **Status:** Provider-ready  
-**Required for:** Live GitHub metadata (stars, contributors, languages) in GitHub analyzer.
+**Required for:** Safe GitHub metadata such as README presence, languages, topics, default branch, and last updated date for portfolio proof and GitHub analyzer workflows. Do not fetch or invent stars, contributors, forks, commits, or verification claims.
 
 ### Activation Steps
 1. Go to [github.com/settings/tokens](https://github.com/settings/tokens)
 2. Generate new token (classic) → Select: `public_repo`, `read:user`
-3. Set `GITHUB_TOKEN=ghp_...` in backend `.env`
-4. Test: POST `/api/ai/github-analyzer` with a public repo URL
+3. Set the `GITHUB_TOKEN` backend environment variable using the real token from GitHub.
+4. Test: POST `/api/portfolios/github/check` with a public repo URL and confirm metadata is returned before marking GitHub Live.
 
 ---
 
@@ -266,7 +266,7 @@ Set these in Vercel Dashboard → Project Settings → Environment Variables:
 | Variable | Value | Required |
 |----------|-------|---------|
 | `NEXT_PUBLIC_API_URL` | `https://ai-job-copilot-backend-l6ut.onrender.com/api` | ✅ Yes |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_...` | Stripe only |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | empty until configured | Stripe only |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN | Monitoring |
 
 ---

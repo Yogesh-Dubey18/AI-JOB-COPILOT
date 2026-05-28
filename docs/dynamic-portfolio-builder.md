@@ -26,6 +26,8 @@ This document covers the implemented Dynamic Portfolio Builder & Public Slugs ph
 - Proof file visibility toggle for `private` or `publicApproved`.
 - Signed URL refresh and delete/detach actions for owner-managed proof files.
 - Public portfolio filtering for `publicApproved` proof files only.
+- GitHub proof URL parsing, provider-ready status, manual fallback, and `Check GitHub proof` actions for case studies and proof mappings.
+- `showGitHubProof` visibility gates so GitHub proof appears publicly only when the owner approves it.
 
 ## Public Slug Behavior
 
@@ -61,10 +63,11 @@ The public endpoint exposes:
 - Project case studies only when projects, case studies, and per-case-study public approval are enabled.
 - Skill proof mappings only when proof mapping visibility and per-mapping public approval are enabled.
 - Proof files only when file visibility is `publicApproved`.
+- GitHub proof links only when social links are enabled and the relevant case study or proof mapping has `showGitHubProof` enabled.
 
 The public endpoint does not expose user IDs, private resume records, auth data, tokens, provider credentials, or unpublished portfolios.
 
-Private case-study notes and private proof-mapping notes are never returned by the public endpoint. GitHub, live demo, and screenshot links for case studies are withheld when social links are disabled.
+Private case-study notes and private proof-mapping notes are never returned by the public endpoint. GitHub, live demo, and screenshot links for case studies are withheld when social links are disabled. GitHub proof metadata is withheld unless `showGitHubProof` is enabled by the owner.
 
 Private file metadata is kept owner-scoped. Absolute local paths, private bucket URLs, provider credentials, and internal storage keys are not returned by the public portfolio endpoint. Local fallback links remain non-durable and should not be presented as production hosting.
 
@@ -77,6 +80,7 @@ The builder can seed or use available user-owned data from:
 - Career vault project entries.
 - Skill roadmap priority skills and progress.
 - GitHub and LinkedIn profile links when the user provides them.
+- Public GitHub repo links for project evidence when the user provides them.
 - Career vault project details for case-study seeds.
 - Skill roadmap priority skills for suggested proof-improvement cards.
 
@@ -124,6 +128,22 @@ Safety rules:
 - Public portfolios show only public-approved file links and hide private files completely.
 - Uploaded files are owner-maintained proof and do not imply third-party verification.
 
+## GitHub Proof Behavior
+
+The builder supports public GitHub repo proof without claiming fake verification.
+
+Implemented behavior:
+
+- GitHub proof URL field per project case study.
+- GitHub proof URL field per skill proof mapping.
+- `Check GitHub proof` action that validates GitHub URLs and extracts owner/repo.
+- Manual fallback when GitHub credentials are not configured.
+- Optional API metadata fetch only after backend GitHub credentials are configured and a real request succeeds.
+- Confidence labels: `strong`, `medium`, `weak`, and `self-reported`.
+- Public visibility toggle for GitHub proof.
+
+Metadata can include repo name, description, languages, README presence, last updated date, public URL, default branch, and topics when safely fetched. The app does not fake stars, forks, commits, contributors, or verification.
+
 ## Provider Honesty
 
 What is real now:
@@ -141,6 +161,7 @@ What is provider-ready only:
 - Custom portfolio domains.
 - Automated Vercel domain provisioning.
 - Durable private object storage through S3/R2.
+- GitHub API/OAuth metadata fetches until `GITHUB_TOKEN` or OAuth credentials are configured and verified.
 
 The app must not claim permanent public hosting, custom domain provisioning, or S3/R2 storage until those providers are configured and verified.
 
