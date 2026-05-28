@@ -38,6 +38,7 @@
 - [AI Job Search Disclaimer](ai-job-search-disclaimer.md)
 - [Provider Integrations](provider-integrations.md)
 - [Proof File Scanning Boundary](proof-file-scanning-boundary.md)
+- [Proof File Audit Trail](proof-file-audit-trail.md)
 - [Refund And Cancellation Policy Template](refund-cancellation-policy-template.md)
 - [Support Operations Guide](support-operations-guide.md)
 - [Incident Response Plan](incident-response-plan.md)

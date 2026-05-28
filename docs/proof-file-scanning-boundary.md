@@ -13,6 +13,7 @@ This phase adds an honest scanning boundary for uploaded portfolio proof files. 
 | Provider scanner | Provider-ready | Env placeholders exist, but no provider is Live without credentials and verified scan success. |
 | Public portfolio filtering | Implemented | `/u/[slug]` excludes private, blocked, failed, pending, and not-scanned files. |
 | Builder scan UX | Implemented | `/portfolio-generator` shows scan status badges and explains local validation versus provider malware scanning. |
+| Audit trail | Implemented | Upload, scan, visibility, signed URL, attach/detach, and delete events are recorded with safe summaries only. |
 
 ## Provider Status Rules
 
@@ -80,6 +81,15 @@ Local validation is useful upload hardening, but it is not malware scanning.
 - Only public-approved and public-eligible file links.
 - Safe unavailable text when a link is absent or expired.
 - No private file metadata or blocked/failed file names.
+
+## Audit Trail Boundary
+
+Proof file scanning events now feed the owner-scoped [Proof File Audit Trail](proof-file-audit-trail.md).
+
+- `local_validated` is recorded by the system after local validation.
+- Provider scan changes use `scan_status_changed` and never imply `clean` without a provider result.
+- Audit records do not include file contents, absolute local paths, storage keys, private bucket URLs, signed URL tokens, or provider credentials.
+- Public portfolios never expose audit events or scan internals.
 
 ## Testing Checklist
 

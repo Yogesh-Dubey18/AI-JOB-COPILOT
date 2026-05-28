@@ -17,6 +17,7 @@ import { LearningPlanModel } from "../models/LearningPlan.js";
 import { PortfolioModel } from "../models/Portfolio.js";
 import { PublicProfileModel } from "../models/PublicProfile.js";
 import { PortfolioFileModel } from "../models/PortfolioFile.js";
+import { PortfolioFileAuditEventModel } from "../models/PortfolioFileAuditEvent.js";
 import { PdfExportModel } from "../models/PdfExport.js";
 import { JobScamReportModel } from "../models/JobScamReport.js";
 import { ChatSessionModel } from "../models/ChatSession.js";
@@ -53,6 +54,7 @@ const modelMap: Record<CollectionName, Model<any>> = {
   portfolios: PortfolioModel,
   publicProfiles: PublicProfileModel,
   portfolioFiles: PortfolioFileModel,
+  portfolioFileAuditEvents: PortfolioFileAuditEventModel,
   pdfExports: PdfExportModel,
   jobScamReports: JobScamReportModel,
   chatSessions: ChatSessionModel,

@@ -34,6 +34,7 @@
 | GitHub proof URL parser and manual fallback | Complete |
 | GitHub proof confidence badges and public visibility gate | Complete |
 | Proof file scanning provider-ready boundary | Complete |
+| Proof file audit trail and user review history | Complete |
 | Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
@@ -92,6 +93,7 @@
 | Skill-to-proof mapping with privacy controls | Complete |
 | Proof file upload, visibility update, signed URL refresh, and delete/detach | Complete |
 | GitHub proof check action, provider status badge, and no-fake-stats proof summary | Complete |
+| Owner-scoped proof file activity timeline and per-file audit history | Complete |
 | Custom-domain hosting | Provider-ready only |
 
 ---
@@ -170,13 +172,13 @@
 
 ## Roadmap Priorities (Next)
 
-Recommended priority update after proof file scanning provider-ready boundary:
+Recommended priority update after proof file audit trail:
 
 1. **Resume compare view** - diff between original and tailored version using changeSummary
-2. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
-3. **Notification reminders** - email alerts for follow-ups when SendGrid configured
-4. **Job CSV batch import** - approved, legally-obtained job list upload
-5. **Rate limit documentation** - approved polling limits per provider
+2. **Proof file retention controls** - owner review for deletion/export windows without exposing contents
+3. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
+4. **Notification reminders** - email alerts for follow-ups when SendGrid configured
+5. **Job CSV batch import** - approved, legally-obtained job list upload
 6. **GitHub OAuth private repo consent design** - provider-ready only, no private repo access without explicit user consent
 7. **Scanner provider activation runbook** - staging-only verification steps before marking malware scanning Live
 

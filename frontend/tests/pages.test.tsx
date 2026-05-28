@@ -424,6 +424,50 @@ describe("frontend pages", () => {
           })
         });
       }
+      if (String(url).includes("/portfolios/portfolio-1/files/activity")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: [
+              {
+                eventId: "activity-1",
+                portfolioId: "portfolio-1",
+                fileId: "proof-file-1",
+                projectId: "case-1",
+                eventType: "uploaded",
+                actor: "user",
+                summary: "Proof file was uploaded into the owner-scoped vault. File contents and storage paths were not logged.",
+                createdAt: "2026-05-28T10:00:00.000Z"
+              },
+              {
+                eventId: "activity-2",
+                portfolioId: "portfolio-1",
+                fileId: "proof-file-1",
+                projectId: "case-1",
+                eventType: "signed_url_generated",
+                actor: "user",
+                summary: "Short-lived proof file URL was generated for the owner. Full token and private storage URL were not logged.",
+                createdAt: "2026-05-28T10:05:00.000Z"
+              },
+              {
+                eventId: "activity-3",
+                portfolioId: "portfolio-1",
+                fileId: "blocked-proof-file",
+                projectId: "case-1",
+                eventType: "scan_status_changed",
+                actor: "system",
+                previousStatus: "not_scanned",
+                newStatus: "blocked",
+                summary: "Provider scan status changed without logging file contents.",
+                createdAt: "2026-05-28T10:10:00.000Z"
+              }
+            ]
+          })
+        });
+      }
       if (String(url).includes("/portfolios/portfolio-1/files")) {
         return Promise.resolve({
           ok: true,
@@ -597,6 +641,12 @@ describe("frontend pages", () => {
       expect(screen.getByText(/Blocked reason: provider_reported_file_risk/i)).toBeInTheDocument();
       expect(screen.getByText(/Public approval disabled until scan is clean or locally eligible/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Owner-maintained proof/i).length).toBeGreaterThan(0);
+      expect(screen.getByTestId("proof-file-activity-panel")).toBeInTheDocument();
+      expect(screen.getByText(/Audit history tracks file actions, not file contents/i)).toBeInTheDocument();
+      expect(screen.getByText(/User review history/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Signed Url Generated/i).length).toBeGreaterThan(0);
+      expect(screen.getByTestId("proof-file-history-proof-file-1")).toBeInTheDocument();
+      expect(screen.queryByText(/C:\\|private-bucket|signed-token|\/uploads\/portfolio-proof/i)).not.toBeInTheDocument();
       expect(screen.getAllByText(/GitHub proof URL/i).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("button", { name: /Check GitHub proof/i }).length).toBeGreaterThan(0);
       expect(screen.getByRole("link", { name: /Download signed URL/i })).toBeInTheDocument();
@@ -1558,6 +1608,12 @@ describe("public portfolio page /u/[slug]", () => {
               progress: 75,
               prioritySkills: ["TypeScript"]
             },
+            auditEvents: [
+              {
+                eventType: "signed_url_generated",
+                summary: "This owner-only audit event must not render publicly."
+              }
+            ],
             sections: {
               showEmail: true,
               showPhone: false,
@@ -1613,6 +1669,7 @@ describe("public portfolio page /u/[slug]", () => {
     expect(screen.queryByText(/private-react-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/blocked-architecture-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/failed-react-proof\.pdf/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/audit history|signed_url_generated|owner-only audit/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/guaranteed/i)).not.toBeInTheDocument();
   });
 });

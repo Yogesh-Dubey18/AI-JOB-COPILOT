@@ -147,6 +147,22 @@ type PortfolioProofFile = {
   storageStatusLabel?: string;
 };
 
+type PortfolioProofAuditEvent = {
+  eventId: string;
+  portfolioId: string;
+  fileId: string;
+  projectId?: string;
+  proofMappingId?: string;
+  eventType: "uploaded" | "local_validated" | "scan_status_changed" | "visibility_changed" | "public_approved" | "public_revoked" | "signed_url_generated" | "downloaded" | "attached_to_project" | "detached_from_project" | "deleted";
+  previousStatus?: string;
+  newStatus?: string;
+  previousVisibility?: string;
+  newVisibility?: string;
+  createdAt?: string;
+  actor: "user" | "system";
+  summary: string;
+};
+
 const defaultForm: PortfolioForm = {
   slug: "portfolio-slug",
   title: "",
@@ -230,6 +246,13 @@ function scanStatusLabel(status?: string) {
 function isFilePublicApprovable(file: PortfolioProofFile) {
   const blockedStatuses = new Set(["blocked", "failed", "provider_pending", "not_scanned"]);
   return file.isPublicEligible !== false && !blockedStatuses.has(file.scanStatus || "local_validated");
+}
+
+function auditEventLabel(eventType?: string) {
+  return String(eventType || "activity")
+    .split("_")
+    .map((part) => part ? part[0].toUpperCase() + part.slice(1) : part)
+    .join(" ");
 }
 
 function GitHubProofSummary({ proof }: { proof?: GitHubProof | null }) {
@@ -566,6 +589,19 @@ export default function PortfolioGeneratorPage() {
     enabled: Boolean(latestPortfolio?._id || latestPortfolio?.id),
     retry: false
   });
+  const portfolioFileActivity = useQuery({
+    queryKey: ["portfolio-file-activity", latestPortfolio?._id || latestPortfolio?.id],
+    queryFn: () => api.get<PortfolioProofAuditEvent[]>(`/portfolios/${latestPortfolio._id || latestPortfolio.id}/files/activity`),
+    enabled: Boolean(latestPortfolio?._id || latestPortfolio?.id),
+    retry: false
+  });
+  const activityByFile = useMemo(() => {
+    const grouped: Record<string, PortfolioProofAuditEvent[]> = {};
+    (portfolioFileActivity.data || []).forEach((event) => {
+      grouped[event.fileId] = [...(grouped[event.fileId] || []), event];
+    });
+    return grouped;
+  }, [portfolioFileActivity.data]);
   const proofTargetOptions = useMemo(() => {
     const caseStudies: ProjectCaseStudyForm[] = (latestPortfolio?.projectCaseStudies?.length ? latestPortfolio.projectCaseStudies : form.projectCaseStudies).map(toCaseStudyForm);
     const mappings: ProofMappingForm[] = (latestPortfolio?.proofMappings?.length ? latestPortfolio.proofMappings : form.proofMappings).map(toProofMappingForm);
@@ -590,6 +626,7 @@ export default function PortfolioGeneratorPage() {
       setProofUploadMessage(`${data.originalFilename || "Proof file"} uploaded as ${data.visibility === "publicApproved" ? "public approved" : "private"}. Scan: ${scanStatusLabel(data.scanStatus)}.`);
       setProofFile(null);
       queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
     }
   });
@@ -600,6 +637,7 @@ export default function PortfolioGeneratorPage() {
     onSuccess: (data) => {
       setProofUploadMessage(`${data.originalFilename || "Proof file"} visibility updated to ${data.visibility === "publicApproved" ? "public approved" : "private"}. Scan: ${scanStatusLabel(data.scanStatus)}.`);
       queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
     }
   });
@@ -610,6 +648,7 @@ export default function PortfolioGeneratorPage() {
     onSuccess: (data) => {
       setProofUploadMessage(`Signed URL refreshed for ${data.originalFilename || "proof file"}; expires in ${data.signedUrlExpiresInSeconds || 900} seconds.`);
       queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
     }
   });
 
@@ -619,6 +658,7 @@ export default function PortfolioGeneratorPage() {
     onSuccess: () => {
       setProofUploadMessage("Proof file deleted and detached from portfolio proof cards.");
       queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
     }
   });
@@ -1004,10 +1044,62 @@ export default function PortfolioGeneratorPage() {
                       <Button type="button" variant="outline" className="h-9 px-3 text-xs" onClick={() => refreshProofFileUrl.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Refresh signed URL</Button>
                       <Button type="button" variant="ghost" className="h-9 px-3 text-xs" onClick={() => deleteProofFile.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Delete/detach</Button>
                     </div>
+                    {activityByFile[file.fileId]?.length ? (
+                      <div className="mt-3 rounded-md border bg-muted/20 p-3" data-testid={`proof-file-history-${file.fileId}`}>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Per-file audit history</p>
+                        <div className="mt-2 space-y-2">
+                          {activityByFile[file.fileId].slice(0, 4).map((event) => (
+                            <div key={event.eventId} className="flex flex-wrap items-start justify-between gap-2 text-xs">
+                              <div>
+                                <p className="font-semibold">{auditEventLabel(event.eventType)} <span className="font-normal text-muted-foreground">by {event.actor}</span></p>
+                                <p className="text-muted-foreground">{event.summary}</p>
+                              </div>
+                              {event.createdAt ? <span className="text-muted-foreground">{new Date(event.createdAt).toLocaleDateString()}</span> : null}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 )) : (
                   <div className="rounded-md border border-dashed p-4 text-xs text-muted-foreground">No proof files uploaded yet. Uploads remain private until you explicitly choose Public approved.</div>
                 )}
+              </div>
+
+              <div className="rounded-md border bg-muted/20 p-3" data-testid="proof-file-activity-panel">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">Proof file activity</p>
+                    <h3 className="text-sm font-semibold">User review history</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">Audit history tracks file actions, not file contents.</p>
+                  </div>
+                  <Badge>Owner-scoped</Badge>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {portfolioFileActivity.data?.length ? portfolioFileActivity.data.slice(0, 8).map((event) => (
+                    <div key={event.eventId} className="rounded-md border bg-background/70 p-3 text-xs">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold">{auditEventLabel(event.eventType)} <span className="font-normal text-muted-foreground">for file {event.fileId}</span></p>
+                          <p className="mt-1 text-muted-foreground">{event.summary}</p>
+                          {(event.previousVisibility || event.newVisibility || event.previousStatus || event.newStatus) ? (
+                            <p className="mt-1 text-muted-foreground">
+                              {event.previousVisibility || event.newVisibility ? `Visibility: ${event.previousVisibility || "none"} -> ${event.newVisibility || "none"}. ` : ""}
+                              {event.previousStatus || event.newStatus ? `Scan: ${event.previousStatus || "none"} -> ${event.newStatus || "none"}.` : ""}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge>{event.actor}</Badge>
+                          {event.projectId ? <Badge>Project-linked</Badge> : null}
+                          {event.proofMappingId ? <Badge>Skill proof-linked</Badge> : null}
+                        </div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="rounded-md border border-dashed p-4 text-xs text-muted-foreground">No proof file activity yet. Upload, attach, approve, refresh, or delete a proof file to build a private review trail.</div>
+                  )}
+                </div>
               </div>
             </div>
 

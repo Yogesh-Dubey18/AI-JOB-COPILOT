@@ -4,6 +4,15 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.36 - Proof File Audit Trail + User Review History (2026-05-28)
+
+- **Owner-Scoped Audit Events**: Added proof-file audit records for uploads, local validation, scan status changes, visibility decisions, public approval/revocation, signed URL generation, attachment, detachment, and deletion.
+- **Audit Endpoints**: Added protected owner-only endpoints for recent portfolio proof activity and per-file audit history, with optional event and project filters.
+- **Flow Integration**: Upload, visibility update, signed URL refresh, attach/detach, and delete paths now record safe summaries without file contents, storage paths, bucket URLs, or signed tokens.
+- **Builder Activity UX**: Added a proof file activity panel and per-file audit history to `/portfolio-generator` with the privacy note that audit history tracks actions, not contents.
+- **Public Privacy**: Kept `/u/[slug]` free of audit events, event IDs, private notes, scan internals, signed URL internals, and private file metadata.
+- **Docs**: Added proof file audit trail documentation and updated proof upload, scanning, proof mapping, provider integration, roadmap, final summary, and changelog docs.
+
 ### v2.0.35 - Proof File Scanning Provider-Ready Boundary (2026-05-28)
 
 - **File Scanning Status**: Added honest scanning status for Local validation, Provider-ready, Live, and Not configured contexts; Live requires real scanner credentials and a verified scan result.

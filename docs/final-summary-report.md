@@ -4,6 +4,19 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-28 Proof File Audit Trail + User Review History (Completed)
+
+Implemented the owner-scoped proof file audit trail without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake scanning/provider success, or exposing private file contents.
+
+- **Audit Event Model**: Added dedicated proof-file audit records for upload, local validation, scan status changes, visibility changes, public approval/revocation, signed URL generation, attachment, detachment, and deletion.
+- **Owner-Only Endpoints**: Added recent portfolio proof activity and per-file audit history routes with optional event and project filters.
+- **Flow Integration**: Upload, visibility update, signed URL refresh, attach/detach, and delete flows now record safe summaries only.
+- **Builder UX**: `/portfolio-generator` now shows a proof file activity panel and per-file user review history.
+- **Public Portfolio Safety**: `/u/[slug]` never exposes audit events, event IDs, private notes, scan internals, signed URL internals, or private file metadata.
+- **Docs**: Added [Proof File Audit Trail](proof-file-audit-trail.md) and updated proof upload, scanning, proof mapping, provider, roadmap, final summary, and changelog docs.
+
+---
+
 ## 2026-05-28 Proof File Scanning Provider-Ready Boundary (Completed)
 
 Implemented the proof file scanning boundary without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake provider success, fake scanning success, or public exposure of private files.

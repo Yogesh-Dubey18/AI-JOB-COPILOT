@@ -61,7 +61,9 @@ Attachment rules:
 - A file also needs public-eligible scan metadata before it can appear on `/u/[slug]`.
 - `blocked`, `failed`, `provider_pending`, and `not_scanned` files stay private and cannot be publicly approved.
 - Delete/detach removes the portfolio reference and asks the storage abstraction to delete the stored object.
+- Upload, attach, detach, visibility, scan, signed URL, and delete actions create owner-scoped audit events with safe summaries only.
 - Public output never includes private proof notes, private file records, local disk paths, private bucket URLs, provider credentials, or internal storage keys.
+- Public output never includes audit events, event IDs, signed URL internals, or owner-only review history.
 
 ## Proof Logic
 

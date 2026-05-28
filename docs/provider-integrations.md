@@ -226,6 +226,7 @@ Portfolio proof file upload:
 - Allows owner-controlled visibility changes to `publicApproved`.
 - Provides owner-gated signed URL/download refresh and delete/detach actions.
 - Does not mark proof as third-party verified.
+- Records owner-scoped audit events for upload, validation, visibility, signed URL, attach/detach, and delete actions without file contents.
 
 Local fallback:
 - Uses app-served `/uploads/...` links when the existing app supports the file.
@@ -239,6 +240,14 @@ S3/R2 provider-ready behavior:
 - Must be verified manually before status is changed to Live.
 
 Never expose absolute local disk paths, private bucket URLs, access keys, secret keys, or internal storage keys in public portfolio output.
+
+### Proof File Audit Trail
+
+**Current status**: Implemented as owner-scoped app data. It does not require an external provider.
+
+The audit trail records file actions and review decisions, including upload, local validation, scan status changes, visibility changes, public approval/revocation, signed URL generation, attachment, detachment, and deletion.
+
+It never logs file contents, absolute local paths, private bucket URLs, full signed URLs, query tokens, provider credentials, or private proof notes. Public portfolios never return audit events or event IDs.
 
 ---
 

@@ -4,6 +4,7 @@ import { createRecord, findOneRecord, findRecordById, findRecords, updateRecord 
 import { randomUUID } from "node:crypto";
 import { resolvePublicPortfolioFiles, sanitizePortfolioFileReferences } from "./portfolio-file.service.js";
 import { publicGitHubProof, sanitizeGitHubProof } from "./github-proof.service.js";
+import { recordPortfolioFileAuditEvent } from "./portfolio-file-audit.service.js";
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "portfolio";
@@ -503,12 +504,29 @@ export async function attachPortfolioFileReference(userId: string, id: string, f
 
   const updated = await updateRecord("portfolios", id, { projectCaseStudies, proofMappings });
   if (!updated) throw new ApiError(404, "Portfolio not found");
+  if (attached) {
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId: id,
+      fileId: safeFile.fileId,
+      projectId: safeFile.projectId,
+      proofMappingId: safeFile.proofMappingId,
+      eventType: "attached_to_project",
+      actor: "user",
+      summary: "Proof file was attached to a portfolio project or skill proof mapping. File contents were not logged."
+    });
+  }
   const publicProfile = await syncPublicProfile(userId, updated, updated);
   return { ...updated, publicProfile, publicUrl: `/u/${publicProfile.slug}` };
 }
 
 export async function detachPortfolioFileReference(userId: string, id: string, fileId: string) {
   const portfolio = await getPortfolio(userId, id);
+  const existingFiles = [
+    ...normalizeCaseStudies(portfolio.projectCaseStudies || []).flatMap((project) => (project.proofFiles || []).map((file: any) => ({ ...file, projectId: project.id }))),
+    ...normalizeProofMappings(portfolio.proofMappings || []).flatMap((mapping) => (mapping.proofFiles || []).map((file: any) => ({ ...file, proofMappingId: mapping.id })))
+  ];
+  const existingFile = existingFiles.find((file: any) => String(file.fileId) === String(fileId));
   const projectCaseStudies = normalizeCaseStudies(portfolio.projectCaseStudies || []).map((project) => ({
     ...project,
     proofFiles: removeProofFile(project.proofFiles, fileId)
@@ -520,6 +538,18 @@ export async function detachPortfolioFileReference(userId: string, id: string, f
 
   const updated = await updateRecord("portfolios", id, { projectCaseStudies, proofMappings });
   if (!updated) throw new ApiError(404, "Portfolio not found");
+  if (existingFile) {
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId: id,
+      fileId,
+      projectId: existingFile.projectId,
+      proofMappingId: existingFile.proofMappingId,
+      eventType: "detached_from_project",
+      actor: "user",
+      summary: "Proof file was detached from portfolio proof cards. File contents were not logged."
+    });
+  }
   const publicProfile = await syncPublicProfile(userId, updated, updated);
   return { ...updated, publicProfile, publicUrl: `/u/${publicProfile.slug}` };
 }

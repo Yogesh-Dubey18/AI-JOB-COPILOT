@@ -18,6 +18,7 @@ export type CollectionName =
   | "portfolios"
   | "publicProfiles"
   | "portfolioFiles"
+  | "portfolioFileAuditEvents"
   | "pdfExports"
   | "jobScamReports"
   | "chatSessions"
@@ -59,6 +60,7 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   portfolios: [],
   publicProfiles: [],
   portfolioFiles: [],
+  portfolioFileAuditEvents: [],
   pdfExports: [],
   jobScamReports: [],
   chatSessions: [],

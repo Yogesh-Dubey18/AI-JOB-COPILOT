@@ -18,6 +18,7 @@ import {
   normalizeScanStatus,
   scanPortfolioProofFileBuffer
 } from "./file-scanning.service.js";
+import { recordPortfolioFileAuditEvent } from "./portfolio-file-audit.service.js";
 
 const fileTypes = new Set(["resumePdf", "portfolioPdf", "screenshot", "proofFile", "other"]);
 const storageProviders = new Set(["local", "s3", "r2"]);
@@ -186,6 +187,24 @@ async function findOwnedPortfolioFile(userId: string, portfolioId: string, fileI
   return file;
 }
 
+async function recordScanAuditForFile(file: any, scanStatus: FileScanStatus) {
+  if (scanStatus === "not_scanned") return;
+  await recordPortfolioFileAuditEvent({
+    ownerId: String(file.ownerId),
+    portfolioId: String(file.portfolioId),
+    fileId: String(file.fileId),
+    projectId: file.projectId,
+    proofMappingId: file.proofMappingId,
+    eventType: scanStatus === "local_validated" ? "local_validated" : "scan_status_changed",
+    previousStatus: "not_scanned",
+    newStatus: scanStatus,
+    actor: "system",
+    summary: scanStatus === "local_validated"
+      ? "Local validation completed without logging file contents."
+      : "Provider scan status changed without logging file contents."
+  });
+}
+
 export async function createPortfolioFileMetadata(userId: string, portfolioId: string, input: any = {}) {
   await assertPortfolioOwner(userId, portfolioId);
   const safeInput = sanitizePortfolioFileReference({
@@ -211,6 +230,31 @@ export async function createPortfolioFileMetadata(userId: string, portfolioId: s
     fileId: safeInput.fileId || randomUUID(),
     ...scanPayload
   });
+
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId: created.fileId,
+    projectId: created.projectId,
+    proofMappingId: created.proofMappingId,
+    eventType: "uploaded",
+    newVisibility: created.visibility,
+    actor: "user",
+    summary: "Proof file metadata was registered in the owner-scoped vault. File contents were not logged."
+  });
+  if (created.visibility === "publicApproved") {
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId,
+      fileId: created.fileId,
+      projectId: created.projectId,
+      proofMappingId: created.proofMappingId,
+      eventType: "public_approved",
+      newVisibility: created.visibility,
+      actor: "user"
+    });
+  }
+  await recordScanAuditForFile(created, scanPayload.scanStatus);
 
   return presentPortfolioFile(created, { includeSignedUrl: true, allowPrivate: true });
 }
@@ -245,6 +289,31 @@ export async function uploadPortfolioProofFile(userId: string, portfolioId: stri
     ...scan
   });
 
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId,
+    projectId: created.projectId,
+    proofMappingId: created.proofMappingId,
+    eventType: "uploaded",
+    newVisibility: visibility,
+    actor: "user",
+    summary: "Proof file was uploaded into the owner-scoped vault. File contents and storage paths were not logged."
+  });
+  if (visibility === "publicApproved") {
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId,
+      fileId,
+      projectId: created.projectId,
+      proofMappingId: created.proofMappingId,
+      eventType: "public_approved",
+      newVisibility: visibility,
+      actor: "user"
+    });
+  }
+  await recordScanAuditForFile(created, scan.scanStatus);
+
   return presentPortfolioFile(created, { includeSignedUrl: true, allowPrivate: true });
 }
 
@@ -261,6 +330,30 @@ export async function updatePortfolioFileVisibility(userId: string, portfolioId:
   const nextVisibility = normalizeVisibility(visibility);
   if (nextVisibility === "publicApproved") assertPublicEligible(file);
   const updated = await updateRecord("portfolioFiles", String(file._id), { visibility: nextVisibility });
+  if (file.visibility !== nextVisibility) {
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId,
+      fileId,
+      projectId: file.projectId,
+      proofMappingId: file.proofMappingId,
+      eventType: "visibility_changed",
+      previousVisibility: file.visibility,
+      newVisibility: nextVisibility,
+      actor: "user"
+    });
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId,
+      fileId,
+      projectId: file.projectId,
+      proofMappingId: file.proofMappingId,
+      eventType: nextVisibility === "publicApproved" ? "public_approved" : "public_revoked",
+      previousVisibility: file.visibility,
+      newVisibility: nextVisibility,
+      actor: "user"
+    });
+  }
   return presentPortfolioFile(updated, { includeSignedUrl: true, allowPrivate: true });
 }
 
@@ -276,13 +369,48 @@ export async function updatePortfolioFile(userId: string, portfolioId: string, f
   if ("proofMappingId" in input) updatePayload.proofMappingId = input.proofMappingId ? String(input.proofMappingId) : "";
   if ("fileType" in input) updatePayload.fileType = normalizeFileType(input.fileType);
   const updated = await updateRecord("portfolioFiles", String(file._id), updatePayload);
+  if ("visibility" in updatePayload && file.visibility !== updatePayload.visibility) {
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId,
+      fileId,
+      projectId: updated?.projectId || file.projectId,
+      proofMappingId: updated?.proofMappingId || file.proofMappingId,
+      eventType: "visibility_changed",
+      previousVisibility: file.visibility,
+      newVisibility: updatePayload.visibility,
+      actor: "user"
+    });
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId,
+      fileId,
+      projectId: updated?.projectId || file.projectId,
+      proofMappingId: updated?.proofMappingId || file.proofMappingId,
+      eventType: updatePayload.visibility === "publicApproved" ? "public_approved" : "public_revoked",
+      previousVisibility: file.visibility,
+      newVisibility: updatePayload.visibility,
+      actor: "user"
+    });
+  }
   return presentPortfolioFile(updated, { includeSignedUrl: true, allowPrivate: true });
 }
 
 export async function getPortfolioFileSignedUrl(userId: string, portfolioId: string, fileId: string) {
   await assertPortfolioOwner(userId, portfolioId);
   const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
-  return presentPortfolioFile(file, { includeSignedUrl: true, allowPrivate: true });
+  const presented = await presentPortfolioFile(file, { includeSignedUrl: true, allowPrivate: true });
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId,
+    projectId: file.projectId,
+    proofMappingId: file.proofMappingId,
+    eventType: "signed_url_generated",
+    actor: "user",
+    summary: "Short-lived proof file URL was generated for the owner. Full token and private storage URL were not logged."
+  });
+  return presented;
 }
 
 export async function deletePortfolioFile(userId: string, portfolioId: string, fileId: string) {
@@ -290,6 +418,17 @@ export async function deletePortfolioFile(userId: string, portfolioId: string, f
   const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
   await deleteFile(file.storageKey);
   await deleteRecord("portfolioFiles", String(file._id));
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId,
+    projectId: file.projectId,
+    proofMappingId: file.proofMappingId,
+    eventType: "deleted",
+    previousVisibility: file.visibility,
+    actor: "user",
+    summary: "Proof file was deleted. File contents and storage paths were not logged."
+  });
   return { deleted: true, fileId };
 }
 

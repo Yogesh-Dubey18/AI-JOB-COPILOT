@@ -29,6 +29,10 @@ import {
   updatePortfolioFileVisibility,
   uploadPortfolioProofFile
 } from "../services/portfolio-file.service.js";
+import {
+  listPortfolioFileAuditEvents,
+  listRecentPortfolioFileActivity
+} from "../services/portfolio-file-audit.service.js";
 
 const router = Router();
 const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : value);
@@ -72,6 +76,17 @@ router.get("/:id/files", asyncHandler(async (req, res) => {
   res.json({ success: true, data: await listPortfolioFiles(req.user!.id, param(req.params.id)) });
 }));
 
+router.get("/:id/files/activity", asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: await listRecentPortfolioFileActivity(req.user!.id, param(req.params.id), {
+      eventType: req.query.eventType,
+      projectId: req.query.projectId,
+      limit: req.query.limit
+    })
+  });
+}));
+
 router.post("/:id/files/metadata", asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: await createPortfolioFileMetadata(req.user!.id, param(req.params.id), req.body) });
 }));
@@ -91,6 +106,16 @@ router.post("/:id/files/upload", portfolioProofUpload.single("proofFile"), async
 
 router.get("/:id/files/:fileId/signed-url", asyncHandler(async (req, res) => {
   res.json({ success: true, data: await getPortfolioFileSignedUrl(req.user!.id, param(req.params.id), param(req.params.fileId)) });
+}));
+
+router.get("/:id/files/:fileId/activity", asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: await listPortfolioFileAuditEvents(req.user!.id, param(req.params.id), param(req.params.fileId), {
+      eventType: req.query.eventType,
+      limit: req.query.limit
+    })
+  });
 }));
 
 router.patch("/:id/files/:fileId", asyncHandler(async (req, res) => {

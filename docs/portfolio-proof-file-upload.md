@@ -16,6 +16,7 @@ This phase adds user-initiated proof file uploads to the portfolio builder while
 | Delete/detach | Implemented | Deletes the stored object through the storage abstraction and detaches portfolio references. |
 | Public route filtering | Implemented | `/u/[slug]` only shows `publicApproved` files. |
 | Scan boundary | Implemented | Local validation is recorded as `local_validated`; provider malware scanning remains provider-ready until credentials and a real scan succeed. |
+| Audit trail | Implemented | Upload, local validation, visibility, signed URL, attach/detach, and delete actions create owner-only safe audit events. |
 | S3/R2 storage | Provider-ready | Requires real credentials and signed URL verification before marking Live. |
 
 ## Supported Files
@@ -55,6 +56,8 @@ POST /api/portfolios/:id/files/upload
 GET /api/portfolios/:id/files
 PATCH /api/portfolios/:id/files/:fileId
 GET /api/portfolios/:id/files/:fileId/signed-url
+GET /api/portfolios/:id/files/activity
+GET /api/portfolios/:id/files/:fileId/activity
 GET /api/portfolios/scanning/status
 POST /api/portfolios/:id/files/:fileId/attach
 DELETE /api/portfolios/:id/files/:fileId
@@ -91,6 +94,8 @@ The `/portfolio-generator` page now shows:
 - Delete/detach action.
 - Warning: "Private proof files are only shared publicly when you approve them."
 - Warning: "Local validation checks file type and signatures. Provider malware scanning requires setup."
+- Proof file activity panel and per-file history.
+- Privacy note: "Audit history tracks file actions, not file contents."
 
 The public `/u/[slug]` page:
 
@@ -118,6 +123,12 @@ The UI keeps proof labels honest and uses the existing warning:
 ```text
 Do not claim skills, results, or metrics that you cannot explain or prove.
 ```
+
+## Audit Trail Privacy
+
+Owner-only proof file audit history records actions, not contents. It may record upload, local validation, visibility approval/revocation, signed URL generation, attachment, detachment, and deletion events.
+
+It never logs file contents, absolute local paths, private bucket URLs, full signed URLs, signed URL tokens, provider credentials, or private proof notes. Public portfolios never receive audit events.
 
 ## Storage Provider Honesty
 

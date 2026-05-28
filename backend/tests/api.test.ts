@@ -1489,27 +1489,41 @@ describe("AI Job Copilot API", () => {
     expect(uploaded.body.data.scanStatus).not.toBe("clean");
     expect(uploaded.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
     expect(JSON.stringify(uploaded.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
+    const uploadActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity`).expect(200);
+    expect(uploadActivity.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining(["uploaded", "local_validated", "attached_to_project"]));
+    expect(JSON.stringify(uploadActivity.body.data)).not.toMatch(/C:\\|private-bucket|storageKey|localPath|absolutePath|\/uploads\/portfolio-proof/);
 
     const privatePublicProfile = await request(app).get("/api/portfolios/public/upload-proof-portfolio").expect(200);
     expect(privatePublicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(0);
+    expect(JSON.stringify(privatePublicProfile.body.data)).not.toMatch(/audit|eventId|uploaded|signed_url_generated/i);
 
     const otherAgent = request.agent(app);
     await otherAgent.post("/api/auth/register").send({ fullName: "Other User", email: "other@example.com", password: "Password123!" }).expect(201);
     await otherAgent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(404);
+    await otherAgent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity`).expect(404);
+    await otherAgent.get(`/api/portfolios/${portfolioId}/files/activity`).expect(404);
 
     const signed = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(200);
     expect(signed.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+    const signedActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity?eventType=signed_url_generated`).expect(200);
+    expect(signedActivity.body.data).toHaveLength(1);
+    expect(signedActivity.body.data[0].summary).toMatch(/token/i);
+    expect(JSON.stringify(signedActivity.body.data)).not.toMatch(/\/uploads\/portfolio-proof|storageKey|C:\\|private-bucket|\?token=|signature=/i);
 
     const approved = await agent.patch(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}`).send({ visibility: "publicApproved" }).expect(200);
     expect(approved.body.data.visibility).toBe("publicApproved");
+    const visibilityActivity = await agent.get(`/api/portfolios/${portfolioId}/files/activity?eventType=public_approved&projectId=case-upload`).expect(200);
+    expect(visibilityActivity.body.data.some((event: any) => event.fileId === uploaded.body.data.fileId)).toBe(true);
 
     const publicProfile = await request(app).get("/api/portfolios/public/upload-proof-portfolio").expect(200);
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(1);
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].fileId).toBe(uploaded.body.data.fileId);
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
-    expect(JSON.stringify(publicProfile.body.data)).not.toMatch(/storageKey|C:\\|localPath|absolutePath|private-bucket/);
+    expect(JSON.stringify(publicProfile.body.data)).not.toMatch(/storageKey|C:\\|localPath|absolutePath|private-bucket|audit|eventId|signed_url_generated/i);
 
     await agent.delete(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}`).expect(200);
+    const deletedActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity`).expect(200);
+    expect(deletedActivity.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining(["deleted", "detached_from_project"]));
     const files = await agent.get(`/api/portfolios/${portfolioId}/files`).expect(200);
     expect(files.body.data).toHaveLength(0);
   });
