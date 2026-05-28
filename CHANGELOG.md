@@ -4,6 +4,16 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.37 - Proof File Retention Controls + Owner Export Review (2026-05-28)
+
+- **Retention Metadata**: Added owner-scoped retention status, review status, delete request/completion timestamps, retention reasons, and sanitized owner notes to portfolio proof files.
+- **Detach/Delete Safeguards**: Added detach, delete request, and confirmed delete flows so owners can separate removing a proof reference from deleting the stored file.
+- **Metadata Export Review**: Added an owner-only proof-file export summary with file metadata and recent safe audit events; binary archive export remains a future secure workflow.
+- **Public Privacy Gate**: `/u/[slug]` now hides scheduled-for-delete, deleted, and retained-for-audit proof files even if old embedded metadata was public-approved.
+- **Audit Events**: Added retention review, delete request, delete completion, detach request, export request, and export metadata generation events without logging file contents, private paths, bucket URLs, or signed tokens.
+- **Builder Retention UX**: Added retention/review badges, detach/delete controls, export summary UI, and privacy copy to `/portfolio-generator`.
+- **Docs**: Added proof file retention controls documentation and updated audit, scanning, upload, proof mapping, provider integration, roadmap, final summary, and changelog docs.
+
 ### v2.0.36 - Proof File Audit Trail + User Review History (2026-05-28)
 
 - **Owner-Scoped Audit Events**: Added proof-file audit records for uploads, local validation, scan status changes, visibility decisions, public approval/revocation, signed URL generation, attachment, detachment, and deletion.

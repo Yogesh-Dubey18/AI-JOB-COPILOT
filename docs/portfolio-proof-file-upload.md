@@ -17,6 +17,7 @@ This phase adds user-initiated proof file uploads to the portfolio builder while
 | Public route filtering | Implemented | `/u/[slug]` only shows `publicApproved` files. |
 | Scan boundary | Implemented | Local validation is recorded as `local_validated`; provider malware scanning remains provider-ready until credentials and a real scan succeed. |
 | Audit trail | Implemented | Upload, local validation, visibility, signed URL, attach/detach, and delete actions create owner-only safe audit events. |
+| Retention controls | Implemented | Owners can review retention state, detach files without deleting binaries, request/confirm deletion, and generate metadata-only export summaries. |
 | S3/R2 storage | Provider-ready | Requires real credentials and signed URL verification before marking Live. |
 
 ## Supported Files
@@ -59,7 +60,11 @@ GET /api/portfolios/:id/files/:fileId/signed-url
 GET /api/portfolios/:id/files/activity
 GET /api/portfolios/:id/files/:fileId/activity
 GET /api/portfolios/scanning/status
+GET /api/portfolios/:id/files/export-summary
 POST /api/portfolios/:id/files/:fileId/attach
+POST /api/portfolios/:id/files/:fileId/detach
+POST /api/portfolios/:id/files/:fileId/delete-request
+PATCH /api/portfolios/:id/files/:fileId/retention
 DELETE /api/portfolios/:id/files/:fileId
 ```
 
@@ -91,16 +96,21 @@ The `/portfolio-generator` page now shows:
 - Project/case-study attachment selector.
 - Visibility selector for `private` or `publicApproved`.
 - Signed URL/download action.
-- Delete/detach action.
+- Delete/detach action with a clear difference between detaching a reference and deleting the file.
+- Retention status badge.
+- Review status badge.
+- Metadata export summary action.
 - Warning: "Private proof files are only shared publicly when you approve them."
 - Warning: "Local validation checks file type and signatures. Provider malware scanning requires setup."
 - Proof file activity panel and per-file history.
 - Privacy note: "Audit history tracks file actions, not file contents."
+- Privacy note: "Export shows your proof-file metadata and audit history. It does not expose private storage paths or signed URL secrets."
 
 The public `/u/[slug]` page:
 
 - Shows only public-approved proof files.
 - Hides blocked, failed, pending, or not-scanned files even if old metadata says `publicApproved`.
+- Hides scheduled-for-delete, deleted, and retained-for-audit files.
 - Hides private files completely.
 - Avoids private local disk paths, private bucket URLs, raw storage keys, and owner-only notes.
 - Shows safe unavailable text if a public-approved file has no usable download link.
@@ -129,6 +139,17 @@ Do not claim skills, results, or metrics that you cannot explain or prove.
 Owner-only proof file audit history records actions, not contents. It may record upload, local validation, visibility approval/revocation, signed URL generation, attachment, detachment, and deletion events.
 
 It never logs file contents, absolute local paths, private bucket URLs, full signed URLs, signed URL tokens, provider credentials, or private proof notes. Public portfolios never receive audit events.
+
+## Retention And Owner Export
+
+Retention controls are owner-scoped and privacy-first:
+
+- New files default to `retentionStatus: active` and `reviewStatus: not_reviewed`.
+- `scheduled_for_delete`, `deleted`, and `retained_for_audit` files cannot appear publicly.
+- Detach removes a file from a case study/proof mapping without deleting the binary.
+- Delete requires confirmation and records safe audit events before metadata is removed.
+- Export summary is metadata-only; binary archive export requires a future secure workflow.
+- Export summaries do not include signed URL secrets, private bucket URLs, absolute local paths, or file contents.
 
 ## Storage Provider Honesty
 
@@ -189,3 +210,6 @@ Frontend coverage includes:
 - Public portfolio hiding blocked files.
 - No fake S3/R2 Live claim.
 - No fake scanning Live claim.
+- Retention defaults are safe.
+- Deleted/scheduled/retained files are hidden from public portfolios.
+- Export summary is owner-scoped and excludes paths, storage keys, signed tokens, and file contents.

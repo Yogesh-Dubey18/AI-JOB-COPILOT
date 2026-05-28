@@ -27,6 +27,7 @@ This document covers the implemented Dynamic Portfolio Builder & Public Slugs ph
 - Signed URL refresh and delete/detach actions for owner-managed proof files.
 - Public portfolio filtering for `publicApproved` proof files only.
 - Proof file scan status badges and public eligibility gates.
+- Proof file retention/review controls with detach, delete request, confirmed delete, and metadata-only export summary.
 - GitHub proof URL parsing, provider-ready status, manual fallback, and `Check GitHub proof` actions for case studies and proof mappings.
 - `showGitHubProof` visibility gates so GitHub proof appears publicly only when the owner approves it.
 
@@ -65,6 +66,7 @@ The public endpoint exposes:
 - Skill proof mappings only when proof mapping visibility and per-mapping public approval are enabled.
 - Proof files only when file visibility is `publicApproved`.
 - Proof files only when scan metadata says the file is public-eligible.
+- Proof files only when retention status is `active`.
 - GitHub proof links only when social links are enabled and the relevant case study or proof mapping has `showGitHubProof` enabled.
 
 The public endpoint does not expose user IDs, private resume records, auth data, tokens, provider credentials, or unpublished portfolios.
@@ -129,6 +131,10 @@ Safety rules:
 - Owners can switch visibility to `publicApproved`, refresh a signed/download URL, or delete/detach the file.
 - Public portfolios show only public-approved file links and hide private files completely.
 - Public approval is disabled when scan status is `blocked`, `failed`, `provider_pending`, or `not_scanned`.
+- Public output is disabled when retention status is `scheduled_for_delete`, `deleted`, or `retained_for_audit`.
+- Detach removes a file from the selected project/proof mapping while keeping owner metadata.
+- Delete requires explicit owner confirmation and preserves minimal safe audit history.
+- Metadata export summary is available for owner review; binary archive export is not implemented.
 - Uploaded files are owner-maintained proof and do not imply third-party verification.
 
 ## Proof File Scan Boundary
@@ -148,6 +154,24 @@ The UI warning is:
 ```text
 Local validation checks file type and signatures. Provider malware scanning requires setup.
 ```
+
+## Proof File Retention And Export
+
+Retention behavior:
+
+- New proof files default to `active` retention and `not_reviewed` review state.
+- Owners can mark files reviewed, schedule them for deletion, retain them for audit, detach them, or confirm deletion.
+- Scheduling deletion, marking deleted, or retaining for audit forces public visibility off.
+- Public `/u/[slug]` output hides retention metadata, audit events, owner notes, and any non-active file.
+- Owner export summary contains proof-file metadata and recent safe audit activity only.
+
+Export limitation:
+
+```text
+metadata_export_ready
+```
+
+Binary export of proof files requires a future secure archive workflow.
 
 ## GitHub Proof Behavior
 

@@ -4,6 +4,20 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-28 Proof File Retention Controls + Owner Data Export/Delete Review (Completed)
+
+Implemented owner-controlled proof-file retention, detach/delete safeguards, and metadata export review without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake scanner/provider success, or exposing private file contents.
+
+- **Retention Metadata**: Portfolio proof files now track `retentionStatus`, `retentionReason`, delete request/completion dates, review state, last reviewed date, and sanitized owner notes.
+- **Detach/Delete Review**: Owners can detach a file from a case study/proof mapping without deleting the binary, request deletion, and confirm deletion before metadata/storage cleanup runs.
+- **Owner Export Summary**: Added a metadata-only export summary that lists proof-file status and recent safe audit events without signed URL tokens, private bucket URLs, absolute local paths, or file contents.
+- **Audit Integration**: Added safe audit events for retention review, delete request, delete completion, detach request, export request, and export metadata generation.
+- **Builder UX**: `/portfolio-generator` now shows retention/review badges, detach/delete controls, export summary controls, and privacy copy explaining that exports do not expose storage secrets.
+- **Public Portfolio Safety**: `/u/[slug]` hides deleted, scheduled-for-delete, retained-for-audit, private, and scan-ineligible files and never exposes retention metadata or audit history.
+- **Docs**: Added [Proof File Retention Controls](proof-file-retention-controls.md) and updated audit, scanning, proof upload, proof mapping, provider, roadmap, final summary, and changelog docs.
+
+---
+
 ## 2026-05-28 Proof File Audit Trail + User Review History (Completed)
 
 Implemented the owner-scoped proof file audit trail without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake scanning/provider success, or exposing private file contents.

@@ -227,6 +227,9 @@ Portfolio proof file upload:
 - Provides owner-gated signed URL/download refresh and delete/detach actions.
 - Does not mark proof as third-party verified.
 - Records owner-scoped audit events for upload, validation, visibility, signed URL, attach/detach, and delete actions without file contents.
+- Tracks owner-scoped retention status and review status.
+- Provides metadata-only export summary for proof files and recent safe audit events.
+- Hides scheduled-for-delete, deleted, and retained-for-audit files from public portfolios.
 
 Local fallback:
 - Uses app-served `/uploads/...` links when the existing app supports the file.
@@ -245,9 +248,34 @@ Never expose absolute local disk paths, private bucket URLs, access keys, secret
 
 **Current status**: Implemented as owner-scoped app data. It does not require an external provider.
 
-The audit trail records file actions and review decisions, including upload, local validation, scan status changes, visibility changes, public approval/revocation, signed URL generation, attachment, detachment, and deletion.
+The audit trail records file actions and review decisions, including upload, local validation, scan status changes, visibility changes, public approval/revocation, signed URL generation, attachment, detachment, retention review, delete request, delete completion, metadata export request, metadata export generation, and deletion.
 
 It never logs file contents, absolute local paths, private bucket URLs, full signed URLs, query tokens, provider credentials, or private proof notes. Public portfolios never return audit events or event IDs.
+
+### Proof File Retention And Export
+
+**Current status**: Implemented as owner-scoped app data. Binary archive export is not implemented.
+
+Retention statuses:
+
+- `active`
+- `scheduled_for_delete`
+- `deleted`
+- `retained_for_audit`
+
+Review statuses:
+
+- `not_reviewed`
+- `reviewed`
+- `needs_attention`
+
+Owner metadata export includes proof-file metadata and recent safe audit summaries. It does not include file contents, signed URL tokens, full signed URLs, private bucket URLs, absolute local paths, storage credentials, or scanner payloads.
+
+Public portfolio rules:
+
+- Only `active` files can appear.
+- Files also need `publicApproved` visibility and public-eligible scan metadata.
+- `scheduled_for_delete`, `deleted`, and `retained_for_audit` files are hidden even if older embedded metadata says public-approved.
 
 ---
 

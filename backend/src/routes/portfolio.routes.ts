@@ -21,10 +21,14 @@ import { checkGitHubProof, getGitHubProviderStatus } from "../services/github-pr
 import {
   createPortfolioFileMetadata,
   deletePortfolioFile,
+  detachPortfolioFileMetadata,
+  getPortfolioProofFileExportSummary,
   getPortfolioFileSignedUrl,
   getPortfolioScanningStatus,
   getPortfolioStorageStatus,
   listPortfolioFiles,
+  requestPortfolioFileDeletion,
+  reviewPortfolioFileRetention,
   updatePortfolioFile,
   updatePortfolioFileVisibility,
   uploadPortfolioProofFile
@@ -87,6 +91,10 @@ router.get("/:id/files/activity", asyncHandler(async (req, res) => {
   });
 }));
 
+router.get("/:id/files/export-summary", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await getPortfolioProofFileExportSummary(req.user!.id, param(req.params.id)) });
+}));
+
 router.post("/:id/files/metadata", asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: await createPortfolioFileMetadata(req.user!.id, param(req.params.id), req.body) });
 }));
@@ -97,7 +105,11 @@ router.post("/:id/files/upload", portfolioProofUpload.single("proofFile"), async
     try {
       await attachPortfolioFileReference(req.user!.id, param(req.params.id), file);
     } catch (error) {
-      await deletePortfolioFile(req.user!.id, param(req.params.id), file.fileId);
+      await deletePortfolioFile(req.user!.id, param(req.params.id), file.fileId, {
+        confirmed: true,
+        actor: "system",
+        reason: "Upload attachment target failed validation; temporary proof file cleanup completed."
+      });
       throw error;
     }
   }
@@ -126,6 +138,14 @@ router.patch("/:id/files/:fileId", asyncHandler(async (req, res) => {
   res.json({ success: true, data: file });
 }));
 
+router.patch("/:id/files/:fileId/retention", asyncHandler(async (req, res) => {
+  const file = await reviewPortfolioFileRetention(req.user!.id, param(req.params.id), param(req.params.fileId), req.body);
+  if (file?.projectId || file?.proofMappingId) {
+    await attachPortfolioFileReference(req.user!.id, param(req.params.id), file);
+  }
+  res.json({ success: true, data: file });
+}));
+
 router.post("/:id/files/:fileId/attach", asyncHandler(async (req, res) => {
   const file = await updatePortfolioFile(req.user!.id, param(req.params.id), param(req.params.fileId), {
     projectId: req.body.projectId,
@@ -135,9 +155,31 @@ router.post("/:id/files/:fileId/attach", asyncHandler(async (req, res) => {
   res.json({ success: true, data: { file, portfolio } });
 }));
 
+router.post("/:id/files/:fileId/detach", asyncHandler(async (req, res) => {
+  const file = await detachPortfolioFileMetadata(req.user!.id, param(req.params.id), param(req.params.fileId));
+  const portfolio = await detachPortfolioFileReference(req.user!.id, param(req.params.id), param(req.params.fileId));
+  res.json({ success: true, data: { file, portfolio } });
+}));
+
+router.post("/:id/files/:fileId/delete-request", asyncHandler(async (req, res) => {
+  const file = await requestPortfolioFileDeletion(req.user!.id, param(req.params.id), param(req.params.fileId), req.body);
+  if (file?.projectId || file?.proofMappingId) {
+    await attachPortfolioFileReference(req.user!.id, param(req.params.id), file);
+  }
+  res.json({ success: true, data: file });
+}));
+
 router.delete("/:id/files/:fileId", asyncHandler(async (req, res) => {
+  const confirmed = req.body?.confirmDelete === true || req.query.confirm === "DELETE";
+  if (!confirmed) {
+    await deletePortfolioFile(req.user!.id, param(req.params.id), param(req.params.fileId), { confirmed: false });
+    return;
+  }
   await detachPortfolioFileReference(req.user!.id, param(req.params.id), param(req.params.fileId));
-  res.json({ success: true, data: await deletePortfolioFile(req.user!.id, param(req.params.id), param(req.params.fileId)) });
+  res.json({ success: true, data: await deletePortfolioFile(req.user!.id, param(req.params.id), param(req.params.fileId), {
+    confirmed,
+    reason: req.body?.retentionReason || req.body?.reason
+  }) });
 }));
 
 router.get("/:id/versions", asyncHandler(async (req, res) => {

@@ -468,6 +468,42 @@ describe("frontend pages", () => {
           })
         });
       }
+      if (String(url).includes("/portfolios/portfolio-1/files/export-summary")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              generatedAt: "2026-05-28T10:20:00.000Z",
+              binaryExportStatus: "metadata_export_ready",
+              binaryExportNote: "Metadata export ready; binary export requires secure archive workflow.",
+              files: [
+                {
+                  fileId: "proof-file-1",
+                  originalFilename: "proof.png",
+                  visibility: "private",
+                  scanStatus: "local_validated",
+                  retentionStatus: "active",
+                  reviewStatus: "not_reviewed",
+                  projectId: "case-1"
+                }
+              ],
+              recentAuditEvents: [
+                {
+                  eventId: "activity-4",
+                  portfolioId: "portfolio-1",
+                  fileId: "portfolio-proof-metadata-export",
+                  eventType: "export_generated_metadata",
+                  actor: "system",
+                  summary: "Metadata export summary was generated without binaries, signed tokens, or private paths."
+                }
+              ]
+            }
+          })
+        });
+      }
       if (String(url).includes("/portfolios/portfolio-1/files")) {
         return Promise.resolve({
           ok: true,
@@ -490,7 +526,9 @@ describe("frontend pages", () => {
                 scanStatus: "local_validated",
                 scanProvider: "local-validation",
                 scanSummary: "Local validation passed. Provider malware scanning is not configured.",
-                isPublicEligible: true
+                isPublicEligible: true,
+                retentionStatus: "active",
+                reviewStatus: "not_reviewed"
               },
               {
                 fileId: "blocked-proof-file",
@@ -506,7 +544,10 @@ describe("frontend pages", () => {
                 scanProvider: "test-scanner",
                 scanSummary: "Provider malware scan blocked this file.",
                 blockedReason: "provider_reported_file_risk",
-                isPublicEligible: false
+                isPublicEligible: false,
+                retentionStatus: "scheduled_for_delete",
+                retentionReason: "Owner requested deletion review.",
+                reviewStatus: "needs_attention"
               }
             ]
           })
@@ -609,6 +650,10 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Max file size: 5MB/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Proof file visibility")).toBeInTheDocument();
     expect(screen.getByText(/Private proof files are only shared publicly when you approve them/i)).toBeInTheDocument();
+    expect(screen.getByText(/Export shows your proof-file metadata and audit history/i)).toBeInTheDocument();
+    expect(screen.getByTestId("proof-retention-controls")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Export metadata summary/i })).toBeInTheDocument();
+    expect(screen.getByText(/Detach removes a file from project\/proof cards/i)).toBeInTheDocument();
     expect(screen.getByText(/does not provision a hosted domain/i)).toBeInTheDocument();
     expect(screen.queryByText(/permanent public hosting/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/S3\/R2 Live/i)).not.toBeInTheDocument();
@@ -638,9 +683,17 @@ describe("frontend pages", () => {
       expect(screen.getByText("proof.png")).toBeInTheDocument();
       expect(screen.getByText("blocked.pdf")).toBeInTheDocument();
       expect(screen.getAllByText(/Scan: Local validation/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Retention: Active/i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Retention: Scheduled for delete/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Not reviewed/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Needs attention/i).length).toBeGreaterThan(0);
       expect(screen.getByText(/Blocked reason: provider_reported_file_risk/i)).toBeInTheDocument();
-      expect(screen.getByText(/Public approval disabled until scan is clean or locally eligible/i)).toBeInTheDocument();
+      expect(screen.getByText(/Public approval disabled until scan is eligible and retention status is active/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Owner-maintained proof/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /Mark reviewed/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /Detach only/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /Request delete/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /Confirm delete/i }).length).toBeGreaterThan(0);
       expect(screen.getByTestId("proof-file-activity-panel")).toBeInTheDocument();
       expect(screen.getByText(/Audit history tracks file actions, not file contents/i)).toBeInTheDocument();
       expect(screen.getByText(/User review history/i)).toBeInTheDocument();
@@ -655,7 +708,14 @@ describe("frontend pages", () => {
     const blockedVisibility = screen.getByLabelText("Visibility for blocked.pdf");
     expect(within(blockedVisibility).getByRole("option", { name: /Public approved/i })).toBeDisabled();
 
-    // 3. Trigger PDF export
+    // 3. Trigger metadata export and PDF export
+    await user.click(screen.getByRole("button", { name: /Export metadata summary/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("proof-export-summary")).toBeInTheDocument();
+      expect(screen.getByText(/Metadata export ready; binary export requires secure archive workflow/i)).toBeInTheDocument();
+      expect(screen.getByText(/No signed URL tokens, private bucket URLs, local paths, or file contents are included/i)).toBeInTheDocument();
+    });
+
     await user.click(screen.getByRole("button", { name: /Generate Portfolio PDF/i }));
 
     await waitFor(() => {
@@ -1533,6 +1593,16 @@ describe("public portfolio page /u/[slug]", () => {
                     isPublicEligible: false
                   },
                   {
+                    fileId: "scheduled-case-file",
+                    originalFilename: "scheduled-proof.pdf",
+                    visibility: "publicApproved",
+                    downloadUrl: "/uploads/proof/scheduled-proof.pdf",
+                    signedUrlExpiresInSeconds: 900,
+                    scanStatus: "local_validated",
+                    retentionStatus: "scheduled_for_delete",
+                    isPublicEligible: true
+                  },
+                  {
                     fileId: "private-case-file",
                     originalFilename: "private-proof.pdf",
                     visibility: "private",
@@ -1588,6 +1658,15 @@ describe("public portfolio page /u/[slug]", () => {
                     scanStatus: "failed",
                     blockedReason: "provider_scan_failed",
                     isPublicEligible: false
+                  },
+                  {
+                    fileId: "audit-retained-proof-file",
+                    originalFilename: "audit-retained-proof.pdf",
+                    visibility: "publicApproved",
+                    downloadUrl: "/uploads/proof/audit-retained-proof.pdf",
+                    scanStatus: "clean",
+                    retentionStatus: "retained_for_audit",
+                    isPublicEligible: true
                   },
                   {
                     fileId: "private-proof-file",
@@ -1669,7 +1748,9 @@ describe("public portfolio page /u/[slug]", () => {
     expect(screen.queryByText(/private-react-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/blocked-architecture-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/failed-react-proof\.pdf/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/audit history|signed_url_generated|owner-only audit/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/scheduled-proof\.pdf/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/audit-retained-proof\.pdf/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/audit history|signed_url_generated|owner-only audit|scheduled_for_delete|retained_for_audit|retentionStatus/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/guaranteed/i)).not.toBeInTheDocument();
   });
 });

@@ -39,12 +39,30 @@ const PortfolioFileSchema = new Schema(
     scannedAt: { type: Date },
     scanSummary: { type: String, default: "" },
     blockedReason: { type: String, default: "" },
-    isPublicEligible: { type: Boolean, default: false, index: true }
+    isPublicEligible: { type: Boolean, default: false, index: true },
+    retentionStatus: {
+      type: String,
+      enum: ["active", "scheduled_for_delete", "deleted", "retained_for_audit"],
+      default: "active",
+      index: true
+    },
+    retentionReason: { type: String, default: "" },
+    deleteRequestedAt: { type: Date },
+    deleteCompletedAt: { type: Date },
+    lastReviewedAt: { type: Date },
+    reviewStatus: {
+      type: String,
+      enum: ["not_reviewed", "reviewed", "needs_attention"],
+      default: "not_reviewed",
+      index: true
+    },
+    ownerNote: { type: String, default: "" }
   },
   { timestamps: true }
 );
 
 PortfolioFileSchema.index({ ownerId: 1, portfolioId: 1, createdAt: -1 });
+PortfolioFileSchema.index({ ownerId: 1, portfolioId: 1, retentionStatus: 1, createdAt: -1 });
 
 export type PortfolioFileDocument = InferSchemaType<typeof PortfolioFileSchema>;
 export const PortfolioFileModel = mongoose.models.PortfolioFile || model("PortfolioFile", PortfolioFileSchema);

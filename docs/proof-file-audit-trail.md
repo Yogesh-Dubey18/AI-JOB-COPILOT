@@ -13,6 +13,7 @@ This phase adds an owner-scoped audit trail for portfolio proof files. It record
 | Flow integration | Implemented | Upload, local validation, visibility changes, public approval/revocation, signed URL refresh, attach/detach, and delete events are recorded. |
 | Public portfolio privacy | Implemented | `/u/[slug]` never returns audit events, private notes, private file internals, or signed URL internals. |
 | Frontend history UI | Implemented | `/portfolio-generator` shows a proof file activity panel and per-file audit history with safe summaries only. |
+| Retention controls | Implemented | Retention review, delete request, delete completion, detach request, and metadata export events are recorded without file contents. |
 
 ## Audit Event Types
 
@@ -27,6 +28,12 @@ This phase adds an owner-scoped audit trail for portfolio proof files. It record
 - `attached_to_project`
 - `detached_from_project`
 - `deleted`
+- `retention_reviewed`
+- `delete_requested`
+- `delete_completed`
+- `detach_requested`
+- `export_requested`
+- `export_generated_metadata`
 
 `downloaded` is reserved for app-proxied download flows. The current owner refresh action records `signed_url_generated` without storing the token.
 
@@ -61,6 +68,9 @@ Summaries are intentionally short and safe. They explain the action without copy
 - A signed URL was generated for the owner.
 - File was attached to or detached from a project case study or skill proof mapping.
 - File was deleted.
+- Retention status or review status changed.
+- Delete was requested or completed.
+- A metadata-only export summary was requested and generated.
 
 ## What Is Never Logged
 
@@ -114,12 +124,23 @@ All audit endpoints require authentication and portfolio ownership. They return 
 
 The app records that a short-lived signed URL was generated, but it never stores the full URL, query token, provider signature, private bucket URL, or local disk path in the audit trail.
 
+## Retention And Export Safety
+
+Retention controls are documented in [Proof File Retention Controls](proof-file-retention-controls.md).
+
+- `scheduled_for_delete`, `deleted`, and `retained_for_audit` files stay out of public portfolios.
+- Metadata export events record that an export summary was requested/generated, not the exported file contents.
+- Audit summaries never include private storage paths, bucket URLs, signed URL tokens, scanner payloads, or proof-file contents.
+
 ## Verification Checklist
 
 - Upload creates `uploaded` and `local_validated` events.
 - Visibility change creates `visibility_changed` plus `public_approved` or `public_revoked`.
 - Signed URL refresh creates `signed_url_generated` with no token or storage URL.
 - Delete/detach creates `detached_from_project` and `deleted` events.
+- Retention review creates `retention_reviewed`.
+- Delete request creates `delete_requested`; confirmed delete creates `delete_completed`.
+- Metadata export creates `export_requested` and `export_generated_metadata`.
 - Audit list requires ownership.
 - Public portfolio responses do not include audit events.
 - Audit records do not expose local paths, private bucket URLs, raw storage keys, signed tokens, or file contents.

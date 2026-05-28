@@ -27,8 +27,9 @@ type PublicPortfolioClientProps = {
 
 function publicApprovedProofFiles(files: any[] = []) {
   const blockedStatuses = new Set(["blocked", "failed", "provider_pending", "not_scanned"]);
+  const blockedRetention = new Set(["scheduled_for_delete", "deleted", "retained_for_audit"]);
   return Array.isArray(files)
-    ? files.filter((file) => file?.visibility === "publicApproved" && file?.isPublicEligible !== false && !blockedStatuses.has(file?.scanStatus || "local_validated"))
+    ? files.filter((file) => file?.visibility === "publicApproved" && file?.isPublicEligible !== false && !blockedStatuses.has(file?.scanStatus || "local_validated") && !blockedRetention.has(file?.retentionStatus || "active"))
     : [];
 }
 

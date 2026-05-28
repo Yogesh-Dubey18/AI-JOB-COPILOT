@@ -273,6 +273,7 @@
 - [Dynamic Portfolio Builder](dynamic-portfolio-builder.md)
 - [Project Case-Study Proof Mapping](project-case-study-proof-mapping.md)
 - [GitHub Proof Verification](github-proof-verification.md)
+- [Proof File Retention Controls](proof-file-retention-controls.md)
 - [PDF Export System v2](pdf-export-system-v2.md)
 - [Resume Export Guide](resume-export-guide.md)
 - [Chrome Extension v2](chrome-extension-v2.md)

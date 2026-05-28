@@ -14,6 +14,7 @@ This phase adds an honest scanning boundary for uploaded portfolio proof files. 
 | Public portfolio filtering | Implemented | `/u/[slug]` excludes private, blocked, failed, pending, and not-scanned files. |
 | Builder scan UX | Implemented | `/portfolio-generator` shows scan status badges and explains local validation versus provider malware scanning. |
 | Audit trail | Implemented | Upload, scan, visibility, signed URL, attach/detach, and delete events are recorded with safe summaries only. |
+| Retention gate | Implemented | Files scheduled for deletion, deleted, or retained for audit are excluded from public output even if older visibility metadata says `publicApproved`. |
 
 ## Provider Status Rules
 
@@ -64,6 +65,7 @@ Local validation is useful upload hardening, but it is not malware scanning.
 - `blocked`, `failed`, `provider_pending`, and `not_scanned` files cannot be marked public-approved.
 - `publicApproved` files appear publicly only when `isPublicEligible` is true.
 - Local validation can make a file eligible for owner-approved public sharing, but the UI labels it as local validation, not provider clean.
+- Retention status must remain `active`; `scheduled_for_delete`, `deleted`, and `retained_for_audit` files are never public.
 - Restoring portfolio versions does not bypass the public eligibility filter.
 
 ## Frontend Behavior
@@ -98,6 +100,7 @@ Proof file scanning events now feed the owner-scoped [Proof File Audit Trail](pr
 - Blocked scan metadata prevents `publicApproved`.
 - Failed scan metadata is excluded from the public portfolio response.
 - Public portfolio hides blocked/failed files even if old data says `publicApproved`.
+- Public portfolio hides scheduled-for-delete, deleted, and retained-for-audit files even if old data says `publicApproved`.
 - Frontend scan badges render and do not claim scanning Live.
 
 ## No Fake Scanning Policy

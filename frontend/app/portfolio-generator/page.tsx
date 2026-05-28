@@ -145,6 +145,13 @@ type PortfolioProofFile = {
   downloadUrl?: string;
   signedUrlExpiresInSeconds?: number;
   storageStatusLabel?: string;
+  retentionStatus?: "active" | "scheduled_for_delete" | "deleted" | "retained_for_audit";
+  retentionReason?: string;
+  deleteRequestedAt?: string;
+  deleteCompletedAt?: string;
+  lastReviewedAt?: string;
+  reviewStatus?: "not_reviewed" | "reviewed" | "needs_attention";
+  ownerNote?: string;
 };
 
 type PortfolioProofAuditEvent = {
@@ -153,7 +160,7 @@ type PortfolioProofAuditEvent = {
   fileId: string;
   projectId?: string;
   proofMappingId?: string;
-  eventType: "uploaded" | "local_validated" | "scan_status_changed" | "visibility_changed" | "public_approved" | "public_revoked" | "signed_url_generated" | "downloaded" | "attached_to_project" | "detached_from_project" | "deleted";
+  eventType: "uploaded" | "local_validated" | "scan_status_changed" | "visibility_changed" | "public_approved" | "public_revoked" | "signed_url_generated" | "downloaded" | "attached_to_project" | "detached_from_project" | "deleted" | "retention_reviewed" | "delete_requested" | "delete_completed" | "detach_requested" | "export_requested" | "export_generated_metadata";
   previousStatus?: string;
   newStatus?: string;
   previousVisibility?: string;
@@ -161,6 +168,14 @@ type PortfolioProofAuditEvent = {
   createdAt?: string;
   actor: "user" | "system";
   summary: string;
+};
+
+type PortfolioProofExportSummary = {
+  generatedAt: string;
+  binaryExportStatus: string;
+  binaryExportNote: string;
+  files: PortfolioProofFile[];
+  recentAuditEvents: PortfolioProofAuditEvent[];
 };
 
 const defaultForm: PortfolioForm = {
@@ -245,7 +260,20 @@ function scanStatusLabel(status?: string) {
 
 function isFilePublicApprovable(file: PortfolioProofFile) {
   const blockedStatuses = new Set(["blocked", "failed", "provider_pending", "not_scanned"]);
-  return file.isPublicEligible !== false && !blockedStatuses.has(file.scanStatus || "local_validated");
+  return file.isPublicEligible !== false && !blockedStatuses.has(file.scanStatus || "local_validated") && (file.retentionStatus || "active") === "active";
+}
+
+function retentionStatusLabel(status?: string) {
+  if (status === "scheduled_for_delete") return "Scheduled for delete";
+  if (status === "deleted") return "Deleted";
+  if (status === "retained_for_audit") return "Retained for audit";
+  return "Active";
+}
+
+function reviewStatusLabel(status?: string) {
+  if (status === "reviewed") return "Reviewed";
+  if (status === "needs_attention") return "Needs attention";
+  return "Not reviewed";
 }
 
 function auditEventLabel(eventType?: string) {
@@ -406,6 +434,7 @@ export default function PortfolioGeneratorPage() {
   const [proofTarget, setProofTarget] = useState("");
   const [proofVisibility, setProofVisibility] = useState<"private" | "publicApproved">("private");
   const [proofUploadMessage, setProofUploadMessage] = useState("");
+  const [proofExportSummary, setProofExportSummary] = useState<PortfolioProofExportSummary | null>(null);
 
   const portfolios = useQuery({ queryKey: ["portfolios"], queryFn: () => api.get<any[]>("/portfolios"), retry: false });
   const resumesQuery = useQuery({ queryKey: ["resumes"], queryFn: () => api.get<any[]>("/resumes"), retry: false });
@@ -654,12 +683,49 @@ export default function PortfolioGeneratorPage() {
 
   const deleteProofFile = useMutation({
     mutationFn: ({ portfolioId, fileId }: { portfolioId: string; fileId: string }) =>
-      api.delete<any>(`/portfolios/${portfolioId}/files/${fileId}`),
+      api.delete<any>(`/portfolios/${portfolioId}/files/${fileId}`, { confirmDelete: true, retentionReason: "Owner confirmed deletion from portfolio builder." }),
     onSuccess: () => {
       setProofUploadMessage("Proof file deleted and detached from portfolio proof cards.");
       queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
       queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    }
+  });
+  const detachProofFile = useMutation({
+    mutationFn: ({ portfolioId, fileId }: { portfolioId: string; fileId: string }) =>
+      api.post<any>(`/portfolios/${portfolioId}/files/${fileId}/detach`, {}),
+    onSuccess: () => {
+      setProofUploadMessage("Proof file detached from project/proof mapping. Private metadata and stored file remain available to the owner.");
+      queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    }
+  });
+  const requestProofFileDelete = useMutation({
+    mutationFn: ({ portfolioId, fileId }: { portfolioId: string; fileId: string }) =>
+      api.post<PortfolioProofFile>(`/portfolios/${portfolioId}/files/${fileId}/delete-request`, { retentionReason: "Owner requested deletion review from portfolio builder." }),
+    onSuccess: (data) => {
+      setProofUploadMessage(`${data.originalFilename || "Proof file"} scheduled for delete. Confirm delete only when you want to remove the stored file.`);
+      queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    }
+  });
+  const reviewProofFileRetention = useMutation({
+    mutationFn: ({ portfolioId, fileId }: { portfolioId: string; fileId: string }) =>
+      api.patch<PortfolioProofFile>(`/portfolios/${portfolioId}/files/${fileId}/retention`, { reviewStatus: "reviewed", retentionStatus: "active", ownerNote: "Reviewed from portfolio builder." }),
+    onSuccess: (data) => {
+      setProofUploadMessage(`${data.originalFilename || "Proof file"} retention reviewed.`);
+      queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
+    }
+  });
+  const exportProofMetadata = useMutation({
+    mutationFn: (portfolioId: string) => api.get<PortfolioProofExportSummary>(`/portfolios/${portfolioId}/files/export-summary`),
+    onSuccess: (data) => {
+      setProofExportSummary(data);
+      setProofUploadMessage("Proof-file metadata export summary generated. Binary export requires a secure archive workflow.");
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
     }
   });
   const checkGitHubProof = useMutation({
@@ -684,7 +750,7 @@ export default function PortfolioGeneratorPage() {
   });
   const serverSlugError = slugCheck.data && typeof slugCheck.data.available === "boolean" && !slugCheck.data.available ? slugCheck.data.message || "This public slug is already taken." : null;
   const effectiveSlugError = slugError || serverSlugError;
-  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error || uploadProofFile.error || updateProofFileVisibility.error || deleteProofFile.error || refreshProofFileUrl.error || checkGitHubProof.error;
+  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error || uploadProofFile.error || updateProofFileVisibility.error || detachProofFile.error || requestProofFileDelete.error || reviewProofFileRetention.error || deleteProofFile.error || refreshProofFileUrl.error || exportProofMetadata.error || checkGitHubProof.error;
 
   function publicUrl(slug: string) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -951,6 +1017,7 @@ export default function PortfolioGeneratorPage() {
                   <h3 className="font-semibold">Attach screenshots or PDFs to project proof</h3>
                   <p className="mt-1 text-xs text-muted-foreground">Allowed file types: PNG, JPG, WEBP, PDF. Max file size: 5MB per file.</p>
                   <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">Private proof files are only shared publicly when you approve them.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Export shows your proof-file metadata and audit history. It does not expose private storage paths or signed URL secrets.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge>{storageBadgeText}</Badge>
@@ -1002,6 +1069,21 @@ export default function PortfolioGeneratorPage() {
                 <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-primary">{proofUploadMessage}</p>
               ) : null}
 
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/20 p-3 text-xs" data-testid="proof-retention-controls">
+                <div>
+                  <p className="font-semibold">Retention, detach, and delete review</p>
+                  <p className="mt-1 text-muted-foreground">Detach removes a file from project/proof cards but keeps the private stored file. Delete requires confirmation and removes the stored object plus metadata while keeping minimal audit history.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!latestPortfolio || exportProofMetadata.isPending}
+                  onClick={() => exportProofMetadata.mutate(latestPortfolio._id || latestPortfolio.id)}
+                >
+                  {exportProofMetadata.isPending ? "Generating summary..." : "Export metadata summary"}
+                </Button>
+              </div>
+
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase text-muted-foreground">Current Proof Files</p>
                 {portfolioFiles.data?.length ? portfolioFiles.data.map((file) => (
@@ -1012,16 +1094,20 @@ export default function PortfolioGeneratorPage() {
                         <p className="text-xs text-muted-foreground">{file.mimeType} - {Math.ceil((file.size || 0) / 1024)} KB - signed links expire in {file.signedUrlExpiresInSeconds || 900}s</p>
                         <p className="text-xs text-muted-foreground">Owner-maintained proof: {file.projectId || file.proofMappingId ? "file-backed attachment" : "portfolio-level file"}. Not third-party verified.</p>
                         <p className="text-xs text-muted-foreground">Scan: {scanStatusLabel(file.scanStatus)}{file.scanProvider ? ` via ${file.scanProvider}` : ""}.</p>
+                        <p className="text-xs text-muted-foreground">Retention: {retentionStatusLabel(file.retentionStatus)}. Review: {reviewStatusLabel(file.reviewStatus)}.</p>
+                        {file.retentionReason ? <p className="text-xs text-muted-foreground">Retention note: {file.retentionReason}</p> : null}
                         {file.scanSummary ? <p className="text-xs text-muted-foreground">{file.scanSummary}</p> : null}
                         {file.blockedReason ? <p className="text-xs font-semibold text-danger">Blocked reason: {file.blockedReason}</p> : null}
                         {!isFilePublicApprovable(file) ? (
-                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Public approval disabled until scan is clean or locally eligible.</p>
+                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Public approval disabled until scan is eligible and retention status is active.</p>
                         ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Badge>{file.visibility === "publicApproved" ? "Public approved" : "Private"}</Badge>
                         <Badge>{file.storageStatusLabel || storageStatusLabel}</Badge>
                         <Badge>{scanStatusLabel(file.scanStatus)}</Badge>
+                        <Badge>{retentionStatusLabel(file.retentionStatus)}</Badge>
+                        <Badge>{reviewStatusLabel(file.reviewStatus)}</Badge>
                       </div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -1042,7 +1128,21 @@ export default function PortfolioGeneratorPage() {
                         <a href={fileHref(file.downloadUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-xs font-semibold hover:bg-muted">Download signed URL</a>
                       ) : null}
                       <Button type="button" variant="outline" className="h-9 px-3 text-xs" onClick={() => refreshProofFileUrl.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Refresh signed URL</Button>
-                      <Button type="button" variant="ghost" className="h-9 px-3 text-xs" onClick={() => deleteProofFile.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Delete/detach</Button>
+                      <Button type="button" variant="outline" className="h-9 px-3 text-xs" onClick={() => reviewProofFileRetention.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Mark reviewed</Button>
+                      <Button type="button" variant="outline" className="h-9 px-3 text-xs" onClick={() => detachProofFile.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Detach only</Button>
+                      <Button type="button" variant="ghost" className="h-9 px-3 text-xs" onClick={() => requestProofFileDelete.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId })}>Request delete</Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-9 px-3 text-xs text-danger"
+                        onClick={() => {
+                          if (window.confirm("Confirm delete? This removes the stored proof file and metadata while keeping minimal audit history.")) {
+                            deleteProofFile.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, fileId: file.fileId });
+                          }
+                        }}
+                      >
+                        Confirm delete
+                      </Button>
                     </div>
                     {activityByFile[file.fileId]?.length ? (
                       <div className="mt-3 rounded-md border bg-muted/20 p-3" data-testid={`proof-file-history-${file.fileId}`}>
@@ -1065,6 +1165,28 @@ export default function PortfolioGeneratorPage() {
                   <div className="rounded-md border border-dashed p-4 text-xs text-muted-foreground">No proof files uploaded yet. Uploads remain private until you explicitly choose Public approved.</div>
                 )}
               </div>
+
+              {proofExportSummary ? (
+                <div className="rounded-md border bg-muted/20 p-3 text-xs" data-testid="proof-export-summary">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">Proof metadata export summary</p>
+                      <p className="mt-1 text-muted-foreground">{proofExportSummary.binaryExportNote}</p>
+                    </div>
+                    <Badge>{proofExportSummary.binaryExportStatus}</Badge>
+                  </div>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    <div className="rounded-md border bg-background/70 p-2">
+                      <p className="font-semibold">{proofExportSummary.files.length} files in metadata summary</p>
+                      <p className="text-muted-foreground">Includes visibility, scan status, retention status, attachment IDs, and recent audit summaries only.</p>
+                    </div>
+                    <div className="rounded-md border bg-background/70 p-2">
+                      <p className="font-semibold">{proofExportSummary.recentAuditEvents.length} recent audit events</p>
+                      <p className="text-muted-foreground">No signed URL tokens, private bucket URLs, local paths, or file contents are included.</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="rounded-md border bg-muted/20 p-3" data-testid="proof-file-activity-panel">
                 <div className="flex flex-wrap items-start justify-between gap-3">

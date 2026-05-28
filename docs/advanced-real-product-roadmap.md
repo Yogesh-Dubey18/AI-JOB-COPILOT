@@ -35,6 +35,7 @@
 | GitHub proof confidence badges and public visibility gate | Complete |
 | Proof file scanning provider-ready boundary | Complete |
 | Proof file audit trail and user review history | Complete |
+| Proof file retention controls and metadata export review | Complete |
 | Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
@@ -94,6 +95,7 @@
 | Proof file upload, visibility update, signed URL refresh, and delete/detach | Complete |
 | GitHub proof check action, provider status badge, and no-fake-stats proof summary | Complete |
 | Owner-scoped proof file activity timeline and per-file audit history | Complete |
+| Owner-controlled proof-file retention, detach/delete review, and metadata export summary | Complete |
 | Custom-domain hosting | Provider-ready only |
 
 ---
@@ -172,10 +174,10 @@
 
 ## Roadmap Priorities (Next)
 
-Recommended priority update after proof file audit trail:
+Recommended priority update after proof file retention controls:
 
 1. **Resume compare view** - diff between original and tailored version using changeSummary
-2. **Proof file retention controls** - owner review for deletion/export windows without exposing contents
+2. **Secure owner data export archive** - optional binary archive workflow with confirmation, expiry, and storage-provider safeguards
 3. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
 4. **Notification reminders** - email alerts for follow-ups when SendGrid configured
 5. **Job CSV batch import** - approved, legally-obtained job list upload

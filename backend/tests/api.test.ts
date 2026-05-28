@@ -1341,6 +1341,17 @@ describe("AI Job Copilot API", () => {
               scanStatus: "blocked",
               blockedReason: "provider_reported_file_risk",
               isPublicEligible: false
+            },
+            {
+              fileId: "retained-case-file",
+              fileType: "proofFile",
+              storageProvider: "local",
+              storageKey: "proof/retained-case.pdf",
+              originalFilename: "retained-case.pdf",
+              visibility: "publicApproved",
+              scanStatus: "local_validated",
+              isPublicEligible: true,
+              retentionStatus: "retained_for_audit"
             }
           ]
         }
@@ -1401,6 +1412,8 @@ describe("AI Job Copilot API", () => {
 
     expect(metadata.body.data.fileType).toBe("proofFile");
     expect(metadata.body.data.visibility).toBe("private");
+    expect(metadata.body.data.retentionStatus).toBe("active");
+    expect(metadata.body.data.reviewStatus).toBe("not_reviewed");
     expect(metadata.body.data.downloadUrl).toBe("/uploads/proof/architecture.pdf");
     expect(JSON.stringify(metadata.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
 
@@ -1432,7 +1445,7 @@ describe("AI Job Copilot API", () => {
     expect(publicProfile.body.data.proofMappings[0].proofFiles).toHaveLength(1);
     expect(publicProfile.body.data.proofMappings[0].proofFiles[0].fileId).toBe("public-mapping-file");
     expect(publicProfile.body.data.proofMappings[0].proofFiles[0].downloadUrl).toBe("/uploads/proof/public-mapping.pdf");
-    expect(publicJson).not.toMatch(/private-case|private-mapping|blocked-case|failed-mapping|private-bucket|storageKey|C:\\|absolutePath|localPath/);
+    expect(publicJson).not.toMatch(/private-case|private-mapping|blocked-case|failed-mapping|retained-case|retained_for_audit|private-bucket|storageKey|C:\\|absolutePath|localPath/);
   });
 
   it("uploads user-initiated proof files privately by default and gates signed URLs by ownership", async () => {
@@ -1487,6 +1500,8 @@ describe("AI Job Copilot API", () => {
     expect(uploaded.body.data.isPublicEligible).toBe(true);
     expect(uploaded.body.data.scanSummary).toMatch(/Local validation/i);
     expect(uploaded.body.data.scanStatus).not.toBe("clean");
+    expect(uploaded.body.data.retentionStatus).toBe("active");
+    expect(uploaded.body.data.reviewStatus).toBe("not_reviewed");
     expect(uploaded.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
     expect(JSON.stringify(uploaded.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
     const uploadActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity`).expect(200);
@@ -1502,6 +1517,7 @@ describe("AI Job Copilot API", () => {
     await otherAgent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(404);
     await otherAgent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity`).expect(404);
     await otherAgent.get(`/api/portfolios/${portfolioId}/files/activity`).expect(404);
+    await otherAgent.get(`/api/portfolios/${portfolioId}/files/export-summary`).expect(404);
 
     const signed = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(200);
     expect(signed.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
@@ -1521,10 +1537,46 @@ describe("AI Job Copilot API", () => {
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
     expect(JSON.stringify(publicProfile.body.data)).not.toMatch(/storageKey|C:\\|localPath|absolutePath|private-bucket|audit|eventId|signed_url_generated/i);
 
-    await agent.delete(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}`).expect(200);
+    const exportSummary = await agent.get(`/api/portfolios/${portfolioId}/files/export-summary`).expect(200);
+    expect(exportSummary.body.data.binaryExportStatus).toBe("metadata_export_ready");
+    expect(exportSummary.body.data.files[0].visibility).toBeTruthy();
+    expect(exportSummary.body.data.files[0].storageKey).toBeUndefined();
+    expect(exportSummary.body.data.files[0].downloadUrl).toBeUndefined();
+    expect(JSON.stringify(exportSummary.body.data)).not.toMatch(/\/uploads\/portfolio-proof|storageKey|C:\\|private-bucket|\?token=|signature=/i);
+
+    const reviewed = await agent.patch(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/retention`).send({
+      reviewStatus: "reviewed",
+      ownerNote: "Reviewed for portfolio use. https://private-bucket.example/token?signature=secret"
+    }).expect(200);
+    expect(reviewed.body.data.reviewStatus).toBe("reviewed");
+    expect(reviewed.body.data.ownerNote).not.toMatch(/signature=secret|private-bucket/);
+    const reviewedActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity?eventType=retention_reviewed`).expect(200);
+    expect(reviewedActivity.body.data).toHaveLength(1);
+
+    const detachUpload = await agent.post(`/api/portfolios/${portfolioId}/files/upload`)
+      .field("projectId", "case-upload")
+      .attach("proofFile", pngBuffer, { filename: "detach.png", contentType: "image/png" })
+      .expect(201);
+    const detached = await agent.post(`/api/portfolios/${portfolioId}/files/${detachUpload.body.data.fileId}/detach`).send({}).expect(200);
+    expect(detached.body.data.file.projectId).toBe("");
+    const detachActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${detachUpload.body.data.fileId}/activity`).expect(200);
+    expect(detachActivity.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining(["detach_requested", "detached_from_project"]));
+
+    const requestedDelete = await agent.post(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/delete-request`).send({
+      retentionReason: "Owner wants this file removed."
+    }).expect(200);
+    expect(requestedDelete.body.data.retentionStatus).toBe("scheduled_for_delete");
+    expect(requestedDelete.body.data.visibility).toBe("private");
+    const requestedPublicProfile = await request(app).get("/api/portfolios/public/upload-proof-portfolio").expect(200);
+    expect(requestedPublicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(0);
+    expect(JSON.stringify(requestedPublicProfile.body.data)).not.toMatch(/scheduled_for_delete|retentionStatus|deleteRequestedAt|audit|eventId/i);
+    await agent.delete(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}`).expect(400);
+    await agent.delete(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}`).send({ confirmDelete: true }).expect(200);
     const deletedActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity`).expect(200);
-    expect(deletedActivity.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining(["deleted", "detached_from_project"]));
+    expect(deletedActivity.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining(["deleted", "delete_requested", "delete_completed", "detached_from_project"]));
+    expect(JSON.stringify(deletedActivity.body.data)).not.toMatch(/\/uploads\/portfolio-proof|storageKey|C:\\|private-bucket|\?token=|signature=/i);
     const files = await agent.get(`/api/portfolios/${portfolioId}/files`).expect(200);
-    expect(files.body.data).toHaveLength(0);
+    expect(files.body.data).toHaveLength(1);
+    expect(files.body.data[0].fileId).toBe(detachUpload.body.data.fileId);
   });
 });

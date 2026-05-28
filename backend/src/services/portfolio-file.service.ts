@@ -18,10 +18,12 @@ import {
   normalizeScanStatus,
   scanPortfolioProofFileBuffer
 } from "./file-scanning.service.js";
-import { recordPortfolioFileAuditEvent } from "./portfolio-file-audit.service.js";
+import { listRecentPortfolioFileActivity, recordPortfolioFileAuditEvent } from "./portfolio-file-audit.service.js";
 
 const fileTypes = new Set(["resumePdf", "portfolioPdf", "screenshot", "proofFile", "other"]);
 const storageProviders = new Set(["local", "s3", "r2"]);
+const retentionStatuses = new Set(["active", "scheduled_for_delete", "deleted", "retained_for_audit"]);
+const reviewStatuses = new Set(["not_reviewed", "reviewed", "needs_attention"]);
 
 function normalizeFileType(value: any) {
   return fileTypes.has(value) ? value : "other";
@@ -29,6 +31,22 @@ function normalizeFileType(value: any) {
 
 function normalizeVisibility(value: any): "private" | "publicApproved" {
   return value === "publicApproved" ? "publicApproved" : "private";
+}
+
+function normalizeRetentionStatus(value: any): "active" | "scheduled_for_delete" | "deleted" | "retained_for_audit" {
+  return retentionStatuses.has(value) ? value : "active";
+}
+
+function normalizeReviewStatus(value: any): "not_reviewed" | "reviewed" | "needs_attention" {
+  return reviewStatuses.has(value) ? value : "not_reviewed";
+}
+
+function safeOwnerText(value: any, maxLength = 500) {
+  return String(value || "")
+    .replace(/[A-Za-z]:\\[^\s]+/g, "[local-path-redacted]")
+    .replace(/https?:\/\/[^\s?]+(\?[^\s]*)?/g, "[url-redacted]")
+    .trim()
+    .slice(0, maxLength);
 }
 
 function normalizeProvider(value: any): "local" | "s3" | "r2" {
@@ -67,9 +85,13 @@ function scanPayloadFrom(input: any = {}) {
 function assertPublicEligible(file: any) {
   const scanStatus = normalizeScanStatus(file?.scanStatus);
   const eligible = isFilePublicEligible(scanStatus) && (typeof file?.isPublicEligible === "boolean" ? file.isPublicEligible : true);
-  if (!eligible) {
-    throw new ApiError(400, "This proof file cannot be public until scanning is clean or local validation is eligible.");
+  if (!eligible || normalizeRetentionStatus(file?.retentionStatus) !== "active") {
+    throw new ApiError(400, "This proof file cannot be public until scanning is eligible and retention status is active.");
   }
+}
+
+function isRetentionPublicEligible(file: any) {
+  return normalizeRetentionStatus(file?.retentionStatus) === "active";
 }
 
 function normalizeSize(value: any) {
@@ -113,6 +135,13 @@ export function sanitizePortfolioFileReference(raw: any) {
     size: normalizeSize(raw.size),
     visibility: normalizeVisibility(raw.visibility),
     ...scanPayloadFrom(raw),
+    retentionStatus: normalizeRetentionStatus(raw.retentionStatus),
+    retentionReason: safeOwnerText(raw.retentionReason, 240),
+    deleteRequestedAt: raw.deleteRequestedAt ? String(raw.deleteRequestedAt) : "",
+    deleteCompletedAt: raw.deleteCompletedAt ? String(raw.deleteCompletedAt) : "",
+    lastReviewedAt: raw.lastReviewedAt ? String(raw.lastReviewedAt) : "",
+    reviewStatus: normalizeReviewStatus(raw.reviewStatus),
+    ownerNote: safeOwnerText(raw.ownerNote),
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || new Date().toISOString()
   };
@@ -140,6 +169,13 @@ export async function presentPortfolioFile(file: any, options: { includeSignedUr
     scanSummary: safeFile.scanSummary,
     blockedReason: safeFile.blockedReason,
     isPublicEligible: safeFile.isPublicEligible,
+    retentionStatus: safeFile.retentionStatus,
+    retentionReason: safeFile.retentionReason,
+    deleteRequestedAt: safeFile.deleteRequestedAt,
+    deleteCompletedAt: safeFile.deleteCompletedAt,
+    lastReviewedAt: safeFile.lastReviewedAt,
+    reviewStatus: safeFile.reviewStatus,
+    ownerNote: safeFile.ownerNote,
     scanningProviderStatus: getFileScanningProviderStatus().status,
     createdAt: safeFile.createdAt,
     updatedAt: safeFile.updatedAt,
@@ -160,11 +196,21 @@ export async function presentPortfolioFile(file: any, options: { includeSignedUr
 export async function resolvePublicPortfolioFiles(files: any[] = []) {
   const publicFiles = files
     .map(sanitizePortfolioFileReference)
-    .filter((file): file is NonNullable<ReturnType<typeof sanitizePortfolioFileReference>> => Boolean(file && file.visibility === "publicApproved" && file.isPublicEligible));
+    .filter((file): file is NonNullable<ReturnType<typeof sanitizePortfolioFileReference>> => Boolean(file && file.visibility === "publicApproved" && file.isPublicEligible && isRetentionPublicEligible(file)));
 
   const resolved = await Promise.all(publicFiles.map((file) => presentPortfolioFile(file, { includeSignedUrl: true })));
   return resolved.filter(Boolean).map((file: any) => {
-    const { storageKey, ...publicFile } = file;
+    const {
+      storageKey,
+      retentionStatus,
+      retentionReason,
+      deleteRequestedAt,
+      deleteCompletedAt,
+      lastReviewedAt,
+      reviewStatus,
+      ownerNote,
+      ...publicFile
+    } = file;
     return publicFile;
   });
 }
@@ -286,6 +332,10 @@ export async function uploadPortfolioProofFile(userId: string, portfolioId: stri
     mimeType: file.mimetype,
     size: file.size || file.buffer.length,
     visibility,
+    retentionStatus: "active",
+    retentionReason: "",
+    reviewStatus: "not_reviewed",
+    ownerNote: "",
     ...scan
   });
 
@@ -399,6 +449,9 @@ export async function updatePortfolioFile(userId: string, portfolioId: string, f
 export async function getPortfolioFileSignedUrl(userId: string, portfolioId: string, fileId: string) {
   await assertPortfolioOwner(userId, portfolioId);
   const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  if (normalizeRetentionStatus(file.retentionStatus) === "deleted") {
+    throw new ApiError(404, "Portfolio proof file not found");
+  }
   const presented = await presentPortfolioFile(file, { includeSignedUrl: true, allowPrivate: true });
   await recordPortfolioFileAuditEvent({
     ownerId: userId,
@@ -413,9 +466,202 @@ export async function getPortfolioFileSignedUrl(userId: string, portfolioId: str
   return presented;
 }
 
-export async function deletePortfolioFile(userId: string, portfolioId: string, fileId: string) {
+export async function reviewPortfolioFileRetention(userId: string, portfolioId: string, fileId: string, input: any = {}) {
   await assertPortfolioOwner(userId, portfolioId);
   const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  const requestedRetention = "retentionStatus" in input ? normalizeRetentionStatus(input.retentionStatus) : normalizeRetentionStatus(file.retentionStatus);
+  if (requestedRetention === "deleted") {
+    throw new ApiError(400, "Use the confirmed delete flow to delete a proof file.");
+  }
+  const retentionStatus = requestedRetention;
+  const updatePayload: any = {
+    retentionStatus,
+    retentionReason: safeOwnerText(input.retentionReason || file.retentionReason, 240),
+    reviewStatus: normalizeReviewStatus(input.reviewStatus || "reviewed"),
+    ownerNote: safeOwnerText(input.ownerNote ?? file.ownerNote),
+    lastReviewedAt: new Date().toISOString()
+  };
+  if (retentionStatus !== "active") {
+    updatePayload.visibility = "private";
+  }
+  const updated = await updateRecord("portfolioFiles", String(file._id), updatePayload);
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId,
+    projectId: file.projectId,
+    proofMappingId: file.proofMappingId,
+    eventType: "retention_reviewed",
+    previousVisibility: file.visibility,
+    newVisibility: updated?.visibility || file.visibility,
+    actor: "user",
+    summary: "Owner reviewed proof file retention settings. File contents, storage paths, and private URLs were not logged."
+  });
+  if (file.visibility === "publicApproved" && updatePayload.visibility === "private") {
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId,
+      fileId,
+      projectId: file.projectId,
+      proofMappingId: file.proofMappingId,
+      eventType: "public_revoked",
+      previousVisibility: file.visibility,
+      newVisibility: "private",
+      actor: "user"
+    });
+  }
+  return presentPortfolioFile(updated, { includeSignedUrl: true, allowPrivate: true });
+}
+
+export async function requestPortfolioFileDeletion(userId: string, portfolioId: string, fileId: string, input: any = {}) {
+  await assertPortfolioOwner(userId, portfolioId);
+  const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  const now = new Date().toISOString();
+  const updated = await updateRecord("portfolioFiles", String(file._id), {
+    retentionStatus: "scheduled_for_delete",
+    retentionReason: safeOwnerText(input.retentionReason || input.reason || "Owner requested deletion.", 240),
+    deleteRequestedAt: now,
+    lastReviewedAt: now,
+    reviewStatus: "needs_attention",
+    visibility: "private"
+  });
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId,
+    projectId: file.projectId,
+    proofMappingId: file.proofMappingId,
+    eventType: "delete_requested",
+    previousVisibility: file.visibility,
+    newVisibility: "private",
+    actor: "user",
+    summary: "Owner requested proof file deletion. File contents, storage paths, and signed URLs were not logged."
+  });
+  if (file.visibility === "publicApproved") {
+    await recordPortfolioFileAuditEvent({
+      ownerId: userId,
+      portfolioId,
+      fileId,
+      projectId: file.projectId,
+      proofMappingId: file.proofMappingId,
+      eventType: "public_revoked",
+      previousVisibility: file.visibility,
+      newVisibility: "private",
+      actor: "user"
+    });
+  }
+  return presentPortfolioFile(updated, { includeSignedUrl: true, allowPrivate: true });
+}
+
+export async function detachPortfolioFileMetadata(userId: string, portfolioId: string, fileId: string) {
+  await assertPortfolioOwner(userId, portfolioId);
+  const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId,
+    projectId: file.projectId,
+    proofMappingId: file.proofMappingId,
+    eventType: "detach_requested",
+    actor: "user",
+    summary: "Owner requested detaching this proof file while keeping the private file metadata and stored object."
+  });
+  const updated = await updateRecord("portfolioFiles", String(file._id), {
+    projectId: "",
+    proofMappingId: "",
+    lastReviewedAt: new Date().toISOString(),
+    reviewStatus: normalizeReviewStatus(file.reviewStatus) === "not_reviewed" ? "reviewed" : normalizeReviewStatus(file.reviewStatus)
+  });
+  return presentPortfolioFile(updated, { includeSignedUrl: true, allowPrivate: true });
+}
+
+function exportFileSummary(file: any) {
+  const safeFile = sanitizePortfolioFileReference(file);
+  if (!safeFile) return null;
+  return {
+    fileId: safeFile.fileId,
+    portfolioId: safeFile.portfolioId,
+    projectId: safeFile.projectId,
+    proofMappingId: safeFile.proofMappingId,
+    fileType: safeFile.fileType,
+    originalFilename: safeFile.originalFilename,
+    mimeType: safeFile.mimeType,
+    size: safeFile.size,
+    visibility: safeFile.visibility,
+    scanStatus: safeFile.scanStatus,
+    scanProvider: safeFile.scanProvider,
+    scanSummary: safeFile.scanSummary,
+    blockedReason: safeFile.blockedReason,
+    isPublicEligible: safeFile.isPublicEligible,
+    retentionStatus: safeFile.retentionStatus,
+    retentionReason: safeFile.retentionReason,
+    deleteRequestedAt: safeFile.deleteRequestedAt,
+    deleteCompletedAt: safeFile.deleteCompletedAt,
+    lastReviewedAt: safeFile.lastReviewedAt,
+    reviewStatus: safeFile.reviewStatus,
+    ownerNote: safeFile.ownerNote,
+    createdAt: safeFile.createdAt,
+    updatedAt: safeFile.updatedAt
+  };
+}
+
+export async function getPortfolioProofFileExportSummary(userId: string, portfolioId: string) {
+  await assertPortfolioOwner(userId, portfolioId);
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId: "portfolio-proof-metadata-export",
+    eventType: "export_requested",
+    actor: "user",
+    summary: "Owner requested proof-file metadata export review. No binaries or signed URL secrets were included."
+  });
+  const [files, recentAuditEvents] = await Promise.all([
+    findRecords("portfolioFiles", { ownerId: userId, portfolioId }, { sort: { createdAt: -1 } }),
+    listRecentPortfolioFileActivity(userId, portfolioId, { limit: 50 })
+  ]);
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId: "portfolio-proof-metadata-export",
+    eventType: "export_generated_metadata",
+    actor: "system",
+    summary: "Proof-file metadata export summary was generated without file binaries, storage keys, signed tokens, private bucket URLs, or local paths."
+  });
+  return {
+    generatedAt: new Date().toISOString(),
+    portfolioId,
+    binaryExportStatus: "metadata_export_ready",
+    binaryExportNote: "Metadata export ready; binary export requires secure archive workflow.",
+    files: files.map(exportFileSummary).filter(Boolean),
+    recentAuditEvents
+  };
+}
+
+export async function deletePortfolioFile(userId: string, portfolioId: string, fileId: string, options: { confirmed?: boolean; actor?: "user" | "system"; reason?: string } = {}) {
+  await assertPortfolioOwner(userId, portfolioId);
+  if (!options.confirmed) {
+    throw new ApiError(400, "Confirm deletion before removing a proof file. Use detach to keep the private file but remove portfolio references.");
+  }
+  const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId,
+    projectId: file.projectId,
+    proofMappingId: file.proofMappingId,
+    eventType: "delete_requested",
+    previousVisibility: file.visibility,
+    newVisibility: "private",
+    actor: options.actor || "user",
+    summary: safeOwnerText(options.reason || "Confirmed delete requested. File contents and storage paths were not logged.", 240)
+  });
+  await updateRecord("portfolioFiles", String(file._id), {
+    retentionStatus: "deleted",
+    visibility: "private",
+    deleteCompletedAt: new Date().toISOString(),
+    retentionReason: safeOwnerText(options.reason || file.retentionReason || "Owner confirmed deletion.", 240),
+    reviewStatus: "reviewed"
+  });
   await deleteFile(file.storageKey);
   await deleteRecord("portfolioFiles", String(file._id));
   await recordPortfolioFileAuditEvent({
@@ -424,10 +670,23 @@ export async function deletePortfolioFile(userId: string, portfolioId: string, f
     fileId,
     projectId: file.projectId,
     proofMappingId: file.proofMappingId,
+    eventType: "delete_completed",
+    previousVisibility: file.visibility,
+    newVisibility: "private",
+    actor: options.actor || "user",
+    summary: "Proof file was deleted. File contents and storage paths were not logged."
+  });
+  await recordPortfolioFileAuditEvent({
+    ownerId: userId,
+    portfolioId,
+    fileId,
+    projectId: file.projectId,
+    proofMappingId: file.proofMappingId,
     eventType: "deleted",
     previousVisibility: file.visibility,
-    actor: "user",
-    summary: "Proof file was deleted. File contents and storage paths were not logged."
+    newVisibility: "private",
+    actor: options.actor || "user",
+    summary: "Legacy deleted event retained as minimal proof-file deletion history without file contents."
   });
   return { deleted: true, fileId };
 }

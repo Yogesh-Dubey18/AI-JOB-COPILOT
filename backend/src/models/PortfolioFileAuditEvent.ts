@@ -21,7 +21,13 @@ const PortfolioFileAuditEventSchema = new Schema(
         "downloaded",
         "attached_to_project",
         "detached_from_project",
-        "deleted"
+        "deleted",
+        "retention_reviewed",
+        "delete_requested",
+        "delete_completed",
+        "detach_requested",
+        "export_requested",
+        "export_generated_metadata"
       ],
       required: true,
       index: true

@@ -13,7 +13,13 @@ export type PortfolioFileAuditEventType =
   | "downloaded"
   | "attached_to_project"
   | "detached_from_project"
-  | "deleted";
+  | "deleted"
+  | "retention_reviewed"
+  | "delete_requested"
+  | "delete_completed"
+  | "detach_requested"
+  | "export_requested"
+  | "export_generated_metadata";
 
 type Actor = "user" | "system";
 
@@ -28,7 +34,13 @@ const eventTypes = new Set<PortfolioFileAuditEventType>([
   "downloaded",
   "attached_to_project",
   "detached_from_project",
-  "deleted"
+  "deleted",
+  "retention_reviewed",
+  "delete_requested",
+  "delete_completed",
+  "detach_requested",
+  "export_requested",
+  "export_generated_metadata"
 ]);
 
 function normalizeEventType(value: any): PortfolioFileAuditEventType | null {
@@ -79,6 +91,18 @@ function defaultSummary(eventType: PortfolioFileAuditEventType, actor: Actor) {
       return "Proof file was detached from a portfolio project or skill proof mapping.";
     case "deleted":
       return "Proof file metadata and storage object were deleted or detached from the vault.";
+    case "retention_reviewed":
+      return "Owner reviewed proof file retention metadata. File contents were not logged.";
+    case "delete_requested":
+      return "Owner requested proof file deletion. File contents and storage paths were not logged.";
+    case "delete_completed":
+      return "Proof file deletion completed. Minimal audit history was retained.";
+    case "detach_requested":
+      return "Owner requested detaching the proof file from portfolio proof cards.";
+    case "export_requested":
+      return "Owner requested a proof file metadata export summary.";
+    case "export_generated_metadata":
+      return "Metadata export summary was generated without binaries, signed tokens, or private paths.";
     default:
       return "Proof file activity was recorded without file contents.";
   }

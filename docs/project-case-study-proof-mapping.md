@@ -59,8 +59,10 @@ Attachment rules:
 - A file can be attached to a skill proof mapping by `proofMappingId`.
 - A file appears on `/u/[slug]` only after its visibility is changed to `publicApproved`.
 - A file also needs public-eligible scan metadata before it can appear on `/u/[slug]`.
+- A file must also have `retentionStatus: active`; scheduled-for-delete, deleted, and retained-for-audit files are hidden from public output.
 - `blocked`, `failed`, `provider_pending`, and `not_scanned` files stay private and cannot be publicly approved.
-- Delete/detach removes the portfolio reference and asks the storage abstraction to delete the stored object.
+- Detach removes the project/proof mapping reference while keeping the owner file record.
+- Delete requires confirmation, asks the storage abstraction to delete the stored object when safe, removes file metadata, and preserves minimal audit history.
 - Upload, attach, detach, visibility, scan, signed URL, and delete actions create owner-scoped audit events with safe summaries only.
 - Public output never includes private proof notes, private file records, local disk paths, private bucket URLs, provider credentials, or internal storage keys.
 - Public output never includes audit events, event IDs, signed URL internals, or owner-only review history.
@@ -98,6 +100,7 @@ The public `/u/[slug]` route only shows:
 - public proof notes only when explicitly enabled
 - public-approved proof files only
 - scan-eligible proof files only
+- active-retention proof files only
 
 The public route does not show:
 
@@ -105,6 +108,7 @@ The public route does not show:
 - private proof mappings
 - private proof files
 - blocked, failed, pending, or not-scanned proof files
+- scheduled-for-delete, deleted, or retained-for-audit proof files
 - private case studies
 - user IDs
 - raw resume records
