@@ -166,6 +166,17 @@ export const externalJobProviders: ExternalJobProviderConfig[] = [
     capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
     policy: "Use public repo URLs manually, or GitHub API/OAuth credentials for provider-ready metadata checks. Do not fake stars, forks, commits, or verification.",
     notes: "Portfolio proof metadata and README/language/topic evidence checks. Manual repo URL fallback remains available without credentials."
+  },
+  {
+    id: "file_scanning",
+    name: "File Scanning Provider",
+    type: "api-provider",
+    trustBaseline: 100,
+    requiresReview: false,
+    envVars: ["FILE_SCANNING_PROVIDER", "FILE_SCANNING_API_KEY", "FILE_SCANNING_ENDPOINT"],
+    capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Use a real malware scanning provider before marking scans Live. Local validation checks file type and signatures only.",
+    notes: "Provider-ready boundary for portfolio proof file malware scanning; local validation remains active by default."
   }
 ];
 
@@ -205,6 +216,11 @@ export function listJobSourceReadiness() {
         }
       } else if (provider.id === "github") {
         const hasCredential = Boolean(process.env.GITHUB_TOKEN || (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET));
+        const hasPlaceholder = provider.envVars.some((name) => typeof process.env[name] !== "undefined");
+        isLive = false;
+        status = hasCredential || hasPlaceholder ? "ready" : "not_configured";
+      } else if (provider.id === "file_scanning") {
+        const hasCredential = Boolean(process.env.FILE_SCANNING_PROVIDER && process.env.FILE_SCANNING_API_KEY && process.env.FILE_SCANNING_ENDPOINT);
         const hasPlaceholder = provider.envVars.some((name) => typeof process.env[name] !== "undefined");
         isLive = false;
         status = hasCredential || hasPlaceholder ? "ready" : "not_configured";

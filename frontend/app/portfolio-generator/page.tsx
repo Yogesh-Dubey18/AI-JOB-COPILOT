@@ -135,6 +135,13 @@ type PortfolioProofFile = {
   mimeType: string;
   size: number;
   visibility: "private" | "publicApproved";
+  scanStatus?: "not_scanned" | "local_validated" | "provider_pending" | "clean" | "blocked" | "failed";
+  scanProvider?: string;
+  scannedAt?: string;
+  scanSummary?: string;
+  blockedReason?: string;
+  isPublicEligible?: boolean;
+  scanningProviderStatus?: "live" | "provider_ready" | "local_validation" | "not_configured";
   downloadUrl?: string;
   signedUrlExpiresInSeconds?: number;
   storageStatusLabel?: string;
@@ -209,6 +216,20 @@ function githubEvidenceLabel(proof?: GitHubProof | null) {
   if (proof.evidenceStatus === "manual_repo_link") return "GitHub-linked";
   if (proof.evidenceStatus === "self_reported") return "Self-reported";
   return "Missing proof";
+}
+
+function scanStatusLabel(status?: string) {
+  if (status === "clean") return "Provider clean";
+  if (status === "blocked") return "Blocked";
+  if (status === "failed") return "Scan failed";
+  if (status === "provider_pending") return "Provider pending";
+  if (status === "not_scanned") return "Not scanned";
+  return "Local validation";
+}
+
+function isFilePublicApprovable(file: PortfolioProofFile) {
+  const blockedStatuses = new Set(["blocked", "failed", "provider_pending", "not_scanned"]);
+  return file.isPublicEligible !== false && !blockedStatuses.has(file.scanStatus || "local_validated");
 }
 
 function GitHubProofSummary({ proof }: { proof?: GitHubProof | null }) {
@@ -369,6 +390,7 @@ export default function PortfolioGeneratorPage() {
   const careerVaultQuery = useQuery({ queryKey: ["career-vault"], queryFn: () => api.get<any[]>("/career-vault"), retry: false });
   const roadmapQuery = useQuery({ queryKey: ["learning-plans"], queryFn: () => api.get<any[]>("/ai/skill-gap/plans"), retry: false });
   const storageStatus = useQuery({ queryKey: ["portfolio-storage-status"], queryFn: () => api.get<any>("/portfolios/storage/status"), retry: false });
+  const scanningStatus = useQuery({ queryKey: ["portfolio-scanning-status"], queryFn: () => api.get<any>("/portfolios/scanning/status"), retry: false });
   const githubStatus = useQuery({ queryKey: ["portfolio-github-status"], queryFn: () => api.get<any>("/portfolios/github/status"), retry: false });
 
   const items = portfolios.data || [];
@@ -376,6 +398,17 @@ export default function PortfolioGeneratorPage() {
   const storageBadgeText = storageInfo.status === "provider_ready" ? "Provider-ready signed URLs" : "Local fallback";
   const storageStatusLabel = typeof storageInfo.label === "string" ? storageInfo.label : "Local fallback storage (not production-durable)";
   const signedUrlText = `Signed URL/download readiness: ${storageInfo.signedUrlTtlSeconds || 900} second TTL when S3/R2 is configured; local fallback uses app-served /uploads links.`;
+  const scanningInfo = scanningStatus.data || {};
+  const scanningBadgeText = scanningInfo.status === "live"
+    ? "Provider scanning Live"
+    : scanningInfo.status === "provider_ready"
+      ? "Provider scanning ready"
+      : scanningInfo.status === "not_configured"
+        ? "Scanning not configured"
+        : "Local validation";
+  const scanningStatusText = typeof scanningInfo.label === "string"
+    ? scanningInfo.label
+    : "Proof uploads use local validation until a malware scanning provider is configured.";
   const githubInfo = githubStatus.data || {};
   const githubBadgeText = githubInfo.status === "live"
     ? "GitHub Live"
@@ -554,7 +587,7 @@ export default function PortfolioGeneratorPage() {
       return api.post<PortfolioProofFile>(`/portfolios/${portfolioId}/files/upload`, body);
     },
     onSuccess: (data) => {
-      setProofUploadMessage(`${data.originalFilename || "Proof file"} uploaded as ${data.visibility === "publicApproved" ? "public approved" : "private"}.`);
+      setProofUploadMessage(`${data.originalFilename || "Proof file"} uploaded as ${data.visibility === "publicApproved" ? "public approved" : "private"}. Scan: ${scanStatusLabel(data.scanStatus)}.`);
       setProofFile(null);
       queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
@@ -565,7 +598,7 @@ export default function PortfolioGeneratorPage() {
     mutationFn: ({ portfolioId, fileId, visibility }: { portfolioId: string; fileId: string; visibility: "private" | "publicApproved" }) =>
       api.patch<PortfolioProofFile>(`/portfolios/${portfolioId}/files/${fileId}`, { visibility }),
     onSuccess: (data) => {
-      setProofUploadMessage(`${data.originalFilename || "Proof file"} visibility updated to ${data.visibility === "publicApproved" ? "public approved" : "private"}.`);
+      setProofUploadMessage(`${data.originalFilename || "Proof file"} visibility updated to ${data.visibility === "publicApproved" ? "public approved" : "private"}. Scan: ${scanStatusLabel(data.scanStatus)}.`);
       queryClient.invalidateQueries({ queryKey: ["portfolio-files"] });
       queryClient.invalidateQueries({ queryKey: ["portfolios"] });
     }
@@ -839,6 +872,24 @@ export default function PortfolioGeneratorPage() {
               <p className="mt-2 text-xs text-muted-foreground">{signedUrlText}</p>
             </div>
 
+            <div className="rounded-md border bg-muted/20 p-3 text-sm" data-testid="proof-file-scan-readiness">
+              <div className="flex flex-wrap items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <p className="font-semibold">Proof File Scan Boundary</p>
+                <Badge>{scanningBadgeText}</Badge>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{scanningStatusText}</p>
+              {(scanningInfo.status === "local_validation" || scanningInfo.status === "not_configured" || !scanningInfo.status) ? (
+                <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">Provider scanning not configured.</p>
+              ) : null}
+              <p className="mt-1 text-xs text-muted-foreground">Local validation checks file type and signatures. Provider malware scanning requires setup.</p>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                <Badge>No fake clean scans</Badge>
+                <Badge>Blocked files stay private</Badge>
+                <Badge>Public approval requires eligibility</Badge>
+              </div>
+            </div>
+
             <div className="rounded-md border bg-muted/20 p-3 text-sm" data-testid="github-proof-readiness">
               <div className="flex flex-wrap items-center gap-2">
                 <Github className="h-4 w-4 text-primary" />
@@ -863,6 +914,7 @@ export default function PortfolioGeneratorPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge>{storageBadgeText}</Badge>
+                  <Badge>{scanningBadgeText}</Badge>
                   <Badge>Private by default</Badge>
                 </div>
               </div>
@@ -919,10 +971,17 @@ export default function PortfolioGeneratorPage() {
                         <p className="font-semibold">{file.originalFilename || file.fileType}</p>
                         <p className="text-xs text-muted-foreground">{file.mimeType} - {Math.ceil((file.size || 0) / 1024)} KB - signed links expire in {file.signedUrlExpiresInSeconds || 900}s</p>
                         <p className="text-xs text-muted-foreground">Owner-maintained proof: {file.projectId || file.proofMappingId ? "file-backed attachment" : "portfolio-level file"}. Not third-party verified.</p>
+                        <p className="text-xs text-muted-foreground">Scan: {scanStatusLabel(file.scanStatus)}{file.scanProvider ? ` via ${file.scanProvider}` : ""}.</p>
+                        {file.scanSummary ? <p className="text-xs text-muted-foreground">{file.scanSummary}</p> : null}
+                        {file.blockedReason ? <p className="text-xs font-semibold text-danger">Blocked reason: {file.blockedReason}</p> : null}
+                        {!isFilePublicApprovable(file) ? (
+                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Public approval disabled until scan is clean or locally eligible.</p>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Badge>{file.visibility === "publicApproved" ? "Public approved" : "Private"}</Badge>
                         <Badge>{file.storageStatusLabel || storageStatusLabel}</Badge>
+                        <Badge>{scanStatusLabel(file.scanStatus)}</Badge>
                       </div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -937,7 +996,7 @@ export default function PortfolioGeneratorPage() {
                         aria-label={`Visibility for ${file.originalFilename || file.fileId}`}
                       >
                         <option value="private">Private</option>
-                        <option value="publicApproved">Public approved</option>
+                        <option value="publicApproved" disabled={!isFilePublicApprovable(file)}>Public approved</option>
                       </select>
                       {file.downloadUrl ? (
                         <a href={fileHref(file.downloadUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-xs font-semibold hover:bg-muted">Download signed URL</a>

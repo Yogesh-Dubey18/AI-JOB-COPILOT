@@ -13,6 +13,7 @@ This phase hardens the portfolio file boundary for resume PDFs, portfolio PDFs, 
 | Signed download/view URL readiness | Implemented | S3/R2 uses presigned URLs when configured; local fallback returns safe app upload routes. |
 | Default signed URL TTL | Implemented | Defaults to `900` seconds through `STORAGE_SIGNED_URL_TTL_SECONDS`. |
 | User-initiated proof file upload UX | Implemented | Owners can upload PNG, JPG, WEBP, and PDF proof files up to 5MB. |
+| Proof file scan boundary | Implemented | Local validation is recorded honestly; provider malware scanning is provider-ready until real credentials and scan verification exist. |
 | Public portfolio file filtering | Implemented | `/u/[slug]` receives only `publicApproved` file metadata and links. |
 | Real S3/R2 bucket activation | Provider-ready | Requires credentials, bucket policy, and manual verification before marking Live. |
 | Custom hosted portfolio domains | Provider-ready only | No Vercel domain provisioning is implemented. |
@@ -33,6 +34,12 @@ Portfolio-related file metadata uses the following safe fields:
 - `mimeType`
 - `size`
 - `visibility`: `private` or `publicApproved`
+- `scanStatus`: `not_scanned`, `local_validated`, `provider_pending`, `clean`, `blocked`, or `failed`
+- `scanProvider`
+- `scannedAt`
+- `scanSummary`
+- `blockedReason`
+- `isPublicEligible`
 - `createdAt`
 - `updatedAt`
 
@@ -44,6 +51,7 @@ Protected owner endpoints:
 
 ```text
 GET /api/portfolios/storage/status
+GET /api/portfolios/scanning/status
 GET /api/portfolios/:id/files
 POST /api/portfolios/:id/files/metadata
 POST /api/portfolios/:id/files/upload
@@ -74,6 +82,7 @@ Public behavior:
 - `publicApproved` files can be returned with short-lived signed download/view links.
 - Expired or unavailable file links should be shown as unavailable, not broken.
 - Public file links do not imply third-party proof verification.
+- Blocked, failed, pending, and not-scanned files are excluded from public output even if old metadata says `publicApproved`.
 - Public file payloads must not include absolute local paths, private bucket URLs, raw provider credentials, or internal storage keys.
 
 ## Signed URL Rules
@@ -87,6 +96,8 @@ Public behavior:
 
 - New portfolio file metadata defaults to `private`.
 - Public portfolios only show file links after the owner marks them `publicApproved`.
+- Files cannot be approved publicly if `scanStatus` is `blocked`, `failed`, `provider_pending`, or `not_scanned`.
+- Local validation can make a file public-eligible, but it must be labeled as local validation, not provider malware clean.
 - Email, phone, private notes, and unpublished portfolio data remain hidden unless explicitly enabled by existing visibility controls.
 - Restoring a portfolio version must not publish private files accidentally; the public projection still filters file visibility.
 - Delete/detach removes the stored object through the storage abstraction and removes portfolio proof references.
@@ -101,6 +112,10 @@ STORAGE_ENDPOINT=
 STORAGE_ACCESS_KEY_ID=
 STORAGE_SECRET_ACCESS_KEY=
 STORAGE_SIGNED_URL_TTL_SECONDS=900
+FILE_SCANNING_PROVIDER=
+FILE_SCANNING_API_KEY=
+FILE_SCANNING_ENDPOINT=
+FILE_SCANNING_TIMEOUT_MS=10000
 ```
 
 Do not commit real credentials. Configure real values only in Render/Vercel/provider dashboards.
@@ -121,4 +136,6 @@ Do not commit real credentials. Configure real values only in Render/Vercel/prov
 - Do not claim S3/R2 is Live while `STORAGE_PROVIDER=local`.
 - Do not claim permanent public hosting for local upload URLs.
 - Do not expose proof files on `/u/[slug]` unless visibility is `publicApproved`.
+- Do not expose blocked, failed, pending, or not-scanned proof files publicly.
+- Do not claim provider malware scanning is Live without credentials and a verified clean scan.
 - Do not publish screenshots, resumes, generated PDFs, or proof files without explicit user action.

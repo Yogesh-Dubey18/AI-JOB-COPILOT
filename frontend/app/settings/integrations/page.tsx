@@ -19,7 +19,8 @@ const STATIC_PROVIDERS = [
   { id: "stripe", name: "Stripe", category: "Payments", description: "Subscription billing, plan enforcement, and invoices.", envKey: "STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET", setupSteps: ["Create a Stripe account at stripe.com.", "Add STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to backend .env.", "Configure webhook endpoint in Stripe dashboard."] },
   { id: "google_oauth", name: "Google OAuth", category: "Auth", description: "One-click sign-in via Google.", envKey: "GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET", setupSteps: ["Create OAuth credentials at console.cloud.google.com.", "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in backend .env."] },
   { id: "sendgrid", name: "SendGrid / SMTP Email", category: "Notifications", description: "Transactional emails for account recovery, OTPs, and reminders.", envKey: "SENDGRID_API_KEY or (SMTP_HOST + SMTP_PORT + SMTP_USER + SMTP_PASS)", setupSteps: ["Set EMAIL_PROVIDER to sendgrid or smtp in backend .env.", "For SendGrid: Add SENDGRID_API_KEY and EMAIL_FROM.", "For SMTP: Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM."] },
-  { id: "github", name: "GitHub API", category: "Dev Tools", description: "Provider-ready portfolio proof checks for public repository metadata, README evidence, languages, topics, and default branch. Manual fallback works with public repo URLs.", envKey: "GITHUB_TOKEN or (GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET)", setupSteps: ["Add GITHUB_TOKEN for safe public metadata checks, or configure GitHub OAuth for future private repo consent.", "Submit a public repo URL in Portfolio Generator and run Check GitHub proof.", "Only mark Live after the backend returns metadata for a real request."] }
+  { id: "github", name: "GitHub API", category: "Dev Tools", description: "Provider-ready portfolio proof checks for public repository metadata, README evidence, languages, topics, and default branch. Manual fallback works with public repo URLs.", envKey: "GITHUB_TOKEN or (GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET)", setupSteps: ["Add GITHUB_TOKEN for safe public metadata checks, or configure GitHub OAuth for future private repo consent.", "Submit a public repo URL in Portfolio Generator and run Check GitHub proof.", "Only mark Live after the backend returns metadata for a real request."] },
+  { id: "file_scanning", name: "File Scanning Provider", category: "Security", description: "Provider-ready malware scanning boundary for uploaded portfolio proof files. Local validation checks file type, size, executable signatures, and magic numbers only.", envKey: "FILE_SCANNING_PROVIDER + FILE_SCANNING_API_KEY + FILE_SCANNING_ENDPOINT", setupSteps: ["Choose a malware/file scanning provider and add endpoint credentials to backend .env.", "Upload a safe test proof file through Portfolio Generator.", "Only mark Live after a real scan returns a clean provider result."] }
 ];
 
 const categoryColors: Record<string, string> = {
@@ -29,7 +30,8 @@ const categoryColors: Record<string, string> = {
   Payments: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
   Auth: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200",
   Notifications: "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200",
-  "Dev Tools": "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
+  "Dev Tools": "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+  Security: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200"
 };
 
 export default function IntegrationsPage() {

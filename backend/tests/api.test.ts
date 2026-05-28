@@ -1287,6 +1287,10 @@ describe("AI Job Copilot API", () => {
     expect(status.body.data.status).toBe("local_fallback");
     expect(status.body.data.label).toMatch(/Local fallback/i);
     expect(status.body.data.live).toBe(false);
+    const scanStatus = await agent.get("/api/portfolios/scanning/status").expect(200);
+    expect(scanStatus.body.data.status).toBe("local_validation");
+    expect(scanStatus.body.data.live).toBe(false);
+    expect(scanStatus.body.data.label).toMatch(/Local validation/i);
 
     const created = await agent.post("/api/portfolios/generate").send({
       slug: "storage-proof-portfolio",
@@ -1323,7 +1327,20 @@ describe("AI Job Copilot API", () => {
               storageProvider: "local",
               storageKey: "proof/public-case.pdf",
               originalFilename: "public-case.pdf",
-              visibility: "publicApproved"
+              visibility: "publicApproved",
+              scanStatus: "local_validated",
+              isPublicEligible: true
+            },
+            {
+              fileId: "blocked-case-file",
+              fileType: "proofFile",
+              storageProvider: "local",
+              storageKey: "proof/blocked-case.pdf",
+              originalFilename: "blocked-case.pdf",
+              visibility: "publicApproved",
+              scanStatus: "blocked",
+              blockedReason: "provider_reported_file_risk",
+              isPublicEligible: false
             }
           ]
         }
@@ -1350,7 +1367,20 @@ describe("AI Job Copilot API", () => {
               storageProvider: "local",
               storageKey: "proof/public-mapping.pdf",
               originalFilename: "public-mapping.pdf",
-              visibility: "publicApproved"
+              visibility: "publicApproved",
+              scanStatus: "local_validated",
+              isPublicEligible: true
+            },
+            {
+              fileId: "failed-mapping-file",
+              fileType: "proofFile",
+              storageProvider: "local",
+              storageKey: "proof/failed-mapping.pdf",
+              originalFilename: "failed-mapping.pdf",
+              visibility: "publicApproved",
+              scanStatus: "failed",
+              blockedReason: "provider_scan_failed",
+              isPublicEligible: false
             }
           ]
         }
@@ -1378,6 +1408,22 @@ describe("AI Job Copilot API", () => {
     expect(files.body.data).toHaveLength(1);
     expect(JSON.stringify(files.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
 
+    const blockedMetadata = await agent.post(`/api/portfolios/${portfolioId}/files/metadata`).send({
+      fileType: "proofFile",
+      storageKey: "proof/blocked.pdf",
+      originalFilename: "blocked.pdf",
+      mimeType: "application/pdf",
+      size: 2048,
+      visibility: "private",
+      scanStatus: "blocked",
+      scanProvider: "test-scanner",
+      blockedReason: "provider_reported_file_risk",
+      isPublicEligible: false
+    }).expect(201);
+    expect(blockedMetadata.body.data.visibility).toBe("private");
+    expect(blockedMetadata.body.data.scanStatus).toBe("blocked");
+    await agent.patch(`/api/portfolios/${portfolioId}/files/${blockedMetadata.body.data.fileId}`).send({ visibility: "publicApproved" }).expect(400);
+
     const publicProfile = await request(app).get("/api/portfolios/public/storage-proof-portfolio").expect(200);
     const publicJson = JSON.stringify(publicProfile.body.data);
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(1);
@@ -1386,7 +1432,7 @@ describe("AI Job Copilot API", () => {
     expect(publicProfile.body.data.proofMappings[0].proofFiles).toHaveLength(1);
     expect(publicProfile.body.data.proofMappings[0].proofFiles[0].fileId).toBe("public-mapping-file");
     expect(publicProfile.body.data.proofMappings[0].proofFiles[0].downloadUrl).toBe("/uploads/proof/public-mapping.pdf");
-    expect(publicJson).not.toMatch(/private-case|private-mapping|private-bucket|storageKey|C:\\|absolutePath|localPath/);
+    expect(publicJson).not.toMatch(/private-case|private-mapping|blocked-case|failed-mapping|private-bucket|storageKey|C:\\|absolutePath|localPath/);
   });
 
   it("uploads user-initiated proof files privately by default and gates signed URLs by ownership", async () => {
@@ -1436,6 +1482,11 @@ describe("AI Job Copilot API", () => {
 
     expect(uploaded.body.data.visibility).toBe("private");
     expect(uploaded.body.data.fileType).toBe("screenshot");
+    expect(uploaded.body.data.scanStatus).toBe("local_validated");
+    expect(uploaded.body.data.scanProvider).toBe("local-validation");
+    expect(uploaded.body.data.isPublicEligible).toBe(true);
+    expect(uploaded.body.data.scanSummary).toMatch(/Local validation/i);
+    expect(uploaded.body.data.scanStatus).not.toBe("clean");
     expect(uploaded.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
     expect(JSON.stringify(uploaded.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
 

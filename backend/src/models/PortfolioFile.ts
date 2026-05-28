@@ -28,7 +28,18 @@ const PortfolioFileSchema = new Schema(
       enum: ["private", "publicApproved"],
       default: "private",
       index: true
-    }
+    },
+    scanStatus: {
+      type: String,
+      enum: ["not_scanned", "local_validated", "provider_pending", "clean", "blocked", "failed"],
+      default: "not_scanned",
+      index: true
+    },
+    scanProvider: { type: String, default: "local-validation" },
+    scannedAt: { type: Date },
+    scanSummary: { type: String, default: "" },
+    blockedReason: { type: String, default: "" },
+    isPublicEligible: { type: Boolean, default: false, index: true }
   },
   { timestamps: true }
 );

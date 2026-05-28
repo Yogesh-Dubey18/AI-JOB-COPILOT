@@ -405,6 +405,25 @@ describe("frontend pages", () => {
           })
         });
       }
+      if (String(url).includes("/portfolios/scanning/status")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              provider: "local-validation",
+              status: "local_validation",
+              label: "Local validation active. Provider malware scanning is not configured.",
+              configured: false,
+              tested: false,
+              live: false,
+              localValidationActive: true
+            }
+          })
+        });
+      }
       if (String(url).includes("/portfolios/portfolio-1/files")) {
         return Promise.resolve({
           ok: true,
@@ -423,7 +442,27 @@ describe("frontend pages", () => {
                 visibility: "private",
                 downloadUrl: "/uploads/portfolio-proof/proof.png",
                 signedUrlExpiresInSeconds: 900,
-                storageStatusLabel: "Local fallback storage (not production-durable)"
+                storageStatusLabel: "Local fallback storage (not production-durable)",
+                scanStatus: "local_validated",
+                scanProvider: "local-validation",
+                scanSummary: "Local validation passed. Provider malware scanning is not configured.",
+                isPublicEligible: true
+              },
+              {
+                fileId: "blocked-proof-file",
+                projectId: "case-1",
+                fileType: "proofFile",
+                originalFilename: "blocked.pdf",
+                mimeType: "application/pdf",
+                size: 4096,
+                visibility: "private",
+                signedUrlExpiresInSeconds: 900,
+                storageStatusLabel: "Local fallback storage (not production-durable)",
+                scanStatus: "blocked",
+                scanProvider: "test-scanner",
+                scanSummary: "Provider malware scan blocked this file.",
+                blockedReason: "provider_reported_file_risk",
+                isPublicEligible: false
               }
             ]
           })
@@ -515,6 +554,9 @@ describe("frontend pages", () => {
     expect(screen.getByText(/Private files are only shared when you approve them/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Signed URL\/download readiness/i).length).toBeGreaterThan(0);
     expect(screen.getByTestId("proof-file-readiness")).toBeInTheDocument();
+    expect(screen.getByTestId("proof-file-scan-readiness")).toBeInTheDocument();
+    expect(screen.getByText(/Provider scanning not configured/i)).toBeInTheDocument();
+    expect(screen.getByText(/Local validation checks file type and signatures. Provider malware scanning requires setup/i)).toBeInTheDocument();
     expect(screen.getByTestId("github-proof-readiness")).toBeInTheDocument();
     expect(screen.getByText(/GitHub manual fallback/i)).toBeInTheDocument();
     expect(screen.getByText(/No fake stars\/forks\/commits/i)).toBeInTheDocument();
@@ -550,11 +592,18 @@ describe("frontend pages", () => {
       expect(screen.getByRole("button", { name: /Save current version/i })).toBeInTheDocument();
       expect(screen.getByText("Recruiter draft")).toBeInTheDocument();
       expect(screen.getByText("proof.png")).toBeInTheDocument();
-      expect(screen.getByText(/Owner-maintained proof/i)).toBeInTheDocument();
+      expect(screen.getByText("blocked.pdf")).toBeInTheDocument();
+      expect(screen.getAllByText(/Scan: Local validation/i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Blocked reason: provider_reported_file_risk/i)).toBeInTheDocument();
+      expect(screen.getByText(/Public approval disabled until scan is clean or locally eligible/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Owner-maintained proof/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/GitHub proof URL/i).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("button", { name: /Check GitHub proof/i }).length).toBeGreaterThan(0);
       expect(screen.getByRole("link", { name: /Download signed URL/i })).toBeInTheDocument();
     });
+
+    const blockedVisibility = screen.getByLabelText("Visibility for blocked.pdf");
+    expect(within(blockedVisibility).getByRole("option", { name: /Public approved/i })).toBeDisabled();
 
     // 3. Trigger PDF export
     await user.click(screen.getByRole("button", { name: /Generate Portfolio PDF/i }));
@@ -1419,7 +1468,19 @@ describe("public portfolio page /u/[slug]", () => {
                     originalFilename: "architecture-proof.pdf",
                     visibility: "publicApproved",
                     downloadUrl: "/uploads/proof/architecture-proof.pdf",
-                    signedUrlExpiresInSeconds: 900
+                    signedUrlExpiresInSeconds: 900,
+                    scanStatus: "local_validated",
+                    isPublicEligible: true
+                  },
+                  {
+                    fileId: "blocked-case-file",
+                    originalFilename: "blocked-architecture-proof.pdf",
+                    visibility: "publicApproved",
+                    downloadUrl: "/uploads/proof/blocked-architecture-proof.pdf",
+                    signedUrlExpiresInSeconds: 900,
+                    scanStatus: "blocked",
+                    blockedReason: "provider_reported_file_risk",
+                    isPublicEligible: false
                   },
                   {
                     fileId: "private-case-file",
@@ -1465,7 +1526,18 @@ describe("public portfolio page /u/[slug]", () => {
                     fileId: "public-proof-file",
                     originalFilename: "react-proof.pdf",
                     visibility: "publicApproved",
-                    downloadUrl: "/uploads/proof/react-proof.pdf"
+                    downloadUrl: "/uploads/proof/react-proof.pdf",
+                    scanStatus: "clean",
+                    isPublicEligible: true
+                  },
+                  {
+                    fileId: "failed-proof-file",
+                    originalFilename: "failed-react-proof.pdf",
+                    visibility: "publicApproved",
+                    downloadUrl: "/uploads/proof/failed-react-proof.pdf",
+                    scanStatus: "failed",
+                    blockedReason: "provider_scan_failed",
+                    isPublicEligible: false
                   },
                   {
                     fileId: "private-proof-file",
@@ -1531,12 +1603,16 @@ describe("public portfolio page /u/[slug]", () => {
     expect(screen.getByText(/Owner-maintained file-backed proof/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Signed proof file: architecture-proof\.pdf \(900s\)/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Signed proof file: react-proof\.pdf/i })).toBeInTheDocument();
+    expect(screen.getByText(/Local validation/i)).toBeInTheDocument();
+    expect(screen.getByText(/Provider scan clean/i)).toBeInTheDocument();
     expect(screen.getByText("Skill Proof Map")).toBeInTheDocument();
     expect(screen.getAllByText("React").length).toBeGreaterThan(0);
     expect(screen.queryByText(/Private reviewer notes/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Private proof mapping note/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/private-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/private-react-proof\.pdf/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/blocked-architecture-proof\.pdf/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/failed-react-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/guaranteed/i)).not.toBeInTheDocument();
   });
 });

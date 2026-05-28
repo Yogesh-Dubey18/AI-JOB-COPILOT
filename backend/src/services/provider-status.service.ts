@@ -1,6 +1,7 @@
 import { getAiRuntime } from "../ai/aiClient.js";
 import { env } from "../config/env.js";
 import { getBillingProviderStatus } from "./billing-provider.service.js";
+import { getFileScanningProviderStatus } from "./file-scanning.service.js";
 import { getGitHubProviderStatus } from "./github-proof.service.js";
 import { getMonitoringStatus } from "./monitoring.service.js";
 import { getStorageStatus } from "./storage.service.js";
@@ -42,6 +43,7 @@ export function getProviderStatus() {
       ...storage,
       mockSafe: storage.localFallback
     },
-    github: getGitHubProviderStatus()
+    github: getGitHubProviderStatus(),
+    fileScanning: getFileScanningProviderStatus()
   };
 }

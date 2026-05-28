@@ -58,6 +58,8 @@ Attachment rules:
 - A file can be attached to a project case study by `projectId`.
 - A file can be attached to a skill proof mapping by `proofMappingId`.
 - A file appears on `/u/[slug]` only after its visibility is changed to `publicApproved`.
+- A file also needs public-eligible scan metadata before it can appear on `/u/[slug]`.
+- `blocked`, `failed`, `provider_pending`, and `not_scanned` files stay private and cannot be publicly approved.
 - Delete/detach removes the portfolio reference and asks the storage abstraction to delete the stored object.
 - Public output never includes private proof notes, private file records, local disk paths, private bucket URLs, provider credentials, or internal storage keys.
 
@@ -93,12 +95,14 @@ The public `/u/[slug]` route only shows:
 - GitHub proof links only when `showGitHubProof` is enabled
 - public proof notes only when explicitly enabled
 - public-approved proof files only
+- scan-eligible proof files only
 
 The public route does not show:
 
 - private proof notes
 - private proof mappings
 - private proof files
+- blocked, failed, pending, or not-scanned proof files
 - private case studies
 - user IDs
 - raw resume records
@@ -130,3 +134,4 @@ GitHub proof badges are also honest labels:
 - GitHub proof provider readiness is implemented through URL parsing, manual fallback, and optional API metadata when credentials are configured and tested.
 - Screenshots should point only to user-approved safe assets.
 - S3/R2 private storage and signed URLs are still required before private proof files or portfolio screenshots can be stored as production-grade assets.
+- Provider malware scanning is provider-ready only. Local validation does not mean a file is malware-free.

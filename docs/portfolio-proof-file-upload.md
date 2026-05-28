@@ -15,6 +15,7 @@ This phase adds user-initiated proof file uploads to the portfolio builder while
 | Signed URL refresh | Implemented | Owners can request a fresh short-lived download/view URL. |
 | Delete/detach | Implemented | Deletes the stored object through the storage abstraction and detaches portfolio references. |
 | Public route filtering | Implemented | `/u/[slug]` only shows `publicApproved` files. |
+| Scan boundary | Implemented | Local validation is recorded as `local_validated`; provider malware scanning remains provider-ready until credentials and a real scan succeed. |
 | S3/R2 storage | Provider-ready | Requires real credentials and signed URL verification before marking Live. |
 
 ## Supported Files
@@ -37,6 +38,14 @@ Validation:
 - Magic-number/signature validation for PNG, JPEG, WEBP, and PDF.
 - Executable signatures such as `MZ` and ELF are rejected.
 
+Scanning boundary:
+
+- Local validation is not malware scanning.
+- Files receive scan metadata: `scanStatus`, `scanProvider`, `scannedAt`, `scanSummary`, `blockedReason`, and `isPublicEligible`.
+- Missing scanner credentials result in `local_validated`, not `clean`.
+- `blocked`, `failed`, `provider_pending`, and `not_scanned` files cannot be approved for public portfolio display.
+- Provider malware scanning requires `FILE_SCANNING_PROVIDER`, `FILE_SCANNING_API_KEY`, and `FILE_SCANNING_ENDPOINT`.
+
 ## API Behavior
 
 Protected owner endpoints:
@@ -46,6 +55,7 @@ POST /api/portfolios/:id/files/upload
 GET /api/portfolios/:id/files
 PATCH /api/portfolios/:id/files/:fileId
 GET /api/portfolios/:id/files/:fileId/signed-url
+GET /api/portfolios/scanning/status
 POST /api/portfolios/:id/files/:fileId/attach
 DELETE /api/portfolios/:id/files/:fileId
 ```
@@ -73,15 +83,19 @@ The `/portfolio-generator` page now shows:
 - Allowed file type and size guidance.
 - Private-by-default badge.
 - Storage status badge.
+- Scan status badge.
+- Local validation versus provider malware scanning explanation.
 - Project/case-study attachment selector.
 - Visibility selector for `private` or `publicApproved`.
 - Signed URL/download action.
 - Delete/detach action.
 - Warning: "Private proof files are only shared publicly when you approve them."
+- Warning: "Local validation checks file type and signatures. Provider malware scanning requires setup."
 
 The public `/u/[slug]` page:
 
 - Shows only public-approved proof files.
+- Hides blocked, failed, pending, or not-scanned files even if old metadata says `publicApproved`.
 - Hides private files completely.
 - Avoids private local disk paths, private bucket URLs, raw storage keys, and owner-only notes.
 - Shows safe unavailable text if a public-approved file has no usable download link.
@@ -97,6 +111,7 @@ Do not claim:
 - Fake testimonials.
 - Fake metrics.
 - Fake provider verification.
+- Fake file scanning success.
 
 The UI keeps proof labels honest and uses the existing warning:
 
@@ -129,6 +144,10 @@ STORAGE_ENDPOINT=
 STORAGE_ACCESS_KEY_ID=
 STORAGE_SECRET_ACCESS_KEY=
 STORAGE_SIGNED_URL_TTL_SECONDS=900
+FILE_SCANNING_PROVIDER=
+FILE_SCANNING_API_KEY=
+FILE_SCANNING_ENDPOINT=
+FILE_SCANNING_TIMEOUT_MS=10000
 ```
 
 Do not commit real storage credentials or uploaded proof assets.
@@ -143,6 +162,8 @@ Backend coverage includes:
 - Owner-gated signed URL route.
 - Public portfolio exclusion for private files.
 - Public portfolio inclusion for `publicApproved` files only.
+- Local validation status when scanner credentials are missing.
+- Blocked/failed files prevented from public approval and public output.
 - No absolute local path, private bucket URL, or raw storage key in public output.
 
 Frontend coverage includes:
@@ -152,5 +173,8 @@ Frontend coverage includes:
 - Private-by-default warning.
 - Visibility toggle.
 - Storage status badge.
+- Scan status badge and provider-ready/local validation message.
 - Public portfolio hiding private files.
+- Public portfolio hiding blocked files.
 - No fake S3/R2 Live claim.
+- No fake scanning Live claim.

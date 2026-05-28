@@ -4,6 +4,15 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.35 - Proof File Scanning Provider-Ready Boundary (2026-05-28)
+
+- **File Scanning Status**: Added honest scanning status for Local validation, Provider-ready, Live, and Not configured contexts; Live requires real scanner credentials and a verified scan result.
+- **Scan Metadata Model**: Added scan status, provider, timestamp, summary, blocked reason, and public eligibility metadata to portfolio proof files.
+- **Upload Flow Boundary**: Proof uploads run local validation first and default to `local_validated` when no scanner is configured; no fake `clean` result is produced without provider evidence.
+- **Public Eligibility Gate**: Blocked, failed, pending, and not-scanned files cannot be publicly approved and are excluded from `/u/[slug]`.
+- **Builder Scan UX**: Added scan badges, provider-not-configured messaging, local validation explanation, and disabled public approval for non-eligible proof files.
+- **Docs & Env**: Added proof file scanning documentation and placeholders for `FILE_SCANNING_PROVIDER`, `FILE_SCANNING_API_KEY`, `FILE_SCANNING_ENDPOINT`, and `FILE_SCANNING_TIMEOUT_MS`.
+
 ### v2.0.34 - GitHub Proof Verification Provider-Ready Integration (2026-05-28)
 
 - **GitHub Provider Status**: Added honest GitHub proof status for Live, Provider-ready, Manual fallback, and Not configured contexts; Live requires configured credentials and a successful metadata request.

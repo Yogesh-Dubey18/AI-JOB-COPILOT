@@ -4,6 +4,19 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-28 Proof File Scanning Provider-Ready Boundary (Completed)
+
+Implemented the proof file scanning boundary without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake provider success, fake scanning success, or public exposure of private files.
+
+- **Provider Status**: Added file scanning status for Live, Provider-ready, Local validation, and Not configured contexts. Live requires real credentials and a verified provider scan.
+- **Scan Metadata**: Portfolio file metadata now records `scanStatus`, `scanProvider`, `scannedAt`, `scanSummary`, `blockedReason`, and `isPublicEligible`.
+- **Upload Flow**: Proof uploads run local validation first. Missing scanner credentials produce `local_validated`, not fake `clean`; provider failures mark the file failed and keep it private.
+- **Public Portfolio Safety**: `/u/[slug]` excludes blocked, failed, pending, not-scanned, private, and non-public-eligible files.
+- **Builder UX**: `/portfolio-generator` now shows scan status badges, a provider-not-configured message, and disables public approval for blocked/failed/pending/not-scanned proof files.
+- **Docs & Env**: Added [Proof File Scanning Boundary](proof-file-scanning-boundary.md), updated proof upload, storage, provider, roadmap docs, and added scanner env placeholders without credentials.
+
+---
+
 ## 2026-05-28 User-Initiated Portfolio Proof File Upload UX (Completed)
 
 Implemented the next safe portfolio phase without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake provider success, fake hosted-domain claims, or fake project proof.

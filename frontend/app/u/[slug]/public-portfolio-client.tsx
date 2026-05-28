@@ -26,7 +26,10 @@ type PublicPortfolioClientProps = {
 };
 
 function publicApprovedProofFiles(files: any[] = []) {
-  return Array.isArray(files) ? files.filter((file) => file?.visibility === "publicApproved") : [];
+  const blockedStatuses = new Set(["blocked", "failed", "provider_pending", "not_scanned"]);
+  return Array.isArray(files)
+    ? files.filter((file) => file?.visibility === "publicApproved" && file?.isPublicEligible !== false && !blockedStatuses.has(file?.scanStatus || "local_validated"))
+    : [];
 }
 
 function fileHref(fileUrl: string) {
@@ -39,6 +42,12 @@ function proofBadgeLabel(item: any) {
   if (item?.githubUrl || item?.githubProof?.repoUrl) return "GitHub-linked";
   if (item?.confidence === "weak" || item?.proofStatus === "missing") return "Missing proof";
   return "Self-reported";
+}
+
+function scanBadgeLabel(file: any) {
+  if (file?.scanStatus === "clean") return "Provider scan clean";
+  if (file?.scanStatus === "local_validated") return "Local validation";
+  return "Public eligible";
 }
 
 function GitHubProofDetails({ proof, theme }: { proof?: any; theme?: string }) {
@@ -347,9 +356,12 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                           <div className="mt-2 flex flex-wrap gap-2">
                             {proofFiles.map((file: any) => (
                               file.downloadUrl ? (
-                                <a key={file.fileId || file.storageKey} href={fileHref(file.downloadUrl)} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">
-                                  Signed proof file: {file.originalFilename || file.fileType || "proof file"} ({file.signedUrlExpiresInSeconds || 900}s)
-                                </a>
+                                <span key={file.fileId || file.storageKey} className="inline-flex flex-wrap items-center gap-2">
+                                  <a href={fileHref(file.downloadUrl)} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">
+                                    Signed proof file: {file.originalFilename || file.fileType || "proof file"} ({file.signedUrlExpiresInSeconds || 900}s)
+                                  </a>
+                                  <Badge>{scanBadgeLabel(file)}</Badge>
+                                </span>
                               ) : (
                                 <span key={file.fileId || file.storageKey} className={`text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>
                                   Proof file link unavailable or expired.
@@ -407,9 +419,12 @@ export function PublicPortfolioClient({ slug }: PublicPortfolioClientProps) {
                         <div className="mt-3 flex flex-wrap gap-2">
                           {proofFiles.map((file: any) => (
                             file.downloadUrl ? (
-                              <a key={file.fileId || file.storageKey} href={fileHref(file.downloadUrl)} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">
-                                Signed proof file: {file.originalFilename || file.fileType || "proof file"}
-                              </a>
+                              <span key={file.fileId || file.storageKey} className="inline-flex flex-wrap items-center gap-2">
+                                <a href={fileHref(file.downloadUrl)} target="_blank" rel="noreferrer" className="text-sm font-semibold underline">
+                                  Signed proof file: {file.originalFilename || file.fileType || "proof file"}
+                                </a>
+                                <Badge>{scanBadgeLabel(file)}</Badge>
+                              </span>
                             ) : (
                               <span key={file.fileId || file.storageKey} className={`text-sm ${data.theme === "bold" ? "text-slate-400" : "text-muted-foreground"}`}>
                                 Proof file link unavailable or expired.

@@ -11,6 +11,13 @@ import {
   uploadFile
 } from "./storage.service.js";
 import { validatePortfolioProofFileBuffer } from "./file-validation.service.js";
+import {
+  FileScanStatus,
+  getFileScanningProviderStatus,
+  isFilePublicEligible,
+  normalizeScanStatus,
+  scanPortfolioProofFileBuffer
+} from "./file-scanning.service.js";
 
 const fileTypes = new Set(["resumePdf", "portfolioPdf", "screenshot", "proofFile", "other"]);
 const storageProviders = new Set(["local", "s3", "r2"]);
@@ -26,6 +33,42 @@ function normalizeVisibility(value: any): "private" | "publicApproved" {
 function normalizeProvider(value: any): "local" | "s3" | "r2" {
   const provider = storageProviders.has(value) ? value : getProvider();
   return provider === "s3" || provider === "r2" ? provider : "local";
+}
+
+function normalizeScanProvider(value: any) {
+  return String(value || "local-validation").trim() || "local-validation";
+}
+
+function normalizeScanSummary(value: any, scanStatus: FileScanStatus) {
+  const summary = String(value || "").trim();
+  if (summary) return summary;
+  if (scanStatus === "local_validated") return "Local validation passed. Provider malware scanning is not configured.";
+  if (scanStatus === "clean") return "Provider malware scan returned clean.";
+  if (scanStatus === "blocked") return "Provider malware scan blocked this file.";
+  if (scanStatus === "failed") return "Provider malware scan failed. File remains private.";
+  if (scanStatus === "provider_pending") return "Provider malware scan is pending.";
+  return "File has not been scanned.";
+}
+
+function scanPayloadFrom(input: any = {}) {
+  const scanStatus = normalizeScanStatus(input.scanStatus);
+  const statusEligible = isFilePublicEligible(scanStatus);
+  return {
+    scanStatus,
+    scanProvider: normalizeScanProvider(input.scanProvider),
+    scannedAt: input.scannedAt ? String(input.scannedAt) : new Date().toISOString(),
+    scanSummary: normalizeScanSummary(input.scanSummary, scanStatus),
+    blockedReason: String(input.blockedReason || ""),
+    isPublicEligible: statusEligible && (typeof input.isPublicEligible === "boolean" ? input.isPublicEligible : true)
+  };
+}
+
+function assertPublicEligible(file: any) {
+  const scanStatus = normalizeScanStatus(file?.scanStatus);
+  const eligible = isFilePublicEligible(scanStatus) && (typeof file?.isPublicEligible === "boolean" ? file.isPublicEligible : true);
+  if (!eligible) {
+    throw new ApiError(400, "This proof file cannot be public until scanning is clean or local validation is eligible.");
+  }
 }
 
 function normalizeSize(value: any) {
@@ -68,6 +111,7 @@ export function sanitizePortfolioFileReference(raw: any) {
     mimeType: typeof raw.mimeType === "string" && raw.mimeType.trim() ? raw.mimeType.trim() : "application/octet-stream",
     size: normalizeSize(raw.size),
     visibility: normalizeVisibility(raw.visibility),
+    ...scanPayloadFrom(raw),
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || new Date().toISOString()
   };
@@ -89,6 +133,13 @@ export async function presentPortfolioFile(file: any, options: { includeSignedUr
     mimeType: safeFile.mimeType,
     size: safeFile.size,
     visibility: safeFile.visibility,
+    scanStatus: safeFile.scanStatus,
+    scanProvider: safeFile.scanProvider,
+    scannedAt: safeFile.scannedAt,
+    scanSummary: safeFile.scanSummary,
+    blockedReason: safeFile.blockedReason,
+    isPublicEligible: safeFile.isPublicEligible,
+    scanningProviderStatus: getFileScanningProviderStatus().status,
     createdAt: safeFile.createdAt,
     updatedAt: safeFile.updatedAt,
     isLocalFallback: status.localFallback,
@@ -108,7 +159,7 @@ export async function presentPortfolioFile(file: any, options: { includeSignedUr
 export async function resolvePublicPortfolioFiles(files: any[] = []) {
   const publicFiles = files
     .map(sanitizePortfolioFileReference)
-    .filter((file): file is NonNullable<ReturnType<typeof sanitizePortfolioFileReference>> => Boolean(file && file.visibility === "publicApproved"));
+    .filter((file): file is NonNullable<ReturnType<typeof sanitizePortfolioFileReference>> => Boolean(file && file.visibility === "publicApproved" && file.isPublicEligible));
 
   const resolved = await Promise.all(publicFiles.map((file) => presentPortfolioFile(file, { includeSignedUrl: true })));
   return resolved.filter(Boolean).map((file: any) => {
@@ -148,11 +199,17 @@ export async function createPortfolioFileMetadata(userId: string, portfolioId: s
     throw new ApiError(400, "A valid private storage key is required for portfolio file metadata.");
   }
 
+  const scanPayload = scanPayloadFrom(input);
+  if (safeInput.visibility === "publicApproved" && !scanPayload.isPublicEligible) {
+    throw new ApiError(400, "This proof file cannot be public until scanning is clean or local validation is eligible.");
+  }
+
   const created = await createRecord("portfolioFiles", {
     ...safeInput,
     ownerId: userId,
     portfolioId,
-    fileId: safeInput.fileId || randomUUID()
+    fileId: safeInput.fileId || randomUUID(),
+    ...scanPayload
   });
 
   return presentPortfolioFile(created, { includeSignedUrl: true, allowPrivate: true });
@@ -165,9 +222,12 @@ export async function uploadPortfolioProofFile(userId: string, portfolioId: stri
   }
 
   validatePortfolioProofFileBuffer(file.buffer, file.originalname, file.mimetype);
+  const scan = await scanPortfolioProofFileBuffer(file);
 
   const fileId = randomUUID();
   const safeName = sanitizeFilename(file.originalname);
+  const requestedVisibility = normalizeVisibility(input.visibility);
+  const visibility = scan.isPublicEligible ? requestedVisibility : "private";
   const storageKey = await uploadFile(`portfolio-proof/${userId}/${portfolioId}/${fileId}-${safeName}`, file.buffer, file.mimetype);
   const created = await createRecord("portfolioFiles", {
     fileId,
@@ -181,7 +241,8 @@ export async function uploadPortfolioProofFile(userId: string, portfolioId: stri
     originalFilename: safeName,
     mimeType: file.mimetype,
     size: file.size || file.buffer.length,
-    visibility: normalizeVisibility(input.visibility)
+    visibility,
+    ...scan
   });
 
   return presentPortfolioFile(created, { includeSignedUrl: true, allowPrivate: true });
@@ -197,7 +258,9 @@ export async function listPortfolioFiles(userId: string, portfolioId: string) {
 export async function updatePortfolioFileVisibility(userId: string, portfolioId: string, fileId: string, visibility: any) {
   await assertPortfolioOwner(userId, portfolioId);
   const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
-  const updated = await updateRecord("portfolioFiles", String(file._id), { visibility: normalizeVisibility(visibility) });
+  const nextVisibility = normalizeVisibility(visibility);
+  if (nextVisibility === "publicApproved") assertPublicEligible(file);
+  const updated = await updateRecord("portfolioFiles", String(file._id), { visibility: nextVisibility });
   return presentPortfolioFile(updated, { includeSignedUrl: true, allowPrivate: true });
 }
 
@@ -205,7 +268,10 @@ export async function updatePortfolioFile(userId: string, portfolioId: string, f
   await assertPortfolioOwner(userId, portfolioId);
   const file = await findOwnedPortfolioFile(userId, portfolioId, fileId);
   const updatePayload: any = {};
-  if ("visibility" in input) updatePayload.visibility = normalizeVisibility(input.visibility);
+  if ("visibility" in input) {
+    updatePayload.visibility = normalizeVisibility(input.visibility);
+    if (updatePayload.visibility === "publicApproved") assertPublicEligible(file);
+  }
   if ("projectId" in input) updatePayload.projectId = input.projectId ? String(input.projectId) : "";
   if ("proofMappingId" in input) updatePayload.proofMappingId = input.proofMappingId ? String(input.proofMappingId) : "";
   if ("fileType" in input) updatePayload.fileType = normalizeFileType(input.fileType);
@@ -229,4 +295,8 @@ export async function deletePortfolioFile(userId: string, portfolioId: string, f
 
 export function getPortfolioStorageStatus() {
   return getStorageStatus();
+}
+
+export function getPortfolioScanningStatus() {
+  return getFileScanningProviderStatus();
 }

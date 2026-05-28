@@ -22,6 +22,7 @@ import {
   createPortfolioFileMetadata,
   deletePortfolioFile,
   getPortfolioFileSignedUrl,
+  getPortfolioScanningStatus,
   getPortfolioStorageStatus,
   listPortfolioFiles,
   updatePortfolioFile,
@@ -53,6 +54,10 @@ router.post("/generate", asyncHandler(async (req, res) => {
 
 router.get("/storage/status", asyncHandler(async (_req, res) => {
   res.json({ success: true, data: getPortfolioStorageStatus() });
+}));
+
+router.get("/scanning/status", asyncHandler(async (_req, res) => {
+  res.json({ success: true, data: getPortfolioScanningStatus() });
 }));
 
 router.get("/github/status", asyncHandler(async (_req, res) => {

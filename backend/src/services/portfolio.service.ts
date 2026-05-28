@@ -254,7 +254,7 @@ function sanitizePublicProject(project: any, sections: typeof defaultSections) {
 
 function publicFileReferences(files: any[] = []) {
   return sanitizePortfolioFileReferences(files)
-    .filter((file: any) => file.visibility === "publicApproved");
+    .filter((file: any) => file.visibility === "publicApproved" && file.isPublicEligible);
 }
 
 function upsertProofFile(files: any[] = [], fileRef: any) {

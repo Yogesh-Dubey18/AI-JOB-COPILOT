@@ -33,6 +33,7 @@
 | User-initiated portfolio proof file upload UX | Complete |
 | GitHub proof URL parser and manual fallback | Complete |
 | GitHub proof confidence badges and public visibility gate | Complete |
+| Proof file scanning provider-ready boundary | Complete |
 | Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
@@ -145,6 +146,7 @@
 | Custom portfolio domains | Vercel/DNS provider credentials, ownership checks, and abuse controls |
 | Google OAuth login | Google OAuth credentials |
 | Live GitHub proof metadata | `GITHUB_TOKEN` or GitHub OAuth credentials, successful metadata verification, and private repo consent rules |
+| Live proof file malware scanning | `FILE_SCANNING_PROVIDER`, `FILE_SCANNING_API_KEY`, `FILE_SCANNING_ENDPOINT`, and a successful real scan |
 | AI-enhanced scoring | OpenAI or Gemini API key |
 | Sentry error monitoring | Sentry DSN |
 
@@ -168,15 +170,15 @@
 
 ## Roadmap Priorities (Next)
 
-Recommended priority update after GitHub proof verification readiness:
+Recommended priority update after proof file scanning provider-ready boundary:
 
-1. **Proof file scanning provider-ready boundary** - optional malware scanning service before production S3/R2 activation
-2. **Resume compare view** - diff between original and tailored version using changeSummary
-3. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
-4. **Notification reminders** - email alerts for follow-ups when SendGrid configured
-5. **Job CSV batch import** - approved, legally-obtained job list upload
-6. **Rate limit documentation** - approved polling limits per provider
-7. **GitHub OAuth private repo consent design** - provider-ready only, no private repo access without explicit user consent
+1. **Resume compare view** - diff between original and tailored version using changeSummary
+2. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
+3. **Notification reminders** - email alerts for follow-ups when SendGrid configured
+4. **Job CSV batch import** - approved, legally-obtained job list upload
+5. **Rate limit documentation** - approved polling limits per provider
+6. **GitHub OAuth private repo consent design** - provider-ready only, no private repo access without explicit user consent
+7. **Scanner provider activation runbook** - staging-only verification steps before marking malware scanning Live
 
 Previous roadmap order retained below for historical context:
 

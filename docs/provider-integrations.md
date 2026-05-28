@@ -21,6 +21,7 @@ AI Job Copilot is provider-ready. Live external integrations must be enabled onl
 | SendGrid / SMTP | Notifications | Provider-ready | Email alerts and reminders |
 | Stripe | Payments | Provider-ready | Subscriptions, invoicing |
 | AWS S3 / R2 | Storage | Provider-ready | Resume, portfolio PDF, screenshot, and proof file storage |
+| File Scanning Provider | Security | Local validation / Provider-ready | Malware scanning boundary for portfolio proof files |
 | Google Calendar | Calendar | Provider-ready | Interview reminders |
 | Coursera / Udemy | Courses | Provider-ready | Skill gap course links |
 | GitHub API | Dev Tools | Provider-ready / manual fallback | Portfolio proof verification and project analyzer |
@@ -238,6 +239,60 @@ S3/R2 provider-ready behavior:
 - Must be verified manually before status is changed to Live.
 
 Never expose absolute local disk paths, private bucket URLs, access keys, secret keys, or internal storage keys in public portfolio output.
+
+---
+
+## File Scanning Provider
+
+Portfolio proof file uploads have a local validation boundary and a provider-ready malware scanning boundary.
+
+**Required env vars (backend)**:
+
+```env
+FILE_SCANNING_PROVIDER=
+FILE_SCANNING_API_KEY=
+FILE_SCANNING_ENDPOINT=
+FILE_SCANNING_TIMEOUT_MS=10000
+```
+
+**Current status**: Local validation is active by default. Malware scanning is provider-ready only until real credentials are configured and a real provider scan succeeds.
+
+Local validation checks:
+
+- MIME type allowlist.
+- File extension allowlist.
+- 5MB size limit.
+- Executable signature rejection.
+- Magic-number/signature validation.
+
+Scan statuses:
+
+- `not_scanned`
+- `local_validated`
+- `provider_pending`
+- `clean`
+- `blocked`
+- `failed`
+
+Public eligibility:
+
+- `blocked`, `failed`, `provider_pending`, and `not_scanned` files cannot be marked `publicApproved`.
+- `/u/[slug]` only receives public-approved files that are also public-eligible.
+- A file marked `local_validated` is not provider malware-clean; the UI labels it as local validation.
+
+Setup steps:
+
+1. Choose a malware scanning provider with API terms that allow user-uploaded portfolio files.
+2. Add the backend env vars in Render or the backend hosting environment.
+3. Upload a safe test file through `/portfolio-generator`.
+4. Confirm the scan endpoint returns a real clean result.
+5. Only then mark scanning as Live in status docs or operations dashboards.
+
+Safety notes:
+
+- Do not fake `clean` scan results.
+- Do not expose scanner payloads, private files, or private bucket URLs.
+- Do not publish blocked, failed, pending, or unscanned files on public portfolios.
 
 ---
 
