@@ -39,6 +39,7 @@ const PortfolioFileExportRequestSchema = new Schema(
 
 PortfolioFileExportRequestSchema.index({ ownerId: 1, portfolioId: 1, createdAt: -1 });
 PortfolioFileExportRequestSchema.index({ ownerId: 1, portfolioId: 1, status: 1, createdAt: -1 });
+PortfolioFileExportRequestSchema.index({ status: 1, expiresAt: 1 });
 
 export type PortfolioFileExportRequestDocument = InferSchemaType<typeof PortfolioFileExportRequestSchema>;
 export const PortfolioFileExportRequestModel = mongoose.models.PortfolioFileExportRequest || model("PortfolioFileExportRequest", PortfolioFileExportRequestSchema);

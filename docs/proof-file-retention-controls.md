@@ -13,6 +13,7 @@ This phase adds owner-controlled retention, detach/delete review, and metadata e
 | Delete review | Implemented | Owners must confirm deletion. Delete request and delete completion are audited before metadata is removed. |
 | Metadata export summary | Implemented | Owners can generate a safe proof-file metadata and recent audit activity summary. |
 | Binary archive export | Implemented | Owners can explicitly confirm a short-lived owner-only ZIP archive for eligible proof files. Public routes never expose archive links or metadata. |
+| Expired archive cleanup | Implemented | Generated archive ZIP artifacts can be cleaned after expiry by the admin/server cleanup runner without deleting original proof files. |
 | Public portfolio filtering | Implemented | `/u/[slug]` hides deleted, scheduled-for-delete, retained-for-audit, private, and scan-ineligible proof files. |
 | Audit integration | Implemented | Retention review, delete request, delete completion, detach request, and export events are recorded with safe summaries only. |
 
@@ -105,6 +106,8 @@ metadata_export_ready
 
 Binary archive export is now implemented through the owner-only workflow documented in [Proof File Binary Export Archive](proof-file-binary-export-archive.md). It uses a stricter eligibility filter, short-lived archive access, and storage-provider safeguards.
 
+Expired archive cleanup is also documented there. Cleanup applies to generated archive ZIP artifacts only. It must not delete source proof files, retained-for-audit files, blocked proof files, public portfolio assets, or any owner upload outside the archive export prefix.
+
 ## Audit Event Types
 
 Retention controls add these owner-scoped events:
@@ -143,6 +146,8 @@ Public portfolios never show retention metadata, audit events, owner notes, file
 
 Public portfolios also never show binary export requests, archive links, archive metadata, archive storage keys, or owner-only export status.
 
+Expired archive cleanup is intentionally invisible to public portfolios. Public routes do not expose cleanup status, export request IDs, audit history, storage keys, archive prefixes, or lifecycle policy details.
+
 ## Verification Checklist
 
 - Retention fields default to `active` and `not_reviewed`.
@@ -153,6 +158,8 @@ Public portfolios also never show binary export requests, archive links, archive
 - Export summary contains no signed tokens, absolute paths, private bucket URLs, storage keys, or file contents.
 - Binary archive export requires owner confirmation and returns no archive storage key in API responses.
 - Signed archive URL generation requires the owner and does not log full tokens.
+- Expired archive cleanup removes only generated archive artifacts and never removes original proof files.
+- Cleanup failure reasons are sanitized and do not expose local paths, bucket URLs, storage keys, or signed URL tokens.
 - Public portfolio hides `scheduled_for_delete`, `deleted`, and `retained_for_audit` files.
 
 ## Safety Policy

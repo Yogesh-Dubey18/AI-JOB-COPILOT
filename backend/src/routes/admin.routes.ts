@@ -4,6 +4,7 @@ import { validateBody } from "../middlewares/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { aiUsage, auditLogs, createAdminJob, deleteAdminJob, feedback, listAdminJobs, listUsers, monitoringStatus, reports, riskSignals, systemHealth, updateAdminJob, usageAnalytics } from "../services/admin.service.js";
 import { createFeedbackIssueDraft, updateFeedbackTriage } from "../services/feedback.service.js";
+import { cleanupExpiredPortfolioProofArchives } from "../services/portfolio-file-export.service.js";
 import { updateFeedbackSchema } from "../validators/feedback.validator.js";
 
 const router = Router();
@@ -21,6 +22,9 @@ router.get("/monitoring", asyncHandler(async (_req, res) => res.json({ success: 
 router.get("/risk-signals", asyncHandler(async (_req, res) => res.json({ success: true, data: await riskSignals() })));
 router.get("/usage-analytics", asyncHandler(async (_req, res) => res.json({ success: true, data: await usageAnalytics() })));
 router.get("/reports", asyncHandler(async (_req, res) => res.json({ success: true, data: await reports() })));
+router.post("/maintenance/proof-archives/cleanup", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await cleanupExpiredPortfolioProofArchives({ limit: req.body?.limit ?? req.query.limit }) });
+}));
 router.get("/feedback", asyncHandler(async (_req, res) => res.json({ success: true, data: await feedback() })));
 router.patch("/feedback/:id", validateBody(updateFeedbackSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await updateFeedbackTriage(param(req.params.id), req.body) })));
 router.post("/feedback/:id/issue-draft", asyncHandler(async (req, res) => res.json({ success: true, data: await createFeedbackIssueDraft(param(req.params.id)) })));

@@ -37,6 +37,7 @@
 | Proof file audit trail and user review history | Complete |
 | Proof file retention controls and metadata export review | Complete |
 | Owner-only proof file binary archive export | Complete |
+| Expired proof archive cleanup and lifecycle policy readiness | Complete |
 | Custom portfolio domain hosting | Provider-ready only |
 | Analytics dashboard | ✅ Complete |
 | Career vault | ✅ Complete |
@@ -98,6 +99,7 @@
 | Owner-scoped proof file activity timeline and per-file audit history | Complete |
 | Owner-controlled proof-file retention, detach/delete review, and metadata export summary | Complete |
 | Owner-only proof-file binary archive export with short-lived access | Complete |
+| Expired proof archive cleanup with provider lifecycle policy readiness | Complete |
 | Custom-domain hosting | Provider-ready only |
 
 ---
@@ -176,10 +178,10 @@
 
 ## Roadmap Priorities (Next)
 
-Recommended priority update after owner proof-file binary archive workflow:
+Recommended priority update after expired proof archive cleanup:
 
 1. **Resume compare view** - diff between original and tailored version using changeSummary
-2. **Archive cleanup job** - scheduled cleanup for expired local/S3/R2 proof archive objects without exposing contents
+2. **Archive cleanup observability** - admin maintenance dashboard/status history for cleanup runs without exposing archive paths or file contents
 3. **Application stage flow chart** - Sankey or funnel chart for CRM analytics
 4. **Notification reminders** - email alerts for follow-ups when SendGrid configured
 5. **Job CSV batch import** - approved, legally-obtained job list upload

@@ -1651,4 +1651,117 @@ describe("AI Job Copilot API", () => {
       scheduledArchiveFile.body.data.fileId
     ]));
   });
+
+  it("cleans expired proof archive artifacts without deleting source proof files or exposing archive internals", async () => {
+    const agent = await authAgent();
+    const me = await agent.get("/api/auth/me").expect(200);
+    const created = await agent.post("/api/portfolios/generate").send({
+      slug: "cleanup-proof-archive",
+      title: "Cleanup Proof Archive",
+      displayName: "Cleanup Owner",
+      headline: "Portfolio owner",
+      isPublished: true,
+      sections: { showProjects: true, showCaseStudies: true },
+      projectCaseStudies: [{ id: "cleanup-case", projectName: "Cleanup Project", isPublic: true }]
+    }).expect(201);
+    const portfolioId = created.body.data._id;
+    const pngBuffer = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from("cleanup-proof")
+    ]);
+    const uploaded = await agent.post(`/api/portfolios/${portfolioId}/files/upload`)
+      .field("projectId", "cleanup-case")
+      .attach("proofFile", pngBuffer, { filename: "cleanup-proof.png", contentType: "image/png" })
+      .expect(201);
+    const archive = await agent.post(`/api/portfolios/${portfolioId}/files/export-archive`).send({
+      requestedFileIds: [uploaded.body.data.fileId],
+      confirmExport: true
+    }).expect(201);
+    const futureArchive = await agent.post(`/api/portfolios/${portfolioId}/files/export-archive`).send({
+      requestedFileIds: [uploaded.body.data.fileId],
+      confirmExport: true
+    }).expect(201);
+    const expiredRecord = await findOneRecord("portfolioFileExportRequests", { exportId: archive.body.data.exportId });
+    const futureRecord = await findOneRecord("portfolioFileExportRequests", { exportId: futureArchive.body.data.exportId });
+    await updateRecord("portfolioFileExportRequests", expiredRecord._id, {
+      expiresAt: new Date(Date.now() - 60_000).toISOString()
+    });
+    await updateRecord("portfolioFileExportRequests", futureRecord._id, {
+      expiresAt: new Date(Date.now() + 60_000).toISOString()
+    });
+    const missingArchive = await createRecord("portfolioFileExportRequests", {
+      exportId: "missing-archive-export",
+      ownerId: me.body.data.id,
+      portfolioId,
+      status: "ready",
+      requestedFileIds: [uploaded.body.data.fileId],
+      includedFileIds: [uploaded.body.data.fileId],
+      includedFileCount: 1,
+      excludedFileCount: 0,
+      archiveStorageKey: "portfolio-proof-exports/test/missing-archive.zip",
+      archiveProvider: "local",
+      archiveFilename: "missing-archive.zip",
+      expiresAt: new Date(Date.now() - 60_000).toISOString(),
+      safeSummary: "Test missing generated archive object."
+    });
+    const failingArchive = await createRecord("portfolioFileExportRequests", {
+      exportId: "failing-archive-export",
+      ownerId: me.body.data.id,
+      portfolioId,
+      status: "ready",
+      requestedFileIds: [uploaded.body.data.fileId],
+      includedFileIds: [uploaded.body.data.fileId],
+      includedFileCount: 1,
+      excludedFileCount: 0,
+      archiveStorageKey: "C:\\private\\portfolio-proof-exports\\failing.zip",
+      archiveProvider: "local",
+      archiveFilename: "failing.zip",
+      expiresAt: new Date(Date.now() - 60_000).toISOString(),
+      safeSummary: "Test failing generated archive cleanup."
+    });
+
+    await agent.post("/api/admin/maintenance/proof-archives/cleanup").send({ limit: 10 }).expect(403);
+    const admin = await adminAgent();
+    const cleanup = await admin.post("/api/admin/maintenance/proof-archives/cleanup").send({ limit: 10 }).expect(200);
+    expect(cleanup.body.data.scannedCount).toBe(3);
+    expect(cleanup.body.data.cleanedCount).toBe(2);
+    expect(cleanup.body.data.deletedArtifactCount).toBe(2);
+    expect(cleanup.body.data.failedCount).toBe(1);
+    expect(cleanup.body.data.safeSummary).toMatch(/generated archive artifacts only/i);
+    expect(JSON.stringify(cleanup.body.data)).not.toMatch(/archiveStorageKey|portfolio-proof-exports|C:\\|private-bucket|\?token=|signature=/i);
+
+    const cleanedRecord = await findOneRecord("portfolioFileExportRequests", { exportId: archive.body.data.exportId });
+    const stillFutureRecord = await findOneRecord("portfolioFileExportRequests", { exportId: futureArchive.body.data.exportId });
+    const missingRecord = await findOneRecord("portfolioFileExportRequests", { exportId: missingArchive.exportId });
+    const failedRecord = await findOneRecord("portfolioFileExportRequests", { exportId: failingArchive.exportId });
+    expect(cleanedRecord.status).toBe("deleted");
+    expect(cleanedRecord.archiveStorageKey).toBe("");
+    expect(missingRecord.status).toBe("deleted");
+    expect(missingRecord.archiveStorageKey).toBe("");
+    expect(stillFutureRecord.status).toBe("ready");
+    expect(stillFutureRecord.archiveStorageKey).toBeTruthy();
+    expect(failedRecord.status).toBe("expired");
+    expect(failedRecord.failureReason).toBeTruthy();
+    expect(failedRecord.failureReason).not.toMatch(/C:\\|portfolio-proof-exports|private-bucket|\?token=|signature=/i);
+
+    const sourceStillAvailable = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(200);
+    expect(sourceStillAvailable.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+    const files = await agent.get(`/api/portfolios/${portfolioId}/files`).expect(200);
+    expect(files.body.data.map((file: any) => file.fileId)).toContain(uploaded.body.data.fileId);
+
+    const cleanupAgain = await admin.post("/api/admin/maintenance/proof-archives/cleanup").send({ limit: 10 }).expect(200);
+    expect(cleanupAgain.body.data.cleanedCount).toBe(0);
+    expect(cleanupAgain.body.data.failedCount).toBe(1);
+    expect(JSON.stringify(cleanupAgain.body.data)).not.toMatch(/archiveStorageKey|portfolio-proof-exports|C:\\|private-bucket|\?token=|signature=/i);
+
+    const activity = await agent.get(`/api/portfolios/${portfolioId}/files/activity`).expect(200);
+    expect(activity.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining([
+      "binary_export_expired",
+      "binary_export_deleted",
+      "binary_export_failed"
+    ]));
+    expect(JSON.stringify(activity.body.data)).not.toMatch(/archiveStorageKey|portfolio-proof-exports|C:\\|private-bucket|\?token=|signature=/i);
+    const publicProfile = await request(app).get("/api/portfolios/public/cleanup-proof-archive").expect(200);
+    expect(JSON.stringify(publicProfile.body.data)).not.toMatch(/binary_export|exportId|archiveStorageKey|portfolio-proof-exports|audit|eventId|expiresAt/i);
+  });
 });

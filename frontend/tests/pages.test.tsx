@@ -843,6 +843,7 @@ describe("frontend pages", () => {
     await waitFor(() => {
       expect(screen.getByTestId("proof-archive-status")).toBeInTheDocument();
       expect(screen.getByText(/Archive request status: ready/i)).toBeInTheDocument();
+      expect(screen.getByText(/Archive is ready. Generate a short-lived owner-only download link when you need it/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Generate short-lived archive link/i })).toBeInTheDocument();
     });
     await user.click(screen.getByRole("button", { name: /Generate short-lived archive link/i }));

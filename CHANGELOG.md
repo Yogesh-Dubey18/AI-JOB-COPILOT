@@ -4,6 +4,16 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.39 - Expired Proof Archive Cleanup + Lifecycle Readiness (2026-05-29)
+
+- **Cleanup Service**: Added a bounded server-side cleanup workflow for expired generated proof archive ZIP artifacts.
+- **Admin Boundary**: Added an admin-protected cleanup route for future scheduler/cron use without exposing cleanup controls publicly.
+- **Source File Safety**: Cleanup targets generated archive artifacts only and never deletes original proof files, retained-for-audit files, blocked proof files, or public portfolio assets.
+- **Storage Safety**: Cleanup uses the existing storage abstraction, clears internal archive keys after success, handles missing archive objects safely, and stores sanitized failure reasons on failure.
+- **Audit Events**: Cleanup records safe binary export expired, deleted, or failed audit events without archive paths, file contents, private bucket URLs, or signed URL secrets.
+- **Builder Copy**: Improved owner-facing archive status copy for expired, deleted, failed, ready, and preparing archive requests.
+- **Provider Lifecycle Docs**: Documented S3/R2 lifecycle policy readiness for generated archive prefixes only, with local fallback limitations and no fake provider Live claim.
+
 ### v2.0.38 - Owner Proof File Binary Export Archive (2026-05-29)
 
 - **Export Request Model**: Added owner-scoped proof archive request records with status lifecycle, requested/included/excluded file tracking, provider label, expiry, failure reason, and safe summary.

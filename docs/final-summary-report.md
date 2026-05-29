@@ -4,6 +4,21 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-29 Expired Proof Archive Cleanup + Lifecycle Policy Readiness (Completed)
+
+Implemented the expired proof archive cleanup boundary without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake cleanup success, or exposing private storage internals.
+
+- **Cleanup Service**: Added a server-side cleanup runner that finds expired owner proof archive requests in bounded batches and targets generated archive ZIP artifacts only.
+- **Admin Boundary**: Added an admin-protected cleanup route for future scheduler/cron use. No public route can trigger cleanup or read cleanup internals.
+- **Storage Safety**: Cleanup deletes through the existing storage abstraction, clears internal archive keys after successful cleanup, handles missing archive objects gracefully, and stores sanitized failure reasons when deletion fails.
+- **Source File Protection**: Original proof files, retained-for-audit files, blocked proof files, public portfolio assets, and owner uploads outside the archive export prefix are never selected by archive cleanup.
+- **Audit Integration**: Cleanup records safe `binary_export_expired`, `binary_export_deleted`, or `binary_export_failed` audit events without archive paths, file contents, bucket URLs, signed tokens, or provider secrets.
+- **Builder UX**: `/portfolio-generator` now gives clearer owner-facing copy for expired, deleted, failed, ready, and preparing archive requests without exposing cleanup internals.
+- **Provider Lifecycle Readiness**: Documented S3/R2 lifecycle policy guidance for generated archive prefixes only. Lifecycle policies remain defense in depth and do not replace app-level expiry checks.
+- **Public Portfolio Safety**: `/u/[slug]` continues to exclude archive requests, archive links, archive metadata, audit/retention internals, cleanup state, and private file metadata.
+
+---
+
 ## 2026-05-29 Secure Owner Binary Export Archive Workflow (Completed)
 
 Implemented the owner-only proof-file binary archive workflow without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake scanning/storage/provider success, or exposing private file contents to public routes.

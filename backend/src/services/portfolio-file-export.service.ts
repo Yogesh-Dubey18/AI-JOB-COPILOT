@@ -22,6 +22,7 @@ function safeText(value: any, maxLength = 500) {
   return String(value || "")
     .replace(/[A-Za-z]:\\[^\s]+/g, "[local-path-redacted]")
     .replace(/https?:\/\/[^\s?]+(\?[^\s]*)?/g, "[url-redacted]")
+    .replace(/portfolio-proof-exports\/[^\s"']+/g, "[archive-key-redacted]")
     .trim()
     .slice(0, maxLength);
 }
@@ -401,6 +402,115 @@ async function markExpiredIfNeeded(request: any) {
     return updated;
   }
   return request;
+}
+
+function hasExpired(request: any, now = Date.now()) {
+  const expiresAt = request?.expiresAt ? new Date(request.expiresAt).getTime() : 0;
+  return Boolean(expiresAt && expiresAt <= now);
+}
+
+function cleanupLimit(value: any) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 25;
+  return Math.min(Math.floor(parsed), 100);
+}
+
+async function findExpiredArchiveCandidates(limit: number, now: number) {
+  const ready = await findRecords("portfolioFileExportRequests", { status: "ready" }, { sort: { expiresAt: 1 }, limit: limit * 2 });
+  const alreadyExpired = await findRecords("portfolioFileExportRequests", { status: "expired" }, { sort: { expiresAt: 1 }, limit: limit * 2 });
+  const seen = new Set<string>();
+  return [...ready, ...alreadyExpired]
+    .filter((request) => {
+      const id = String(request._id || request.exportId || "");
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return hasExpired(request, now) && Boolean(request.archiveStorageKey);
+    })
+    .slice(0, limit);
+}
+
+export async function cleanupExpiredPortfolioProofArchives(input: any = {}) {
+  const limit = cleanupLimit(input.limit);
+  const now = Date.now();
+  const candidates = await findExpiredArchiveCandidates(limit, now);
+  const summary = {
+    scannedCount: candidates.length,
+    cleanedCount: 0,
+    expiredMarkedCount: 0,
+    deletedArtifactCount: 0,
+    failedCount: 0,
+    skippedCount: 0,
+    limit,
+    storageStatus: getStorageStatus().status,
+    storageStatusLabel: getStorageStatus().label,
+    safeSummary: "Expired proof archive cleanup targets generated archive artifacts only. Source proof files are never deleted by this job."
+  };
+
+  for (const request of candidates) {
+    const requestId = String(request._id || "");
+    const exportId = String(request.exportId || "");
+    const ownerId = String(request.ownerId || "");
+    const portfolioId = String(request.portfolioId || "");
+    if (!requestId || !exportId || !ownerId || !portfolioId) {
+      summary.skippedCount += 1;
+      continue;
+    }
+
+    let current = request;
+    if (normalizeStatus(current.status) === "ready") {
+      current = await updateRecord("portfolioFileExportRequests", requestId, {
+        status: "expired",
+        safeSummary: "Owner-only proof archive expired by cleanup metadata. Generated archive artifact cleanup is in progress."
+      });
+      summary.expiredMarkedCount += 1;
+      await recordPortfolioFileAuditEvent({
+        ownerId,
+        portfolioId,
+        fileId: exportId,
+        eventType: "binary_export_expired",
+        actor: "system",
+        summary: "Expired proof archive was selected for cleanup. Archive paths, file contents, and signed URL secrets were not logged."
+      });
+    }
+
+    try {
+      await deleteFile(String(current?.archiveStorageKey || request.archiveStorageKey));
+      await updateRecord("portfolioFileExportRequests", requestId, {
+        status: "deleted",
+        archiveStorageKey: "",
+        failureReason: "",
+        safeSummary: "Expired proof archive artifact was removed or was already unavailable. Minimal metadata remains for owner review."
+      });
+      summary.cleanedCount += 1;
+      summary.deletedArtifactCount += 1;
+      await recordPortfolioFileAuditEvent({
+        ownerId,
+        portfolioId,
+        fileId: exportId,
+        eventType: "binary_export_deleted",
+        actor: "system",
+        summary: "Expired proof archive artifact cleanup completed. Source proof files were not deleted and archive storage paths were not logged."
+      });
+    } catch (error: any) {
+      const failureReason = safeText(error?.message || "Archive cleanup failed.", 240);
+      await updateRecord("portfolioFileExportRequests", requestId, {
+        status: "expired",
+        failureReason,
+        safeSummary: "Expired proof archive cleanup failed safely. Generated archive cleanup can be retried."
+      });
+      summary.failedCount += 1;
+      await recordPortfolioFileAuditEvent({
+        ownerId,
+        portfolioId,
+        fileId: exportId,
+        eventType: "binary_export_failed",
+        actor: "system",
+        summary: "Expired proof archive cleanup failed safely. File contents, storage paths, and signed URL secrets were not logged."
+      });
+    }
+  }
+
+  return summary;
 }
 
 export async function listPortfolioProofArchiveExports(userId: string, portfolioId: string) {

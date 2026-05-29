@@ -231,6 +231,7 @@ Portfolio proof file upload:
 - Provides metadata-only export summary for proof files and recent safe audit events.
 - Provides owner-only binary archive export for eligible proof files after explicit confirmation.
 - Generates short-lived archive download links and never exposes archive storage keys in API responses.
+- Cleans expired generated proof archive artifacts through an admin/server cleanup runner without deleting original proof files.
 - Hides scheduled-for-delete, deleted, and retained-for-audit files from public portfolios.
 
 Local fallback:
@@ -243,6 +244,7 @@ S3/R2 provider-ready behavior:
 - Generates short-lived signed download/view URLs.
 - Uses `STORAGE_SIGNED_URL_TTL_SECONDS`, defaulting to `900` seconds.
 - Must be verified manually before status is changed to Live.
+- Generated proof archive lifecycle rules should target the archive export prefix only, not source proof uploads or public portfolio assets.
 
 Never expose absolute local disk paths, private bucket URLs, access keys, secret keys, or internal storage keys in public portfolio output.
 
@@ -283,6 +285,24 @@ Owner binary archive export:
 - uses `STORAGE_SIGNED_URL_TTL_SECONDS`, defaulting to 900 seconds
 - never returns archive storage keys, absolute local paths, private bucket URLs, provider credentials, or signed URL secrets in normal API responses
 - records safe binary export audit events only
+
+Expired archive cleanup:
+
+- is available through the admin/server cleanup boundary `POST /api/admin/maintenance/proof-archives/cleanup`
+- uses the same storage abstraction to delete generated archive ZIP artifacts only
+- marks expired archive requests safely and clears internal archive keys after cleanup
+- treats missing archive objects gracefully when the storage abstraction reports them unavailable
+- records safe `binary_export_expired`, `binary_export_deleted`, or `binary_export_failed` audit events
+- returns counts and safe summaries only, never archive storage keys, bucket URLs, local paths, signed URL tokens, or file contents
+- does not delete original proof files, retained-for-audit files, blocked files, or public portfolio assets
+
+Provider lifecycle policy readiness:
+
+- S3 lifecycle rules should be scoped only to generated archive artifacts, for example the `portfolio-proof-exports/` prefix.
+- R2 lifecycle rules should use the same archive-only prefix boundary.
+- Lifecycle policies are defense in depth and do not replace app-level expiry checks, owner auth, signed URL TTLs, or the admin cleanup runner.
+- Do not add real bucket names, credentials, private paths, or provider-specific secrets to documentation.
+- Do not mark S3/R2 archive cleanup Live until real credentials, private bucket access, signed URLs, and lifecycle behavior are tested.
 
 Public portfolio rules:
 

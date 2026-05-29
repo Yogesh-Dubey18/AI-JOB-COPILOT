@@ -15,6 +15,7 @@ This phase adds an owner-scoped audit trail for portfolio proof files. It record
 | Frontend history UI | Implemented | `/portfolio-generator` shows a proof file activity panel and per-file audit history with safe summaries only. |
 | Retention controls | Implemented | Retention review, delete request, delete completion, detach request, and metadata export events are recorded without file contents. |
 | Binary archive export | Implemented | Owner-only archive request, preparation, download-link, expiration, and deletion events are recorded with safe summaries only. |
+| Expired archive cleanup | Implemented | Server/admin cleanup records safe archive expiration, deletion, or failure events without archive keys, paths, signed tokens, or file contents. |
 
 ## Audit Event Types
 
@@ -79,6 +80,7 @@ Summaries are intentionally short and safe. They explain the action without copy
 - Delete was requested or completed.
 - A metadata-only export summary was requested and generated.
 - A binary proof-file archive was requested, prepared, failed, expired, revoked, or had a short-lived owner download link generated.
+- Expired generated archive cleanup selected, removed, or safely failed against an owner archive request.
 
 ## What Is Never Logged
 
@@ -140,6 +142,7 @@ Retention controls are documented in [Proof File Retention Controls](proof-file-
 - `scheduled_for_delete`, `deleted`, and `retained_for_audit` files stay out of public portfolios.
 - Metadata export events record that an export summary was requested/generated, not the exported file contents.
 - Binary archive export events record workflow status only. They never store generated archive contents, archive storage paths, private bucket URLs, or signed archive URL tokens.
+- Expired archive cleanup events use `actor: system` and record status only. They never store archive keys, local paths, bucket URLs, signed URL secrets, source proof file contents, or lifecycle provider internals.
 - Audit summaries never include private storage paths, bucket URLs, signed URL tokens, scanner payloads, or proof-file contents.
 
 ## Verification Checklist
@@ -152,6 +155,7 @@ Retention controls are documented in [Proof File Retention Controls](proof-file-
 - Delete request creates `delete_requested`; confirmed delete creates `delete_completed`.
 - Metadata export creates `export_requested` and `export_generated_metadata`.
 - Binary archive export creates safe `binary_export_*` events without archive paths or tokens.
+- Expired archive cleanup creates safe `binary_export_expired`, `binary_export_deleted`, or `binary_export_failed` events without deleting source proof files.
 - Audit list requires ownership.
 - Public portfolio responses do not include audit events.
 - Audit records do not expose local paths, private bucket URLs, raw storage keys, signed tokens, or file contents.

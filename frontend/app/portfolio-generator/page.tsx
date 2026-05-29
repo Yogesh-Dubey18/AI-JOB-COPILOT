@@ -325,6 +325,15 @@ function auditEventLabel(eventType?: string) {
     .join(" ");
 }
 
+function archiveStatusHelp(status?: PortfolioProofArchiveRequest["status"]) {
+  if (status === "expired") return "Download link expired. Request a fresh owner-only archive if the proof files are still eligible.";
+  if (status === "deleted") return "Expired archive artifact cleanup completed or the owner revoked the archive. Generate a fresh archive when needed.";
+  if (status === "failed") return "Archive generation or cleanup failed safely. Review the failure message and try again after checking eligible files.";
+  if (status === "preparing") return "Archive generation is in progress. Public portfolios never expose private archive links.";
+  if (status === "ready") return "Archive is ready. Generate a short-lived owner-only download link when you need it.";
+  return "Owner-only export request recorded without storage paths or signed URL secrets.";
+}
+
 function GitHubProofSummary({ proof }: { proof?: GitHubProof | null }) {
   if (!proof) {
     return (
@@ -774,7 +783,7 @@ export default function PortfolioGeneratorPage() {
     mutationFn: (portfolioId: string) => api.get<PortfolioProofExportSummary>(`/portfolios/${portfolioId}/files/export-summary`),
     onSuccess: (data) => {
       setProofExportSummary(data);
-      setProofUploadMessage("Proof-file metadata export summary generated. Binary export requires a secure archive workflow.");
+      setProofUploadMessage("Proof-file metadata export summary generated. Use the owner-only archive section below when you need eligible proof file binaries.");
       queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
     }
   });
@@ -1361,7 +1370,8 @@ export default function PortfolioGeneratorPage() {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold">Archive request status: {archiveRequest.status}</p>
-                        <p className="mt-1 text-muted-foreground">{archiveRequest.safeSummary || "Owner-only export request recorded without storage paths or signed URL secrets."}</p>
+                        {archiveRequest.safeSummary ? <p className="mt-1 text-muted-foreground">{archiveRequest.safeSummary}</p> : null}
+                        <p className="mt-1 text-muted-foreground">{archiveStatusHelp(archiveRequest.status)}</p>
                         {archiveRequest.expiresAt ? <p className="mt-1 text-muted-foreground">Archive metadata expiry: {new Date(archiveRequest.expiresAt).toLocaleString()}.</p> : null}
                         {archiveRequest.failureReason ? <p className="mt-1 font-semibold text-danger">Failure: {archiveRequest.failureReason}</p> : null}
                         {archiveRequest.isLocalFallback ? <p className="mt-1 text-muted-foreground">Local fallback archive links are not production-durable. S3/R2 remains provider-ready until configured and tested.</p> : null}

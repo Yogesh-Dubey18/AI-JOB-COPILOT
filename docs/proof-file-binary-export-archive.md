@@ -16,6 +16,8 @@ This phase adds an owner-only binary archive workflow for portfolio proof files.
 | S3/R2 archive storage | Provider-ready | Uses the same private storage abstraction when credentials are configured. Do not mark Live until real bucket access and signed URL behavior are tested. |
 | Public portfolio privacy | Implemented | `/u/[slug]` never exposes export requests, archive links, archive metadata, audit events, retention internals, or private file metadata. |
 | Audit integration | Implemented | Safe binary export events are recorded without file contents, archive storage paths, signed URL secrets, or private bucket URLs. |
+| Expired archive cleanup | Implemented | Admin/server-side cleanup removes expired generated archive artifacts through the storage abstraction without touching source proof files. |
+| Provider lifecycle policy readiness | Documented | S3/R2 lifecycle guidance targets generated archive prefixes only and remains provider-ready until real buckets are configured and tested. |
 
 ## Export Request Metadata
 
@@ -51,6 +53,14 @@ GET /api/portfolios/:id/files/export-archive/:exportId
 GET /api/portfolios/:id/files/export-archive/:exportId/signed-url
 DELETE /api/portfolios/:id/files/export-archive/:exportId
 ```
+
+Protected admin/server endpoint:
+
+```text
+POST /api/admin/maintenance/proof-archives/cleanup
+```
+
+The cleanup endpoint is behind the existing admin auth boundary and accepts an optional `limit`. The default limit is 25 and the maximum is 100 to avoid unbounded cleanup runs. Future cron or scheduler integrations should call the same service function, not bypass the storage abstraction.
 
 The preview endpoint returns:
 
@@ -182,17 +192,59 @@ Audit summaries must never include:
 
 ## Cleanup And Expiry Plan
 
-Current cleanup behavior:
+Implemented cleanup behavior:
 
 - archive metadata expires automatically by `expiresAt`
 - signed URL generation refuses expired archives
 - owners can delete/revoke an archive request, which deletes the archive object through the storage abstraction when available
+- the admin/server cleanup runner finds expired `ready` or `expired` archive requests that still have a generated archive artifact
+- only generated archive ZIP artifacts are targeted; original proof files, retained-for-audit files, public portfolio assets, and source uploads are never selected by this cleanup job
+- generated archive artifacts are removed through the existing storage abstraction, then the export request is marked `deleted` and the internal archive key is cleared
+- missing archive objects are handled gracefully and treated as safe cleanup completion when the storage abstraction reports success
+- failed deletion attempts leave the export request `expired`, store a sanitized failure reason, and can be retried safely
+- cleanup responses return counts and safe summaries only; they do not return export IDs, archive storage keys, bucket URLs, local paths, or signed URL secrets
+- cleanup records safe `binary_export_expired`, `binary_export_deleted`, or `binary_export_failed` audit events without archive paths or file contents
+- repeated cleanup runs do not repeatedly delete already-cleaned archive artifacts because successful cleanup clears the archive key and moves the request to `deleted`
 
-Production hardening follow-up:
+Cleanup runner contract:
 
-- background cleanup job for expired local/S3/R2 archive objects
-- provider lifecycle policies for `portfolio-proof-exports/`
-- admin-safe cleanup monitoring without exposing archive contents
+- callable service: `cleanupExpiredPortfolioProofArchives({ limit })`
+- protected route: `POST /api/admin/maintenance/proof-archives/cleanup`
+- default batch size: 25
+- maximum batch size: 100
+- actor for cleanup audit events: `system`
+
+## Provider Lifecycle Policy Readiness
+
+Lifecycle policies are defense in depth. They do not replace app-level expiry checks, owner auth, signed URL TTL enforcement, or the cleanup runner above.
+
+Recommended archive prefix:
+
+```text
+portfolio-proof-exports/
+```
+
+Current archive keys are generated under the archive export prefix and should remain separate from source proof uploads. Do not configure a lifecycle rule that matches resume uploads, source proof files, retained-for-audit files, public portfolio assets, or any non-archive object namespace.
+
+S3 provider-ready policy guidance:
+
+- create a lifecycle expiration rule scoped only to the generated archive prefix, for example `portfolio-proof-exports/`
+- expire generated ZIP archives after the product-approved archive window
+- keep source proof file prefixes outside the archive lifecycle rule
+- verify deletion behavior in a non-production bucket before marking the provider Live
+- never place real bucket names, access keys, or private paths in repo docs
+
+R2 provider-ready policy guidance:
+
+- configure an object lifecycle rule scoped only to the generated archive prefix
+- use the same archive-only boundary as S3
+- verify that signed URL generation and app-level cleanup still behave correctly before marking R2 Live
+
+Local fallback cleanup:
+
+- local archives are non-durable and remain a development fallback
+- the admin cleanup route/service is the app-level cleanup boundary
+- no permanent hosting or bucket lifecycle behavior should be claimed in local mode
 
 ## Verification Checklist
 
@@ -203,6 +255,10 @@ Production hardening follow-up:
 - Signed archive URL route requires the owner.
 - Public portfolio response does not include export request data.
 - Audit events are created with safe summaries only.
+- Expired archive cleanup targets generated archive artifacts only.
+- Non-expired archive requests are not cleaned.
+- Original proof files remain available after expired archive cleanup.
+- Failed cleanup stores a sanitized failure reason without archive keys, local paths, bucket URLs, or signed tokens.
 - Local fallback is labeled not production-durable.
 - S3/R2 remains provider-ready until real credentials and signed URL tests pass.
 
