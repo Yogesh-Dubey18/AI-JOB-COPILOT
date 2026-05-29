@@ -19,7 +19,13 @@ export type PortfolioFileAuditEventType =
   | "delete_completed"
   | "detach_requested"
   | "export_requested"
-  | "export_generated_metadata";
+  | "export_generated_metadata"
+  | "binary_export_requested"
+  | "binary_export_prepared"
+  | "binary_export_failed"
+  | "binary_export_download_link_generated"
+  | "binary_export_expired"
+  | "binary_export_deleted";
 
 type Actor = "user" | "system";
 
@@ -40,7 +46,13 @@ const eventTypes = new Set<PortfolioFileAuditEventType>([
   "delete_completed",
   "detach_requested",
   "export_requested",
-  "export_generated_metadata"
+  "export_generated_metadata",
+  "binary_export_requested",
+  "binary_export_prepared",
+  "binary_export_failed",
+  "binary_export_download_link_generated",
+  "binary_export_expired",
+  "binary_export_deleted"
 ]);
 
 function normalizeEventType(value: any): PortfolioFileAuditEventType | null {
@@ -103,6 +115,18 @@ function defaultSummary(eventType: PortfolioFileAuditEventType, actor: Actor) {
       return "Owner requested a proof file metadata export summary.";
     case "export_generated_metadata":
       return "Metadata export summary was generated without binaries, signed tokens, or private paths.";
+    case "binary_export_requested":
+      return "Owner requested a proof file binary export archive.";
+    case "binary_export_prepared":
+      return "Proof file binary export archive was prepared without logging file contents or storage paths.";
+    case "binary_export_failed":
+      return "Proof file binary export archive preparation failed without logging file contents.";
+    case "binary_export_download_link_generated":
+      return "Short-lived archive download link was generated. Secret tokens were not stored.";
+    case "binary_export_expired":
+      return "Proof file binary export archive expired by metadata.";
+    case "binary_export_deleted":
+      return "Proof file binary export archive was deleted or revoked.";
     default:
       return "Proof file activity was recorded without file contents.";
   }

@@ -1553,6 +1553,75 @@ describe("AI Job Copilot API", () => {
     const reviewedActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity?eventType=retention_reviewed`).expect(200);
     expect(reviewedActivity.body.data).toHaveLength(1);
 
+    const blockedArchiveFile = await agent.post(`/api/portfolios/${portfolioId}/files/metadata`).send({
+      fileId: "archive-blocked-file",
+      fileType: "proofFile",
+      storageKey: "proof/archive-blocked.pdf",
+      originalFilename: "archive-blocked.pdf",
+      mimeType: "application/pdf",
+      size: 1024,
+      visibility: "private",
+      scanStatus: "blocked",
+      scanProvider: "test-scanner",
+      scanSummary: "Provider malware scan blocked this file.",
+      blockedReason: "provider_reported_file_risk",
+      isPublicEligible: false,
+      retentionStatus: "active"
+    }).expect(201);
+    const scheduledArchiveFile = await agent.post(`/api/portfolios/${portfolioId}/files/metadata`).send({
+      fileId: "archive-scheduled-file",
+      fileType: "proofFile",
+      storageKey: "proof/archive-scheduled.pdf",
+      originalFilename: "archive-scheduled.pdf",
+      mimeType: "application/pdf",
+      size: 1024,
+      visibility: "private",
+      scanStatus: "local_validated",
+      scanProvider: "local-validation",
+      isPublicEligible: true,
+      retentionStatus: "scheduled_for_delete",
+      retentionReason: "Owner scheduled file for deletion."
+    }).expect(201);
+    await otherAgent.post(`/api/portfolios/${portfolioId}/files/export-archive`).send({
+      requestedFileIds: [uploaded.body.data.fileId],
+      confirmExport: true
+    }).expect(404);
+    const archivePreview = await agent.post(`/api/portfolios/${portfolioId}/files/export-archive/preview`).send({
+      requestedFileIds: [uploaded.body.data.fileId, blockedArchiveFile.body.data.fileId, scheduledArchiveFile.body.data.fileId]
+    }).expect(200);
+    expect(archivePreview.body.data.confirmationRequired).toBe(true);
+    expect(archivePreview.body.data.includedFileCount).toBe(1);
+    expect(archivePreview.body.data.excludedFileCount).toBe(2);
+    expect(JSON.stringify(archivePreview.body.data)).not.toMatch(/storageKey|archiveStorageKey|C:\\|private-bucket|\?token=|signature=/i);
+    await agent.post(`/api/portfolios/${portfolioId}/files/export-archive`).send({
+      requestedFileIds: [uploaded.body.data.fileId],
+      confirmExport: false
+    }).expect(400);
+    const archive = await agent.post(`/api/portfolios/${portfolioId}/files/export-archive`).send({
+      requestedFileIds: [uploaded.body.data.fileId, blockedArchiveFile.body.data.fileId, scheduledArchiveFile.body.data.fileId],
+      confirmExport: true
+    }).expect(201);
+    expect(archive.body.data.status).toBe("ready");
+    expect(archive.body.data.includedFileCount).toBe(1);
+    expect(archive.body.data.excludedFileCount).toBe(2);
+    expect(archive.body.data.archiveProvider).toBe("local");
+    expect(archive.body.data.downloadUrl).toBeUndefined();
+    expect(JSON.stringify(archive.body.data)).not.toMatch(/archiveStorageKey|portfolio-proof-exports|storageKey|C:\\|private-bucket|\?token=|signature=/i);
+    await otherAgent.get(`/api/portfolios/${portfolioId}/files/export-archive/${archive.body.data.exportId}/signed-url`).expect(404);
+    const archiveSigned = await agent.get(`/api/portfolios/${portfolioId}/files/export-archive/${archive.body.data.exportId}/signed-url`).expect(200);
+    expect(archiveSigned.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof-exports\/.*\.zip/);
+    expect(archiveSigned.body.data.signedUrlExpiresInSeconds).toBe(900);
+    expect(JSON.stringify(archiveSigned.body.data)).not.toMatch(/archiveStorageKey|storageKey|C:\\|private-bucket|\?token=|signature=/i);
+    const archiveEvents = await agent.get(`/api/portfolios/${portfolioId}/files/activity`).expect(200);
+    expect(archiveEvents.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining([
+      "binary_export_requested",
+      "binary_export_prepared",
+      "binary_export_download_link_generated"
+    ]));
+    expect(JSON.stringify(archiveEvents.body.data)).not.toMatch(/portfolio-proof-exports|archiveStorageKey|storageKey|C:\\|private-bucket|\?token=|signature=/i);
+    const archivePublicProfile = await request(app).get("/api/portfolios/public/upload-proof-portfolio").expect(200);
+    expect(JSON.stringify(archivePublicProfile.body.data)).not.toMatch(/binary_export|exportId|archiveStorageKey|portfolio-proof-exports|retentionStatus|audit|eventId/i);
+
     const detachUpload = await agent.post(`/api/portfolios/${portfolioId}/files/upload`)
       .field("projectId", "case-upload")
       .attach("proofFile", pngBuffer, { filename: "detach.png", contentType: "image/png" })
@@ -1576,7 +1645,10 @@ describe("AI Job Copilot API", () => {
     expect(deletedActivity.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining(["deleted", "delete_requested", "delete_completed", "detached_from_project"]));
     expect(JSON.stringify(deletedActivity.body.data)).not.toMatch(/\/uploads\/portfolio-proof|storageKey|C:\\|private-bucket|\?token=|signature=/i);
     const files = await agent.get(`/api/portfolios/${portfolioId}/files`).expect(200);
-    expect(files.body.data).toHaveLength(1);
-    expect(files.body.data[0].fileId).toBe(detachUpload.body.data.fileId);
+    expect(files.body.data.map((file: any) => file.fileId)).toEqual(expect.arrayContaining([
+      detachUpload.body.data.fileId,
+      blockedArchiveFile.body.data.fileId,
+      scheduledArchiveFile.body.data.fileId
+    ]));
   });
 });

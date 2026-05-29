@@ -4,11 +4,22 @@ All notable changes to AI Job Copilot will be documented here.
 
 ## Unreleased
 
+### v2.0.38 - Owner Proof File Binary Export Archive (2026-05-29)
+
+- **Export Request Model**: Added owner-scoped proof archive request records with status lifecycle, requested/included/excluded file tracking, provider label, expiry, failure reason, and safe summary.
+- **Owner Confirmation Flow**: Added archive preview and explicit confirmation before generating a proof-file ZIP archive.
+- **Archive Generation**: Packages eligible proof files server-side with a safe manifest, while excluding deleted, scheduled, retained-for-audit, blocked, failed, pending, not-scanned, and noneligible files.
+- **Signed Archive Access**: Added owner-gated short-lived archive download links with the existing storage abstraction and 900-second default TTL.
+- **Public Privacy Gate**: Kept `/u/[slug]` free of archive requests, archive links, archive metadata, private file metadata, audit events, retention internals, and signed URL secrets.
+- **Builder Export UX**: Added an "Export Proof Files Archive" section with checklist, eligibility review, confirmation step, request status, expiry info, local fallback warning, and download action.
+- **Audit Events**: Added binary export requested, prepared, failed, download-link generated, expired, and deleted audit events with safe summaries only.
+- **Docs**: Added proof file binary archive documentation and updated retention, audit, proof upload, provider integration, roadmap, final summary, and changelog docs.
+
 ### v2.0.37 - Proof File Retention Controls + Owner Export Review (2026-05-28)
 
 - **Retention Metadata**: Added owner-scoped retention status, review status, delete request/completion timestamps, retention reasons, and sanitized owner notes to portfolio proof files.
 - **Detach/Delete Safeguards**: Added detach, delete request, and confirmed delete flows so owners can separate removing a proof reference from deleting the stored file.
-- **Metadata Export Review**: Added an owner-only proof-file export summary with file metadata and recent safe audit events; binary archive export remains a future secure workflow.
+- **Metadata Export Review**: Added an owner-only proof-file export summary with file metadata and recent safe audit events; binary archive export was delivered later in v2.0.38.
 - **Public Privacy Gate**: `/u/[slug]` now hides scheduled-for-delete, deleted, and retained-for-audit proof files even if old embedded metadata was public-approved.
 - **Audit Events**: Added retention review, delete request, delete completion, detach request, export request, and export metadata generation events without logging file contents, private paths, bucket URLs, or signed tokens.
 - **Builder Retention UX**: Added retention/review badges, detach/delete controls, export summary UI, and privacy copy to `/portfolio-generator`.

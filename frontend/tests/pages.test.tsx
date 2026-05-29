@@ -463,6 +463,15 @@ describe("frontend pages", () => {
                 newStatus: "blocked",
                 summary: "Provider scan status changed without logging file contents.",
                 createdAt: "2026-05-28T10:10:00.000Z"
+              },
+              {
+                eventId: "activity-5",
+                portfolioId: "portfolio-1",
+                fileId: "archive-1",
+                eventType: "binary_export_prepared",
+                actor: "system",
+                summary: "Proof file archive was prepared for the owner without logging archive storage paths or file contents.",
+                createdAt: "2026-05-28T10:25:00.000Z"
               }
             ]
           })
@@ -500,6 +509,107 @@ describe("frontend pages", () => {
                   summary: "Metadata export summary was generated without binaries, signed tokens, or private paths."
                 }
               ]
+            }
+          })
+        });
+      }
+      if (String(url).includes("/portfolios/portfolio-1/files/export-archive/preview")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              portfolioId: "portfolio-1",
+              generatedAt: "2026-05-29T10:00:00.000Z",
+              confirmationRequired: true,
+              includedFileCount: 1,
+              excludedFileCount: 1,
+              signedUrlExpiresInSeconds: 900,
+              storageStatus: "local_fallback",
+              storageStatusLabel: "Local fallback storage (not production-durable)",
+              warning: "Binary export is owner-only. Public portfolios never expose private archive links.",
+              selectedFiles: [
+                {
+                  fileId: "proof-file-1",
+                  originalFilename: "proof.png",
+                  visibility: "private",
+                  scanStatus: "local_validated",
+                  retentionStatus: "active",
+                  reviewStatus: "not_reviewed",
+                  size: 2048,
+                  eligible: true
+                },
+                {
+                  fileId: "blocked-proof-file",
+                  originalFilename: "blocked.pdf",
+                  visibility: "private",
+                  scanStatus: "blocked",
+                  retentionStatus: "scheduled_for_delete",
+                  reviewStatus: "needs_attention",
+                  size: 4096,
+                  eligible: false,
+                  exclusionReason: "Retention status is scheduled_for_delete."
+                }
+              ]
+            }
+          })
+        });
+      }
+      if (String(url).includes("/portfolios/portfolio-1/files/export-archive/archive-1/signed-url")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              exportId: "archive-1",
+              portfolioId: "portfolio-1",
+              status: "ready",
+              requestedFileIds: ["proof-file-1", "blocked-proof-file"],
+              includedFileIds: ["proof-file-1"],
+              excludedFiles: [{ fileId: "blocked-proof-file", originalFilename: "blocked.pdf", reason: "Retention status is scheduled_for_delete." }],
+              includedFileCount: 1,
+              excludedFileCount: 1,
+              archiveProvider: "local",
+              archiveFilename: "proof-files-archive-1.zip",
+              expiresAt: "2026-05-29T10:15:00.000Z",
+              safeSummary: "Owner-only proof archive is ready with 1 included file(s) and 1 excluded file(s).",
+              storageStatus: "local_fallback",
+              storageStatusLabel: "Local fallback storage (not production-durable)",
+              signedUrlExpiresInSeconds: 900,
+              isLocalFallback: true,
+              downloadUrl: "/uploads/portfolio-proof-exports/archive-1.zip"
+            }
+          })
+        });
+      }
+      if (String(url).includes("/portfolios/portfolio-1/files/export-archive")) {
+        return Promise.resolve({
+          ok: true,
+          status: 201,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              exportId: "archive-1",
+              portfolioId: "portfolio-1",
+              status: "ready",
+              requestedFileIds: ["proof-file-1", "blocked-proof-file"],
+              includedFileIds: ["proof-file-1"],
+              excludedFiles: [{ fileId: "blocked-proof-file", originalFilename: "blocked.pdf", reason: "Retention status is scheduled_for_delete." }],
+              includedFileCount: 1,
+              excludedFileCount: 1,
+              archiveProvider: "local",
+              archiveFilename: "proof-files-archive-1.zip",
+              expiresAt: "2026-05-29T10:15:00.000Z",
+              safeSummary: "Owner-only proof archive is ready with 1 included file(s) and 1 excluded file(s).",
+              storageStatus: "local_fallback",
+              storageStatusLabel: "Local fallback storage (not production-durable)",
+              signedUrlExpiresInSeconds: 900,
+              isLocalFallback: true
             }
           })
         });
@@ -654,6 +764,9 @@ describe("frontend pages", () => {
     expect(screen.getByTestId("proof-retention-controls")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Export metadata summary/i })).toBeInTheDocument();
     expect(screen.getByText(/Detach removes a file from project\/proof cards/i)).toBeInTheDocument();
+    expect(screen.getByTestId("proof-binary-export-section")).toBeInTheDocument();
+    expect(screen.getByText(/Binary export is owner-only. Public portfolios never expose private archive links/i)).toBeInTheDocument();
+    expect(screen.getByText(/Deleted, scheduled, retained-for-audit, blocked, failed, pending, or noneligible files are excluded/i)).toBeInTheDocument();
     expect(screen.getByText(/does not provision a hosted domain/i)).toBeInTheDocument();
     expect(screen.queryByText(/permanent public hosting/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/S3\/R2 Live/i)).not.toBeInTheDocument();
@@ -680,11 +793,11 @@ describe("frontend pages", () => {
       expect(screen.getByTestId("version-history")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Save current version/i })).toBeInTheDocument();
       expect(screen.getByText("Recruiter draft")).toBeInTheDocument();
-      expect(screen.getByText("proof.png")).toBeInTheDocument();
-      expect(screen.getByText("blocked.pdf")).toBeInTheDocument();
+      expect(screen.getAllByText("proof.png").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("blocked.pdf").length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Scan: Local validation/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Retention: Active/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Retention: Scheduled for delete/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Retention: Scheduled for delete/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Not reviewed/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Needs attention/i).length).toBeGreaterThan(0);
       expect(screen.getByText(/Blocked reason: provider_reported_file_risk/i)).toBeInTheDocument();
@@ -694,6 +807,11 @@ describe("frontend pages", () => {
       expect(screen.getAllByRole("button", { name: /Detach only/i }).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("button", { name: /Request delete/i }).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("button", { name: /Confirm delete/i }).length).toBeGreaterThan(0);
+      expect(screen.getByTestId("proof-archive-file-checklist")).toBeInTheDocument();
+      expect(screen.getByLabelText(/Select proof archive file proof.png/i)).toBeChecked();
+      expect(screen.getByLabelText(/Select proof archive file blocked.pdf/i)).toBeDisabled();
+      expect(screen.getByRole("button", { name: /Review archive eligibility/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Confirm owner-only archive export/i })).toBeInTheDocument();
       expect(screen.getByTestId("proof-file-activity-panel")).toBeInTheDocument();
       expect(screen.getByText(/Audit history tracks file actions, not file contents/i)).toBeInTheDocument();
       expect(screen.getByText(/User review history/i)).toBeInTheDocument();
@@ -715,6 +833,26 @@ describe("frontend pages", () => {
       expect(screen.getByText(/Metadata export ready; binary export requires secure archive workflow/i)).toBeInTheDocument();
       expect(screen.getByText(/No signed URL tokens, private bucket URLs, local paths, or file contents are included/i)).toBeInTheDocument();
     });
+    await user.click(screen.getByRole("button", { name: /Review archive eligibility/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("proof-archive-preview")).toBeInTheDocument();
+      expect(screen.getByText(/1 included \/ 1 excluded/i)).toBeInTheDocument();
+      expect(screen.getByText(/Retention status is scheduled_for_delete/i)).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /Confirm owner-only archive export/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("proof-archive-status")).toBeInTheDocument();
+      expect(screen.getByText(/Archive request status: ready/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Generate short-lived archive link/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /Generate short-lived archive link/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /Download proof archive/i })).toHaveAttribute(
+        "href",
+        "http://localhost:5000/uploads/portfolio-proof-exports/archive-1.zip"
+      );
+      expect(screen.queryByText(/archiveStorageKey|signed-token|private-bucket|C:\\/i)).not.toBeInTheDocument();
+    });
 
     await user.click(screen.getByRole("button", { name: /Generate Portfolio PDF/i }));
 
@@ -725,7 +863,7 @@ describe("frontend pages", () => {
         "http://localhost:5000/uploads/exports/Candidate_Portfolio.pdf"
       );
     });
-  });
+  }, 10000);
 
   it("public portfolio page renders loading state", () => {
     renderWithProviders(<PublicPortfolioPage params={{ slug: "demo" }} />);
@@ -1750,7 +1888,7 @@ describe("public portfolio page /u/[slug]", () => {
     expect(screen.queryByText(/failed-react-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/scheduled-proof\.pdf/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/audit-retained-proof\.pdf/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/audit history|signed_url_generated|owner-only audit|scheduled_for_delete|retained_for_audit|retentionStatus/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/audit history|signed_url_generated|owner-only audit|scheduled_for_delete|retained_for_audit|retentionStatus|binary_export|archiveStorageKey|portfolio-proof-exports/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/guaranteed/i)).not.toBeInTheDocument();
   });
 });

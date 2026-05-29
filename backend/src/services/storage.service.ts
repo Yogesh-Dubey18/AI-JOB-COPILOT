@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } fro
 import { getSignedUrl as s3GetSignedUrl } from "@aws-sdk/s3-request-presigner";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { env } from "../config/env.js";
 
 const provider = env.STORAGE_PROVIDER || "local";
@@ -122,6 +123,35 @@ export async function deleteFile(fileKey: string): Promise<void> {
     const localPath = path.join(localUploadDir, safeKey);
     await fs.unlink(localPath).catch(() => {});
   }
+}
+
+async function bodyToBuffer(body: any): Promise<Buffer> {
+  if (!body) return Buffer.alloc(0);
+  if (Buffer.isBuffer(body)) return body;
+  if (body instanceof Uint8Array) return Buffer.from(body);
+  if (body instanceof Readable || typeof body[Symbol.asyncIterator] === "function") {
+    const chunks: Buffer[] = [];
+    for await (const chunk of body) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+  return Buffer.from(String(body));
+}
+
+export async function downloadFile(fileKey: string): Promise<Buffer> {
+  const safeKey = normalizeStorageKey(fileKey);
+  if (isS3Configured && s3Client) {
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: safeKey
+    });
+    const response = await s3Client.send(command);
+    return bodyToBuffer(response.Body);
+  }
+
+  const localPath = path.join(localUploadDir, safeKey);
+  return fs.readFile(localPath);
 }
 
 export async function getSignedUrl(fileKey: string): Promise<string> {

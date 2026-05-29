@@ -4,6 +4,21 @@ This final report details the verification results, release decision, and handof
 
 ---
 
+## 2026-05-29 Secure Owner Binary Export Archive Workflow (Completed)
+
+Implemented the owner-only proof-file binary archive workflow without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake scanning/storage/provider success, or exposing private file contents to public routes.
+
+- **Export Request Model**: Added owner-scoped proof archive request metadata with status lifecycle, requested/included/excluded file tracking, provider label, expiry, failure reason, and safe summary.
+- **Owner Confirmation Flow**: `/portfolio-generator` now lets owners select proof files, review eligibility, see scan/retention/visibility status, and explicitly confirm archive generation.
+- **Archive Generation**: Eligible proof files are packaged server-side into a ZIP archive with a safe manifest. Deleted, scheduled, retained-for-audit, blocked, failed, pending, not-scanned, and noneligible files are excluded.
+- **Signed Archive URLs**: Owners can generate a short-lived archive download link using the existing storage abstraction and 900-second default TTL. API responses never expose archive storage keys, private bucket URLs, absolute local paths, or signed token secrets.
+- **Builder UX**: Added an "Export Proof Files Archive" section with checklist, eligibility review, confirmation step, request status, expiry info, local fallback warning, and download action when ready.
+- **Public Portfolio Safety**: `/u/[slug]` continues to exclude archive requests, archive links, archive metadata, audit/retention internals, and private file metadata.
+- **Audit Integration**: Added safe binary export audit events for requested, prepared, failed, download-link generated, expired, and deleted states.
+- **Docs**: Added [Proof File Binary Export Archive](proof-file-binary-export-archive.md) and updated retention, audit, proof upload, provider, roadmap, final summary, and changelog docs.
+
+---
+
 ## 2026-05-28 Proof File Retention Controls + Owner Data Export/Delete Review (Completed)
 
 Implemented owner-controlled proof-file retention, detach/delete safeguards, and metadata export review without starting Stripe, subscription tiers, job-board provider activation, release tagging, fake scanner/provider success, or exposing private file contents.

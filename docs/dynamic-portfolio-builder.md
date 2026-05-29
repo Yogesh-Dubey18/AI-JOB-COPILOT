@@ -164,14 +164,15 @@ Retention behavior:
 - Scheduling deletion, marking deleted, or retaining for audit forces public visibility off.
 - Public `/u/[slug]` output hides retention metadata, audit events, owner notes, and any non-active file.
 - Owner export summary contains proof-file metadata and recent safe audit activity only.
+- Owner binary archive export packages eligible active proof files after explicit confirmation and provides short-lived download access.
 
-Export limitation:
+Metadata export status:
 
 ```text
 metadata_export_ready
 ```
 
-Binary export of proof files requires a future secure archive workflow.
+Binary archive export is implemented through the owner-only workflow documented in [Proof File Binary Export Archive](proof-file-binary-export-archive.md). Public portfolios never expose archive requests, archive links, archive metadata, or archive audit internals.
 
 ## GitHub Proof Behavior
 

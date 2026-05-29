@@ -160,7 +160,7 @@ type PortfolioProofAuditEvent = {
   fileId: string;
   projectId?: string;
   proofMappingId?: string;
-  eventType: "uploaded" | "local_validated" | "scan_status_changed" | "visibility_changed" | "public_approved" | "public_revoked" | "signed_url_generated" | "downloaded" | "attached_to_project" | "detached_from_project" | "deleted" | "retention_reviewed" | "delete_requested" | "delete_completed" | "detach_requested" | "export_requested" | "export_generated_metadata";
+  eventType: "uploaded" | "local_validated" | "scan_status_changed" | "visibility_changed" | "public_approved" | "public_revoked" | "signed_url_generated" | "downloaded" | "attached_to_project" | "detached_from_project" | "deleted" | "retention_reviewed" | "delete_requested" | "delete_completed" | "detach_requested" | "export_requested" | "export_generated_metadata" | "binary_export_requested" | "binary_export_prepared" | "binary_export_failed" | "binary_export_download_link_generated" | "binary_export_expired" | "binary_export_deleted";
   previousStatus?: string;
   newStatus?: string;
   previousVisibility?: string;
@@ -176,6 +176,44 @@ type PortfolioProofExportSummary = {
   binaryExportNote: string;
   files: PortfolioProofFile[];
   recentAuditEvents: PortfolioProofAuditEvent[];
+};
+
+type PortfolioProofArchivePreview = {
+  portfolioId: string;
+  generatedAt: string;
+  confirmationRequired: boolean;
+  selectedFiles: Array<PortfolioProofFile & {
+    selected?: boolean;
+    eligible?: boolean;
+    exclusionReason?: string;
+  }>;
+  includedFileCount: number;
+  excludedFileCount: number;
+  signedUrlExpiresInSeconds: number;
+  storageStatus: string;
+  storageStatusLabel: string;
+  warning: string;
+};
+
+type PortfolioProofArchiveRequest = {
+  exportId: string;
+  portfolioId: string;
+  status: "requested" | "preparing" | "ready" | "failed" | "expired" | "deleted";
+  requestedFileIds: string[];
+  includedFileIds: string[];
+  excludedFiles: Array<{ fileId: string; originalFilename?: string; reason: string }>;
+  includedFileCount: number;
+  excludedFileCount: number;
+  archiveProvider: "local" | "s3" | "r2";
+  archiveFilename: string;
+  expiresAt?: string;
+  failureReason?: string;
+  safeSummary?: string;
+  storageStatus?: string;
+  storageStatusLabel?: string;
+  signedUrlExpiresInSeconds?: number;
+  isLocalFallback?: boolean;
+  downloadUrl?: string;
 };
 
 const defaultForm: PortfolioForm = {
@@ -261,6 +299,10 @@ function scanStatusLabel(status?: string) {
 function isFilePublicApprovable(file: PortfolioProofFile) {
   const blockedStatuses = new Set(["blocked", "failed", "provider_pending", "not_scanned"]);
   return file.isPublicEligible !== false && !blockedStatuses.has(file.scanStatus || "local_validated") && (file.retentionStatus || "active") === "active";
+}
+
+function isArchiveExportEligible(file: PortfolioProofFile) {
+  return isFilePublicApprovable(file);
 }
 
 function retentionStatusLabel(status?: string) {
@@ -435,6 +477,9 @@ export default function PortfolioGeneratorPage() {
   const [proofVisibility, setProofVisibility] = useState<"private" | "publicApproved">("private");
   const [proofUploadMessage, setProofUploadMessage] = useState("");
   const [proofExportSummary, setProofExportSummary] = useState<PortfolioProofExportSummary | null>(null);
+  const [archiveSelectedFileIds, setArchiveSelectedFileIds] = useState<string[]>([]);
+  const [archivePreview, setArchivePreview] = useState<PortfolioProofArchivePreview | null>(null);
+  const [archiveRequest, setArchiveRequest] = useState<PortfolioProofArchiveRequest | null>(null);
 
   const portfolios = useQuery({ queryKey: ["portfolios"], queryFn: () => api.get<any[]>("/portfolios"), retry: false });
   const resumesQuery = useQuery({ queryKey: ["resumes"], queryFn: () => api.get<any[]>("/resumes"), retry: false });
@@ -618,6 +663,11 @@ export default function PortfolioGeneratorPage() {
     enabled: Boolean(latestPortfolio?._id || latestPortfolio?.id),
     retry: false
   });
+  useEffect(() => {
+    if (!portfolioFiles.data?.length || archiveSelectedFileIds.length) return;
+    const eligibleIds = portfolioFiles.data.filter(isArchiveExportEligible).map((file) => file.fileId);
+    if (eligibleIds.length) setArchiveSelectedFileIds(eligibleIds);
+  }, [archiveSelectedFileIds.length, portfolioFiles.data]);
   const portfolioFileActivity = useQuery({
     queryKey: ["portfolio-file-activity", latestPortfolio?._id || latestPortfolio?.id],
     queryFn: () => api.get<PortfolioProofAuditEvent[]>(`/portfolios/${latestPortfolio._id || latestPortfolio.id}/files/activity`),
@@ -728,6 +778,37 @@ export default function PortfolioGeneratorPage() {
       queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
     }
   });
+  const previewProofArchive = useMutation({
+    mutationFn: (portfolioId: string) => api.post<PortfolioProofArchivePreview>(`/portfolios/${portfolioId}/files/export-archive/preview`, {
+      requestedFileIds: archiveSelectedFileIds
+    }),
+    onSuccess: (data) => {
+      setArchivePreview(data);
+      setProofUploadMessage(`Archive review ready: ${data.includedFileCount} eligible file(s), ${data.excludedFileCount} excluded.`);
+    }
+  });
+  const requestProofArchive = useMutation({
+    mutationFn: (portfolioId: string) => api.post<PortfolioProofArchiveRequest>(`/portfolios/${portfolioId}/files/export-archive`, {
+      requestedFileIds: archiveSelectedFileIds,
+      confirmExport: true
+    }),
+    onSuccess: (data) => {
+      setArchiveRequest(data);
+      setProofUploadMessage(data.status === "ready"
+        ? "Owner-only proof archive prepared. Generate a short-lived download link when you are ready."
+        : `Proof archive request status: ${data.status}.`);
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
+    }
+  });
+  const refreshProofArchiveUrl = useMutation({
+    mutationFn: ({ portfolioId, exportId }: { portfolioId: string; exportId: string }) =>
+      api.get<PortfolioProofArchiveRequest>(`/portfolios/${portfolioId}/files/export-archive/${exportId}/signed-url`),
+    onSuccess: (data) => {
+      setArchiveRequest(data);
+      setProofUploadMessage(`Short-lived owner-only archive link generated; expires in ${data.signedUrlExpiresInSeconds || 900} seconds.`);
+      queryClient.invalidateQueries({ queryKey: ["portfolio-file-activity"] });
+    }
+  });
   const checkGitHubProof = useMutation({
     mutationFn: ({ repoUrl, projectName, skillName, keywords }: GitHubProofCheckInput) =>
       api.post<GitHubProof>("/portfolios/github/check", { repoUrl, projectName, skillName, keywords }),
@@ -750,7 +831,7 @@ export default function PortfolioGeneratorPage() {
   });
   const serverSlugError = slugCheck.data && typeof slugCheck.data.available === "boolean" && !slugCheck.data.available ? slugCheck.data.message || "This public slug is already taken." : null;
   const effectiveSlugError = slugError || serverSlugError;
-  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error || uploadProofFile.error || updateProofFileVisibility.error || detachProofFile.error || requestProofFileDelete.error || reviewProofFileRetention.error || deleteProofFile.error || refreshProofFileUrl.error || exportProofMetadata.error || checkGitHubProof.error;
+  const saveError = generate.error || update.error || publish.error || saveVersion.error || restoreVersion.error || compareVersion.error || uploadProofFile.error || updateProofFileVisibility.error || detachProofFile.error || requestProofFileDelete.error || reviewProofFileRetention.error || deleteProofFile.error || refreshProofFileUrl.error || exportProofMetadata.error || previewProofArchive.error || requestProofArchive.error || refreshProofArchiveUrl.error || checkGitHubProof.error;
 
   function publicUrl(slug: string) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -1187,6 +1268,124 @@ export default function PortfolioGeneratorPage() {
                   </div>
                 </div>
               ) : null}
+
+              <div className="rounded-md border bg-card/50 p-4 text-xs space-y-4" data-testid="proof-binary-export-section">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">Export Proof Files Archive</p>
+                    <h3 className="text-sm font-semibold">Owner-only binary archive workflow</h3>
+                    <p className="mt-1 text-muted-foreground">Select eligible proof files, review excluded files, then explicitly confirm archive generation.</p>
+                    <p className="mt-1 font-semibold text-amber-700 dark:text-amber-300">Binary export is owner-only. Public portfolios never expose private archive links.</p>
+                    <p className="mt-1 text-muted-foreground">Deleted, scheduled, retained-for-audit, blocked, failed, pending, or noneligible files are excluded.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge>{storageBadgeText}</Badge>
+                    <Badge>{storageInfo.localFallback ? "Local non-durable archive" : "Signed archive URLs"}</Badge>
+                    <Badge>{storageInfo.signedUrlTtlSeconds || 900}s URL TTL</Badge>
+                  </div>
+                </div>
+
+                {portfolioFiles.data?.length ? (
+                  <div className="grid gap-2 md:grid-cols-2" data-testid="proof-archive-file-checklist">
+                    {portfolioFiles.data.map((file) => {
+                      const eligible = isArchiveExportEligible(file);
+                      const checked = archiveSelectedFileIds.includes(file.fileId);
+                      return (
+                        <label key={`archive-${file.fileId}`} className="flex items-start gap-3 rounded-md border bg-background/70 p-3">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={checked}
+                            disabled={!eligible}
+                            aria-label={`Select proof archive file ${file.originalFilename || file.fileId}`}
+                            onChange={(event) => {
+                              setArchivePreview(null);
+                              setArchiveRequest(null);
+                              setArchiveSelectedFileIds((current) => event.target.checked
+                                ? [...new Set([...current, file.fileId])]
+                                : current.filter((fileId) => fileId !== file.fileId));
+                            }}
+                          />
+                          <span>
+                            <span className="block font-semibold">{file.originalFilename || file.fileId}</span>
+                            <span className="block text-muted-foreground">Visibility: {file.visibility === "publicApproved" ? "Public approved" : "Private"}; scan: {scanStatusLabel(file.scanStatus)}; retention: {retentionStatusLabel(file.retentionStatus)}.</span>
+                            {!eligible ? <span className="block font-semibold text-amber-700 dark:text-amber-300">Excluded from archive eligibility until scan and retention are safe.</span> : null}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-dashed p-4 text-muted-foreground">Upload proof files before creating an owner-only binary archive.</div>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!latestPortfolio || !archiveSelectedFileIds.length || previewProofArchive.isPending}
+                    onClick={() => latestPortfolio && previewProofArchive.mutate(latestPortfolio._id || latestPortfolio.id)}
+                  >
+                    {previewProofArchive.isPending ? "Reviewing archive..." : "Review archive eligibility"}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!latestPortfolio || !archiveSelectedFileIds.length || requestProofArchive.isPending || (archivePreview ? archivePreview.includedFileCount === 0 : false)}
+                    onClick={() => latestPortfolio && requestProofArchive.mutate(latestPortfolio._id || latestPortfolio.id)}
+                  >
+                    {requestProofArchive.isPending ? "Preparing archive..." : "Confirm owner-only archive export"}
+                  </Button>
+                </div>
+
+                {archivePreview ? (
+                  <div className="rounded-md border bg-muted/20 p-3" data-testid="proof-archive-preview">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">Archive eligibility review</p>
+                        <p className="mt-1 text-muted-foreground">{archivePreview.warning}</p>
+                      </div>
+                      <Badge>{archivePreview.includedFileCount} included / {archivePreview.excludedFileCount} excluded</Badge>
+                    </div>
+                    {archivePreview.selectedFiles.some((file) => !file.eligible) ? (
+                      <div className="mt-3 space-y-1">
+                        {archivePreview.selectedFiles.filter((file) => !file.eligible).map((file) => (
+                          <p key={`excluded-${file.fileId}`} className="text-muted-foreground">{file.originalFilename || file.fileId}: {file.exclusionReason}</p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {archiveRequest ? (
+                  <div className="rounded-md border bg-muted/20 p-3" data-testid="proof-archive-status">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">Archive request status: {archiveRequest.status}</p>
+                        <p className="mt-1 text-muted-foreground">{archiveRequest.safeSummary || "Owner-only export request recorded without storage paths or signed URL secrets."}</p>
+                        {archiveRequest.expiresAt ? <p className="mt-1 text-muted-foreground">Archive metadata expiry: {new Date(archiveRequest.expiresAt).toLocaleString()}.</p> : null}
+                        {archiveRequest.failureReason ? <p className="mt-1 font-semibold text-danger">Failure: {archiveRequest.failureReason}</p> : null}
+                        {archiveRequest.isLocalFallback ? <p className="mt-1 text-muted-foreground">Local fallback archive links are not production-durable. S3/R2 remains provider-ready until configured and tested.</p> : null}
+                      </div>
+                      <Badge>{archiveRequest.includedFileCount} files</Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {archiveRequest.status === "ready" ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!latestPortfolio || refreshProofArchiveUrl.isPending}
+                          onClick={() => latestPortfolio && refreshProofArchiveUrl.mutate({ portfolioId: latestPortfolio._id || latestPortfolio.id, exportId: archiveRequest.exportId })}
+                        >
+                          {refreshProofArchiveUrl.isPending ? "Generating archive link..." : "Generate short-lived archive link"}
+                        </Button>
+                      ) : null}
+                      {archiveRequest.downloadUrl ? (
+                        <a href={fileHref(archiveRequest.downloadUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-xs font-semibold hover:bg-muted">Download proof archive</a>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
 
               <div className="rounded-md border bg-muted/20 p-3" data-testid="proof-file-activity-panel">
                 <div className="flex flex-wrap items-start justify-between gap-3">

@@ -34,6 +34,14 @@ import {
   uploadPortfolioProofFile
 } from "../services/portfolio-file.service.js";
 import {
+  createPortfolioProofArchiveExport,
+  deletePortfolioProofArchiveExport,
+  getPortfolioProofArchiveExport,
+  getPortfolioProofArchiveSignedUrl,
+  listPortfolioProofArchiveExports,
+  previewPortfolioProofArchiveExport
+} from "../services/portfolio-file-export.service.js";
+import {
   listPortfolioFileAuditEvents,
   listRecentPortfolioFileActivity
 } from "../services/portfolio-file-audit.service.js";
@@ -93,6 +101,30 @@ router.get("/:id/files/activity", asyncHandler(async (req, res) => {
 
 router.get("/:id/files/export-summary", asyncHandler(async (req, res) => {
   res.json({ success: true, data: await getPortfolioProofFileExportSummary(req.user!.id, param(req.params.id)) });
+}));
+
+router.post("/:id/files/export-archive/preview", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await previewPortfolioProofArchiveExport(req.user!.id, param(req.params.id), req.body) });
+}));
+
+router.get("/:id/files/export-archive", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await listPortfolioProofArchiveExports(req.user!.id, param(req.params.id)) });
+}));
+
+router.post("/:id/files/export-archive", asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, data: await createPortfolioProofArchiveExport(req.user!.id, param(req.params.id), req.body) });
+}));
+
+router.get("/:id/files/export-archive/:exportId", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await getPortfolioProofArchiveExport(req.user!.id, param(req.params.id), param(req.params.exportId)) });
+}));
+
+router.get("/:id/files/export-archive/:exportId/signed-url", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await getPortfolioProofArchiveSignedUrl(req.user!.id, param(req.params.id), param(req.params.exportId)) });
+}));
+
+router.delete("/:id/files/export-archive/:exportId", asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await deletePortfolioProofArchiveExport(req.user!.id, param(req.params.id), param(req.params.exportId)) });
 }));
 
 router.post("/:id/files/metadata", asyncHandler(async (req, res) => {

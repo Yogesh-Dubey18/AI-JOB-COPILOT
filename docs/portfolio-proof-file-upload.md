@@ -1,6 +1,6 @@
 # Portfolio Proof File Upload UX
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 This phase adds user-initiated proof file uploads to the portfolio builder while keeping every file private by default. It uses the private portfolio file metadata and signed URL boundary introduced in the storage hardening phase.
 
@@ -18,6 +18,7 @@ This phase adds user-initiated proof file uploads to the portfolio builder while
 | Scan boundary | Implemented | Local validation is recorded as `local_validated`; provider malware scanning remains provider-ready until credentials and a real scan succeed. |
 | Audit trail | Implemented | Upload, local validation, visibility, signed URL, attach/detach, and delete actions create owner-only safe audit events. |
 | Retention controls | Implemented | Owners can review retention state, detach files without deleting binaries, request/confirm deletion, and generate metadata-only export summaries. |
+| Binary archive export | Implemented | Owners can confirm an owner-only ZIP archive for eligible proof files, receive short-lived download access, and review safe archive status. |
 | S3/R2 storage | Provider-ready | Requires real credentials and signed URL verification before marking Live. |
 
 ## Supported Files
@@ -61,6 +62,12 @@ GET /api/portfolios/:id/files/activity
 GET /api/portfolios/:id/files/:fileId/activity
 GET /api/portfolios/scanning/status
 GET /api/portfolios/:id/files/export-summary
+POST /api/portfolios/:id/files/export-archive/preview
+POST /api/portfolios/:id/files/export-archive
+GET /api/portfolios/:id/files/export-archive
+GET /api/portfolios/:id/files/export-archive/:exportId
+GET /api/portfolios/:id/files/export-archive/:exportId/signed-url
+DELETE /api/portfolios/:id/files/export-archive/:exportId
 POST /api/portfolios/:id/files/:fileId/attach
 POST /api/portfolios/:id/files/:fileId/detach
 POST /api/portfolios/:id/files/:fileId/delete-request
@@ -103,8 +110,10 @@ The `/portfolio-generator` page now shows:
 - Warning: "Private proof files are only shared publicly when you approve them."
 - Warning: "Local validation checks file type and signatures. Provider malware scanning requires setup."
 - Proof file activity panel and per-file history.
+- Owner-only binary archive export section with file selection checklist, eligibility review, confirmation action, status display, expiry information, and short-lived download button.
 - Privacy note: "Audit history tracks file actions, not file contents."
 - Privacy note: "Export shows your proof-file metadata and audit history. It does not expose private storage paths or signed URL secrets."
+- Privacy note: "Binary export is owner-only. Public portfolios never expose private archive links."
 
 The public `/u/[slug]` page:
 
@@ -149,7 +158,12 @@ Retention controls are owner-scoped and privacy-first:
 - Detach removes a file from a case study/proof mapping without deleting the binary.
 - Delete requires confirmation and records safe audit events before metadata is removed.
 - Export summary is metadata-only; binary archive export requires a future secure workflow.
+- Metadata export summary does not include file contents.
+- Binary archive export requires explicit owner confirmation, includes only eligible active/scan-safe files, and returns short-lived archive access.
 - Export summaries do not include signed URL secrets, private bucket URLs, absolute local paths, or file contents.
+- Binary archive responses do not include archive storage keys, private bucket URLs, absolute local paths, signed token secrets, or file contents in JSON responses.
+
+See [Proof File Binary Export Archive](proof-file-binary-export-archive.md) for the archive lifecycle, eligibility rules, signed URL behavior, and cleanup plan.
 
 ## Storage Provider Honesty
 
@@ -213,3 +227,4 @@ Frontend coverage includes:
 - Retention defaults are safe.
 - Deleted/scheduled/retained files are hidden from public portfolios.
 - Export summary is owner-scoped and excludes paths, storage keys, signed tokens, and file contents.
+- Binary archive export requires ownership, excludes deleted/scheduled/blocked/failed/pending/noneligible files, and keeps public portfolio responses free of archive metadata.

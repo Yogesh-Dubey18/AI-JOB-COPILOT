@@ -14,7 +14,7 @@ This document tracks the implementation progress of every phase from the advance
 | **Phase 4: Job Aggregator & Dedup** | **Completed** | Manual URL/text import, duplicate checks by title/company/location, parsed fields, and apply readiness scoring. |
 | **Phase 5: Client-Side Apply Assistant** | **Completed** | Manual copy/fill helper panel with safety review disclaimer, tone selector, and vault/timeline integration. |
 | **Phase 6: AI Answer Synthesizer** | **Completed** | Dynamic tone-based generation for 10 question types with deterministic fallbacks when AI is mock. |
-| **Phase 7: Dynamic Portfolio Builder, Public Slugs, Version History, Storage Hardening, and SEO** | **Completed** | Builder fields, privacy controls, slug validation, public `/u/[slug]`, safe unavailable state, PDF export, version snapshots, project case studies, proof mapping, private file metadata, signed URL readiness, and server-side metadata. |
+| **Phase 7: Dynamic Portfolio Builder, Public Slugs, Version History, Storage Hardening, and SEO** | **Completed** | Builder fields, privacy controls, slug validation, public `/u/[slug]`, safe unavailable state, PDF export, version snapshots, project case studies, proof mapping, private file metadata, signed URL readiness, owner-only proof archive export, and server-side metadata. |
 | **Phase 8: CRM & Email Sync** | **Completed** | Recruiter CRM with contact linking, notes, and activity timeline logging. |
 | **Phase 9: Multi-Agent Orchestration** | **Completed** | Next-Best-Action prioritization engine and guided workflow cards UI. |
 | **Phase 10: Browser Extension** | **Partially completed** | Chrome extension layout at `extension/` for user-initiated manual job capture. |
@@ -77,6 +77,7 @@ This document tracks the implementation progress of every phase from the advance
 - [x] Private portfolio file metadata for resume PDFs, portfolio PDFs, screenshots, and proof files -> **Completed**
 - [x] Public portfolio filters for `publicApproved` proof files only -> **Completed**
 - [x] Signed URL readiness with local fallback honesty and 900-second default TTL -> **Completed**
+- [x] Owner-only proof file binary archive export with confirmation, eligibility review, expiry, and short-lived access -> **Completed**
 
 ### 8. CRM / Email Sync
 - [x] Kanban tracking board and application stage timeline -> **Completed**
@@ -105,4 +106,4 @@ This document tracks the implementation progress of every phase from the advance
 
 ---
 
-*Last Updated: 2026-05-27 | Progress tracking file aligned with main branch.*
+*Last Updated: 2026-05-29 | Progress tracking file aligned with main branch.*

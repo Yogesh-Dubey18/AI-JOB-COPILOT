@@ -20,7 +20,7 @@ AI Job Copilot is provider-ready. Live external integrations must be enabled onl
 | Google OAuth | Auth | Provider-ready | One-click sign-in |
 | SendGrid / SMTP | Notifications | Provider-ready | Email alerts and reminders |
 | Stripe | Payments | Provider-ready | Subscriptions, invoicing |
-| AWS S3 / R2 | Storage | Provider-ready | Resume, portfolio PDF, screenshot, and proof file storage |
+| AWS S3 / R2 | Storage | Provider-ready | Resume, portfolio PDF, screenshot, proof file, and owner-only archive storage |
 | File Scanning Provider | Security | Local validation / Provider-ready | Malware scanning boundary for portfolio proof files |
 | Google Calendar | Calendar | Provider-ready | Interview reminders |
 | Coursera / Udemy | Courses | Provider-ready | Skill gap course links |
@@ -201,7 +201,7 @@ STRIPE_PUBLISHABLE_KEY=
 
 ## File Storage
 
-Resume files, generated PDFs, portfolio PDFs, screenshots, and portfolio proof files are stored through the configured storage provider.
+Resume files, generated PDFs, portfolio PDFs, screenshots, portfolio proof files, and owner-only proof archive exports are stored through the configured storage provider.
 
 **Required env vars**:
 ```
@@ -229,6 +229,8 @@ Portfolio proof file upload:
 - Records owner-scoped audit events for upload, validation, visibility, signed URL, attach/detach, and delete actions without file contents.
 - Tracks owner-scoped retention status and review status.
 - Provides metadata-only export summary for proof files and recent safe audit events.
+- Provides owner-only binary archive export for eligible proof files after explicit confirmation.
+- Generates short-lived archive download links and never exposes archive storage keys in API responses.
 - Hides scheduled-for-delete, deleted, and retained-for-audit files from public portfolios.
 
 Local fallback:
@@ -254,7 +256,7 @@ It never logs file contents, absolute local paths, private bucket URLs, full sig
 
 ### Proof File Retention And Export
 
-**Current status**: Implemented as owner-scoped app data. Binary archive export is not implemented.
+**Current status**: Implemented as owner-scoped app data. Binary archive export is implemented for eligible proof files with explicit owner confirmation and short-lived access.
 
 Retention statuses:
 
@@ -271,11 +273,23 @@ Review statuses:
 
 Owner metadata export includes proof-file metadata and recent safe audit summaries. It does not include file contents, signed URL tokens, full signed URLs, private bucket URLs, absolute local paths, storage credentials, or scanner payloads.
 
+Owner binary archive export:
+
+- requires the authenticated owner and portfolio ownership
+- requires explicit `confirmExport: true`
+- packages only active, scan-eligible, storage-safe proof files
+- excludes deleted, scheduled-for-delete, retained-for-audit, blocked, failed, provider-pending, not-scanned, and noneligible files
+- stores the archive through the same local/S3/R2 storage abstraction
+- uses `STORAGE_SIGNED_URL_TTL_SECONDS`, defaulting to 900 seconds
+- never returns archive storage keys, absolute local paths, private bucket URLs, provider credentials, or signed URL secrets in normal API responses
+- records safe binary export audit events only
+
 Public portfolio rules:
 
 - Only `active` files can appear.
 - Files also need `publicApproved` visibility and public-eligible scan metadata.
 - `scheduled_for_delete`, `deleted`, and `retained_for_audit` files are hidden even if older embedded metadata says public-approved.
+- archive requests, archive links, archive storage keys, export audit events, and retention internals are never returned by `/u/[slug]`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Proof File Retention Controls
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 This phase adds owner-controlled retention, detach/delete review, and metadata export review for portfolio proof files. It does not export file contents, expose private storage paths, or make retained files public.
 
@@ -11,7 +11,8 @@ This phase adds owner-controlled retention, detach/delete review, and metadata e
 | Retention metadata | Implemented | Portfolio proof files now track retention status, retention reason, delete request/completion dates, last review date, review status, and safe owner note. |
 | Detach review | Implemented | Owners can detach a file from a project case study or proof mapping without deleting the stored object. |
 | Delete review | Implemented | Owners must confirm deletion. Delete request and delete completion are audited before metadata is removed. |
-| Metadata export summary | Implemented | Owners can generate a safe proof-file metadata and recent audit activity summary. Binary export is not implemented. |
+| Metadata export summary | Implemented | Owners can generate a safe proof-file metadata and recent audit activity summary. |
+| Binary archive export | Implemented | Owners can explicitly confirm a short-lived owner-only ZIP archive for eligible proof files. Public routes never expose archive links or metadata. |
 | Public portfolio filtering | Implemented | `/u/[slug]` hides deleted, scheduled-for-delete, retained-for-audit, private, and scan-ineligible proof files. |
 | Audit integration | Implemented | Retention review, delete request, delete completion, detach request, and export events are recorded with safe summaries only. |
 
@@ -96,13 +97,13 @@ The export summary never includes:
 - raw scanner payloads
 - private file text or screenshot contents
 
-Current binary export status:
+Current metadata export status:
 
 ```text
 metadata_export_ready
 ```
 
-Binary proof-file export requires a future secure archive workflow with owner confirmation, short-lived links, and storage-provider safeguards.
+Binary archive export is now implemented through the owner-only workflow documented in [Proof File Binary Export Archive](proof-file-binary-export-archive.md). It uses a stricter eligibility filter, short-lived archive access, and storage-provider safeguards.
 
 ## Audit Event Types
 
@@ -116,6 +117,15 @@ Retention controls add these owner-scoped events:
 - `export_generated_metadata`
 
 Existing upload, validation, scan, visibility, signed URL, attach, detach, and delete events continue to work.
+
+Binary archive export adds these owner-scoped events:
+
+- `binary_export_requested`
+- `binary_export_prepared`
+- `binary_export_failed`
+- `binary_export_download_link_generated`
+- `binary_export_expired`
+- `binary_export_deleted`
 
 ## Frontend Behavior
 
@@ -131,6 +141,8 @@ Existing upload, validation, scan, visibility, signed URL, attach, detach, and d
 
 Public portfolios never show retention metadata, audit events, owner notes, file internals, signed URL internals, or private proof details.
 
+Public portfolios also never show binary export requests, archive links, archive metadata, archive storage keys, or owner-only export status.
+
 ## Verification Checklist
 
 - Retention fields default to `active` and `not_reviewed`.
@@ -139,13 +151,16 @@ Public portfolios never show retention metadata, audit events, owner notes, file
 - Confirmed delete removes file metadata and preserves minimal audit history.
 - Export summary requires portfolio ownership.
 - Export summary contains no signed tokens, absolute paths, private bucket URLs, storage keys, or file contents.
+- Binary archive export requires owner confirmation and returns no archive storage key in API responses.
+- Signed archive URL generation requires the owner and does not log full tokens.
 - Public portfolio hides `scheduled_for_delete`, `deleted`, and `retained_for_audit` files.
 
 ## Safety Policy
 
 Do not claim:
 
-- Binary data export exists until secure archive export is implemented.
+- Binary archive links are public or permanent.
+- Local fallback archive storage is production durable.
 - Retained audit metadata contains file contents.
 - Deleted files remain downloadable.
 - Local fallback storage is production durable.

@@ -1,6 +1,6 @@
 # Proof File Audit Trail + User Review History
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 This phase adds an owner-scoped audit trail for portfolio proof files. It records file actions and review decisions, not file contents.
 
@@ -14,6 +14,7 @@ This phase adds an owner-scoped audit trail for portfolio proof files. It record
 | Public portfolio privacy | Implemented | `/u/[slug]` never returns audit events, private notes, private file internals, or signed URL internals. |
 | Frontend history UI | Implemented | `/portfolio-generator` shows a proof file activity panel and per-file audit history with safe summaries only. |
 | Retention controls | Implemented | Retention review, delete request, delete completion, detach request, and metadata export events are recorded without file contents. |
+| Binary archive export | Implemented | Owner-only archive request, preparation, download-link, expiration, and deletion events are recorded with safe summaries only. |
 
 ## Audit Event Types
 
@@ -34,6 +35,12 @@ This phase adds an owner-scoped audit trail for portfolio proof files. It record
 - `detach_requested`
 - `export_requested`
 - `export_generated_metadata`
+- `binary_export_requested`
+- `binary_export_prepared`
+- `binary_export_failed`
+- `binary_export_download_link_generated`
+- `binary_export_expired`
+- `binary_export_deleted`
 
 `downloaded` is reserved for app-proxied download flows. The current owner refresh action records `signed_url_generated` without storing the token.
 
@@ -71,6 +78,7 @@ Summaries are intentionally short and safe. They explain the action without copy
 - Retention status or review status changed.
 - Delete was requested or completed.
 - A metadata-only export summary was requested and generated.
+- A binary proof-file archive was requested, prepared, failed, expired, revoked, or had a short-lived owner download link generated.
 
 ## What Is Never Logged
 
@@ -80,6 +88,7 @@ Summaries are intentionally short and safe. They explain the action without copy
 - Private S3/R2 bucket URLs.
 - Raw storage keys in public output.
 - Full signed URLs, query tokens, signatures, or private bucket URLs.
+- Archive storage keys, archive signed URL secrets, or generated archive contents.
 - Provider credentials or API tokens.
 - Private proof notes unless a future field is explicitly reviewed and marked safe.
 
@@ -130,6 +139,7 @@ Retention controls are documented in [Proof File Retention Controls](proof-file-
 
 - `scheduled_for_delete`, `deleted`, and `retained_for_audit` files stay out of public portfolios.
 - Metadata export events record that an export summary was requested/generated, not the exported file contents.
+- Binary archive export events record workflow status only. They never store generated archive contents, archive storage paths, private bucket URLs, or signed archive URL tokens.
 - Audit summaries never include private storage paths, bucket URLs, signed URL tokens, scanner payloads, or proof-file contents.
 
 ## Verification Checklist
@@ -141,6 +151,7 @@ Retention controls are documented in [Proof File Retention Controls](proof-file-
 - Retention review creates `retention_reviewed`.
 - Delete request creates `delete_requested`; confirmed delete creates `delete_completed`.
 - Metadata export creates `export_requested` and `export_generated_metadata`.
+- Binary archive export creates safe `binary_export_*` events without archive paths or tokens.
 - Audit list requires ownership.
 - Public portfolio responses do not include audit events.
 - Audit records do not expose local paths, private bucket URLs, raw storage keys, signed tokens, or file contents.
