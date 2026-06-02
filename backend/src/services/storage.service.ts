@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl as s3GetSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { v2 as cloudinary } from "cloudinary";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -22,6 +23,21 @@ const isS3Configured = Boolean(
   secretAccessKey
 );
 
+const isCloudinaryConfigured = Boolean(
+  provider === "cloudinary" &&
+  env.CLOUDINARY_CLOUD_NAME &&
+  env.CLOUDINARY_API_KEY &&
+  env.CLOUDINARY_API_SECRET
+);
+
+if (isCloudinaryConfigured) {
+  cloudinary.config({
+    cloud_name: env.CLOUDINARY_CLOUD_NAME,
+    api_key: env.CLOUDINARY_API_KEY,
+    api_secret: env.CLOUDINARY_API_SECRET
+  });
+}
+
 let s3Client: S3Client | null = null;
 if (isS3Configured) {
   const config: any = {
@@ -41,11 +57,11 @@ if (isS3Configured) {
 const localUploadDir = path.join(process.cwd(), "uploads");
 
 export function isConfigured(): boolean {
-  return isS3Configured;
+  return isS3Configured || isCloudinaryConfigured;
 }
 
 export function getProvider(): string {
-  return isS3Configured ? provider : "local";
+  return isCloudinaryConfigured ? "cloudinary" : (isS3Configured ? provider : "local");
 }
 
 export function getSignedUrlTtlSeconds(): number {
@@ -68,9 +84,9 @@ export function normalizeStorageKey(fileKey: string): string {
 }
 
 export function getStorageStatus() {
-  const requestedProvider = provider === "s3" || provider === "r2" ? provider : "local";
+  const requestedProvider = provider;
   const activeProvider = getProvider();
-  const providerReady = Boolean(isS3Configured);
+  const providerReady = isConfigured();
   return {
     requestedProvider,
     provider: activeProvider,
@@ -80,7 +96,7 @@ export function getStorageStatus() {
     live: false,
     status: providerReady ? "provider_ready" : "local_fallback",
     label: providerReady
-      ? `${String(requestedProvider).toUpperCase()} provider-ready signed URLs configured; verify bucket access before marking Live.`
+      ? `${String(activeProvider).toUpperCase()} provider-ready storage configured.`
       : "Local fallback storage (not production-durable)",
     localFallback: activeProvider === "local",
     signedUrlTtlSeconds: ttl,
@@ -92,7 +108,22 @@ export function getStorageStatus() {
 
 export async function uploadFile(fileKey: string, buffer: Buffer, mimetype: string): Promise<string> {
   const safeKey = normalizeStorageKey(fileKey);
-  if (isS3Configured && s3Client) {
+  const active = getProvider();
+  if (active === "cloudinary") {
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          public_id: safeKey,
+          resource_type: "raw"
+        },
+        (err, result) => {
+          if (err || !result) return reject(err ?? new Error("Upload failed"));
+          resolve(safeKey);
+        }
+      );
+      Readable.from(buffer).pipe(stream);
+    });
+  } else if (active !== "local" && s3Client) {
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: safeKey,
@@ -112,7 +143,10 @@ export async function uploadFile(fileKey: string, buffer: Buffer, mimetype: stri
 
 export async function deleteFile(fileKey: string): Promise<void> {
   const safeKey = normalizeStorageKey(fileKey);
-  if (isS3Configured && s3Client) {
+  const active = getProvider();
+  if (active === "cloudinary") {
+    await cloudinary.uploader.destroy(safeKey, { resource_type: "raw" });
+  } else if (active !== "local" && s3Client) {
     const command = new DeleteObjectCommand({
       Bucket: bucketName,
       Key: safeKey
@@ -141,7 +175,13 @@ async function bodyToBuffer(body: any): Promise<Buffer> {
 
 export async function downloadFile(fileKey: string): Promise<Buffer> {
   const safeKey = normalizeStorageKey(fileKey);
-  if (isS3Configured && s3Client) {
+  const active = getProvider();
+  if (active === "cloudinary") {
+    const url = await getSignedUrl(safeKey);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to download file from Cloudinary: ${response.statusText}`);
+    return Buffer.from(await response.arrayBuffer());
+  } else if (active !== "local" && s3Client) {
     const command = new GetObjectCommand({
       Bucket: bucketName,
       Key: safeKey
@@ -156,7 +196,12 @@ export async function downloadFile(fileKey: string): Promise<Buffer> {
 
 export async function getSignedUrl(fileKey: string): Promise<string> {
   const safeKey = normalizeStorageKey(fileKey);
-  if (isS3Configured && s3Client) {
+  const active = getProvider();
+  if (active === "cloudinary") {
+    if (safeKey.startsWith("http")) return safeKey;
+    const cloudName = env.CLOUDINARY_CLOUD_NAME;
+    return `https://res.cloudinary.com/${cloudName}/raw/upload/${safeKey}`;
+  } else if (active !== "local" && s3Client) {
     const command = new GetObjectCommand({
       Bucket: bucketName,
       Key: safeKey

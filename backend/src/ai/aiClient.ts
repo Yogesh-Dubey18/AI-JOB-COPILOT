@@ -1,6 +1,54 @@
 import type { ZodSchema } from "zod";
 import { env } from "../config/env.js";
 import { estimateTokens } from "./guardrails.js";
+import { AIRequestModel } from "../models/AIRequest.js";
+
+function estimateCostUsd(provider: string, model: string, inputTokens: number, outputTokens: number): number {
+  if (provider === "openai") {
+    if (model.includes("gpt-4o-mini")) {
+      return (inputTokens * 0.15 + outputTokens * 0.60) / 1_000_000;
+    }
+    return (inputTokens * 2.50 + outputTokens * 10.00) / 1_000_000;
+  }
+  if (provider === "gemini") {
+    return (inputTokens * 0.075 + outputTokens * 0.30) / 1_000_000;
+  }
+  return 0;
+}
+
+export async function getDailyCostUsd(): Promise<number> {
+  try {
+    if (!AIRequestModel) return 0;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const requests = await AIRequestModel.find({
+      createdAt: { $gte: startOfToday },
+      status: "success"
+    }).select("provider model inputTokens outputTokens").lean();
+
+    let totalCost = 0;
+    for (const r of requests) {
+      const rawProvider = (r.provider || "").toLowerCase();
+      const rawModel = (r.model || "").toLowerCase();
+      const provider = rawProvider || (rawModel.includes("openai") ? "openai" : rawModel.includes("gemini") ? "gemini" : "");
+      totalCost += estimateCostUsd(provider, rawModel, r.inputTokens || 0, r.outputTokens || 0);
+    }
+    return totalCost;
+  } catch (error) {
+    console.error("Error calculating daily AI cost:", error);
+    return 0;
+  }
+}
+
+export async function checkDailyBudgetLimit(): Promise<{ allowed: boolean; costUsd: number; limitUsd: number }> {
+  const limitUsd = Number(process.env.AI_DAILY_BUDGET_USD || "10.00");
+  const costUsd = await getDailyCostUsd();
+  return {
+    allowed: costUsd < limitUsd,
+    costUsd,
+    limitUsd
+  };
+}
 
 export type AiProvider = "mock" | "openai" | "gemini";
 
@@ -145,6 +193,28 @@ export async function callJsonModelWithMeta<T>(prompt: string, fallback: T, sche
   const runtime = resolveRuntime();
   const startedAt = Date.now();
   const inputTokens = estimateTokens(prompt);
+
+  if (runtime.provider !== "mock") {
+    const budget = await checkDailyBudgetLimit();
+    if (!budget.allowed) {
+      console.warn(`Daily AI budget limit exceeded ($${budget.costUsd.toFixed(4)} / $${budget.limitUsd.toFixed(2)}). Falling back to mock.`);
+      const validated = validateJson(fallback, fallback, schema);
+      return {
+        data: validated.data,
+        meta: {
+          provider: "mock" as const,
+          model: runtime.model,
+          status: "fallback" as const,
+          fallbackUsed: true,
+          validationPassed: validated.validationPassed,
+          inputTokens,
+          outputTokens: estimateTokens(JSON.stringify(validated.data)),
+          latencyMs: Date.now() - startedAt,
+          error: `Daily budget exceeded: $${budget.costUsd.toFixed(4)}`
+        }
+      };
+    }
+  }
 
   if (runtime.provider === "mock") {
     const validated = validateJson(fallback, fallback, schema);

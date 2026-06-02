@@ -40,8 +40,8 @@ export async function analyzeResume(userId: string, resumeId: string, options: A
   const normalized = normalizeOptions(options);
   const resume = await findRecordById("resumes", resumeId);
   if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
-  const localScore = scoreResumeForRole(resume, normalized.targetRole);
-  const jobDescriptionCoverage = scoreResumeAgainstJobDescription(resume, normalized.jobDescription);
+  const localScore = await scoreResumeForRole(resume, normalized.targetRole);
+  const jobDescriptionCoverage = await scoreResumeAgainstJobDescription(resume, normalized.jobDescription);
   const resumeForAi = normalized.anonymizeForAnalysis ? anonymizeResumeRecord(resume) : resume;
   const analysis = await aiService.analyzeResume(userId, { resume: resumeForAi, targetRole: normalized.targetRole, jobDescription: normalized.jobDescription, localScore });
   const jdWeightedScore = jobDescriptionCoverage ? Math.round((localScore.atsScore * 0.75) + (jobDescriptionCoverage.coveragePercent * 0.25)) : localScore.atsScore;

@@ -1,5 +1,8 @@
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { env } from "../config/env.js";
+
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 type EmailMessage = {
   to: string;
@@ -32,13 +35,46 @@ export async function sendEmail(message: EmailMessage) {
   }
 
   if (env.EMAIL_PROVIDER === "resend") {
-    return {
-      provider: "resend",
-      sent: false,
-      to: message.to,
-      subject: message.subject,
-      note: env.RESEND_API_KEY ? "Resend provider is configured but network send is disabled in this provider-ready foundation." : "RESEND_API_KEY is missing."
-    };
+    if (!env.RESEND_API_KEY || !resend) {
+      return {
+        provider: "resend",
+        sent: false,
+        to: message.to,
+        subject: message.subject,
+        note: "RESEND_API_KEY is missing."
+      };
+    }
+
+    try {
+      const result = await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        html: message.html
+      });
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      return {
+        provider: "resend",
+        sent: true,
+        to: message.to,
+        subject: message.subject,
+        messageId: result.data?.id
+      };
+    } catch (error: any) {
+      console.error("Resend send failed:", error.message);
+      return {
+        provider: "resend",
+        sent: false,
+        to: message.to,
+        subject: message.subject,
+        error: error.message
+      };
+    }
   }
 
   if (env.EMAIL_PROVIDER === "sendgrid") {

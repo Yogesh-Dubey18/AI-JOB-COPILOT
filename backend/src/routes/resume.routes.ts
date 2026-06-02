@@ -39,8 +39,8 @@ router.post("/score-draft", asyncHandler(async (req, res) => {
     parsedData
   };
 
-  const localScore = scoreResumeForRole(dummyResume, targetRole || "Full Stack Developer");
-  const jobDescriptionCoverage = jobDescription ? scoreResumeAgainstJobDescription(dummyResume, jobDescription) : null;
+  const localScore = await scoreResumeForRole(dummyResume, targetRole || "Full Stack Developer");
+  const jobDescriptionCoverage = jobDescription ? await scoreResumeAgainstJobDescription(dummyResume, jobDescription) : null;
 
   res.json({
     success: true,

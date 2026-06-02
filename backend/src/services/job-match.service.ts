@@ -13,7 +13,7 @@ export async function matchJob(userId: string, jobId: string, resumeId?: string)
   
   // Retrieve or compute ATS score
   const analyses = await findRecords("resumeAnalyses", { userId, resumeId: resume._id }, { limit: 1, sort: { createdAt: -1 } });
-  const atsScore = analyses[0]?.atsScore || scoreResumeForRole(resume, job.title).atsScore;
+  const atsScore = analyses[0]?.atsScore || (await scoreResumeForRole(resume, job.title)).atsScore;
   
   // Compute composite apply readiness score
   const hasApplyUrl = Boolean(job.applyUrl);

@@ -2,6 +2,7 @@
 // 5-category breakdown: Content, Format, Optimization, BestPractices, Readiness.
 // "Why this score" explanation included in every result.
 // DISCLAIMER: Score is a heuristic estimate to help find gaps, not a guarantee of ATS acceptance.
+import { callJsonModel, getAiRuntime } from "../ai/aiClient.js";
 
 const roleKeywordBanks = {
   react: ["React", "TypeScript", "JavaScript", "Hooks", "Redux", "Tailwind", "Responsive UI", "REST API", "Testing", "Git"],
@@ -250,7 +251,7 @@ function extractJobKeywords(jobDescription: string) {
   return unique([...bankKeywords, ...phraseKeywords, ...tokenKeywords]).slice(0, 28);
 }
 
-export function scoreResumeAgainstJobDescription(resume: any, jobDescription = "") {
+function getLocalScoreAgainstJobDescription(resume: any, jobDescription = "") {
   if (!jobDescription.trim()) return null;
   const parsed = resume?.parsedData || {};
   const searchable = normalize([resume?.rawText, parsed.summary, parsed.skills?.join(" "), parsed.projects?.join(" "), parsed.experience?.join(" ")].join(" "));
@@ -271,14 +272,13 @@ export function scoreResumeAgainstJobDescription(resume: any, jobDescription = "
   };
 }
 
-export function scoreResumeForRole(resume: any, targetRole = "Full Stack Developer") {
+function getLocalScoreForRole(resume: any, targetRole: string) {
   const content = scoreContent(resume);
   const format = scoreFormat(resume);
   const optimization = scoreOptimization(resume, targetRole);
   const bestPractices = scoreBestPractices(resume);
   const readiness = scoreApplicationReadiness(resume, targetRole);
 
-  // Legacy compatibility: compute breakdown in old format too
   const parsed = resume?.parsedData || {};
   const rawText = String(resume?.rawText || "");
   const searchable = normalize([rawText, parsed.summary, parsed.skills?.join(" "), parsed.projects?.join(" "), parsed.experience?.join(" ")].join(" "));
@@ -296,7 +296,6 @@ export function scoreResumeForRole(resume: any, targetRole = "Full Stack Develop
   const hasPhone = Boolean(parsed.phone || rawText.match(/(?:\+?\d[\s-]?){10,14}/));
   const hasLink = Array.isArray(parsed.links) && parsed.links.length > 0;
 
-  // Legacy breakdown fields (for backward compat with existing UI)
   const contactInformation = Math.min(10, (hasEmail ? 4 : 0) + (hasPhone ? 4 : 0) + (hasLink ? 2 : 0));
   const skillsMatch = Math.min(25, Math.round((detectedKeywords.length / keywordBank.length) * 20) + Math.min(5, skillMatches.length));
   const projectQuality = Math.min(25, projectLines.length * 4 + experienceLines.length * 2 + Math.min(5, detectedActionVerbs.length));
@@ -305,10 +304,7 @@ export function scoreResumeForRole(resume: any, targetRole = "Full Stack Develop
   const actionVerbScore = Math.min(10, detectedActionVerbs.length * 2);
   const legacyAtsScore = Math.min(100, contactInformation + skillsMatch + projectQuality + keywords + formattingScore + actionVerbScore);
 
-  // v2 composite ATS score: weighted average of 5 categories (total max = 100).
   const atsScore = Math.min(100, content.score + format.score + optimization.score + bestPractices.score + readiness.score);
-
-  // All issues merged
   const allIssues = unique([...content.issues, ...format.issues, ...optimization.issues, ...bestPractices.issues, ...readiness.issues]);
 
   const strengths = unique([
@@ -320,14 +316,11 @@ export function scoreResumeForRole(resume: any, targetRole = "Full Stack Develop
     format.score >= 16 ? "Document format is ATS-friendly." : ""
   ].filter(Boolean));
 
-  const weaknesses = unique([
-    ...allIssues.slice(0, 6)
-  ]);
+  const weaknesses = unique([...allIssues.slice(0, 6)]);
 
   return {
     atsScore,
     resumeLevel: resumeLevel(atsScore),
-    // v2 five-category breakdown
     categoryScores: {
       content: { score: content.score, max: content.max, why: content.why },
       format: { score: format.score, max: format.max, why: format.why },
@@ -336,7 +329,6 @@ export function scoreResumeForRole(resume: any, targetRole = "Full Stack Develop
       applicationReadiness: { score: readiness.score, max: readiness.max, why: readiness.why }
     },
     scoreExplanation: [content.why, format.why, optimization.why, bestPractices.why, readiness.why].join(" | "),
-    // legacy section scores (backward compat)
     sectionScores: {
       summary: scorePercent(String(parsed.summary || "").length, 240),
       skills: scorePercent(skillsMatch, 25),
@@ -360,7 +352,6 @@ export function scoreResumeForRole(resume: any, targetRole = "Full Stack Develop
       missingKeywords,
       coveragePercent: Math.round((detectedKeywords.length / keywordBank.length) * 100)
     },
-    // legacy atsBreakdown (backward compat with existing UI)
     atsBreakdown: {
       contactInformation,
       skillsMatch,
@@ -371,4 +362,149 @@ export function scoreResumeForRole(resume: any, targetRole = "Full Stack Develop
       total: legacyAtsScore
     }
   };
+}
+
+export async function scoreResumeAgainstJobDescription(resume: any, jobDescription = "") {
+  const local = getLocalScoreAgainstJobDescription(resume, jobDescription);
+  if (!local) return null;
+
+  const runtime = getAiRuntime();
+  if (runtime.provider === "mock") {
+    return local;
+  }
+
+  const prompt = `Analyze the following resume text against the job description. Identify matching keywords/skills, missing keywords/skills, coverage percent, and actionable suggestions to align the resume with the job description.
+
+Job Description:
+${jobDescription}
+
+Resume Text:
+${resume.rawText || ""}
+
+Return a JSON object matching this schema exactly:
+{
+  "detectedKeywords": ["string"],
+  "missingKeywords": ["string"],
+  "coveragePercent": number,
+  "keywordCount": number,
+  "suggestions": ["string"]
+}`;
+
+  try {
+    const aiResult = await callJsonModel(prompt, local);
+    return {
+      detectedKeywords: Array.isArray(aiResult.detectedKeywords) ? aiResult.detectedKeywords : local.detectedKeywords,
+      missingKeywords: Array.isArray(aiResult.missingKeywords) ? aiResult.missingKeywords : local.missingKeywords,
+      coveragePercent: typeof aiResult.coveragePercent === "number" ? aiResult.coveragePercent : local.coveragePercent,
+      keywordCount: typeof aiResult.keywordCount === "number" ? aiResult.keywordCount : local.keywordCount,
+      suggestions: Array.isArray(aiResult.suggestions) ? aiResult.suggestions : local.suggestions
+    };
+  } catch (error) {
+    console.error("AI scoreResumeAgainstJobDescription failed, returning local fallback:", error);
+    return local;
+  }
+}
+
+export async function scoreResumeForRole(resume: any, targetRole = "Full Stack Developer") {
+  const local = getLocalScoreForRole(resume, targetRole);
+  const runtime = getAiRuntime();
+  if (runtime.provider === "mock") {
+    return local;
+  }
+
+  const prompt = `Analyze the following resume text for the target role "${targetRole}".
+Evaluate the resume across 5 categories:
+1. Content (max 25): word count, active voice, quantified impact.
+2. Format (max 20): section presence, layout scan-friendliness.
+3. Optimization (max 25): keyword matching and skill coverage.
+4. Best Practices (max 20): professional contact info, email format.
+5. Application Readiness (max 10): name presence, certifications, target role terminology.
+
+Return a JSON object conforming exactly to this schema:
+{
+  "atsScore": number,
+  "resumeLevel": "Excellent" | "Good" | "Needs Work" | "Weak",
+  "categoryScores": {
+    "content": { "score": number, "max": 25, "why": "string" },
+    "format": { "score": number, "max": 20, "why": "string" },
+    "optimization": { "score": number, "max": 25, "why": "string" },
+    "bestPractices": { "score": number, "max": 20, "why": "string" },
+    "applicationReadiness": { "score": number, "max": 10, "why": "string" }
+  },
+  "scoreExplanation": "string",
+  "sectionScores": {
+    "summary": number,
+    "skills": number,
+    "projects": number,
+    "experience": number,
+    "education": number,
+    "formatting": number
+  },
+  "strengths": ["string"],
+  "weaknesses": ["string"],
+  "missingKeywords": ["string"],
+  "improvementSuggestions": ["string"],
+  "recruiterView": "string"
+}
+
+Resume Text:
+${resume.rawText || ""}
+Parsed Data:
+${JSON.stringify(resume.parsedData || {})}`;
+
+  try {
+    const aiResult = await callJsonModel(prompt, local);
+
+    const atsScore = typeof aiResult.atsScore === "number" ? aiResult.atsScore : local.atsScore;
+    const resumeLevel = aiResult.resumeLevel || local.resumeLevel;
+    const categoryScores = aiResult.categoryScores || local.categoryScores;
+    const scoreExplanation = aiResult.scoreExplanation || local.scoreExplanation;
+    const sectionScores = aiResult.sectionScores || local.sectionScores;
+    const strengths = Array.isArray(aiResult.strengths) ? aiResult.strengths : local.strengths;
+    const weaknesses = Array.isArray(aiResult.weaknesses) ? aiResult.weaknesses : local.weaknesses;
+    const missingKeywords = Array.isArray(aiResult.missingKeywords) ? aiResult.missingKeywords : local.missingKeywords;
+    const improvementSuggestions = Array.isArray(aiResult.improvementSuggestions) ? aiResult.improvementSuggestions : local.improvementSuggestions;
+    const recruiterView = aiResult.recruiterView || local.recruiterView;
+
+    // Fill helper/compat properties
+    const contactInformation = categoryScores.bestPractices?.score ? Math.round(categoryScores.bestPractices.score / 2) : 8;
+    const skillsMatch = categoryScores.optimization?.score || 20;
+    const projectQuality = categoryScores.content?.score || 20;
+    const keywordsVal = categoryScores.optimization?.score ? Math.round(categoryScores.optimization.score * 0.8) : 16;
+    const formattingScore = categoryScores.format?.score ? Math.round(categoryScores.format.score / 2) : 8;
+    const actionVerbScore = categoryScores.content?.score ? Math.round(categoryScores.content.score * 0.4) : 8;
+    const legacyAtsScore = Math.min(100, contactInformation + skillsMatch + projectQuality + keywordsVal + formattingScore + actionVerbScore);
+
+    return {
+      atsScore,
+      resumeLevel,
+      categoryScores,
+      scoreExplanation,
+      sectionScores,
+      strengths,
+      weaknesses,
+      missingKeywords,
+      improvementSuggestions,
+      recruiterView,
+      roleKeywordBank: local.roleKeywordBank,
+      keywordCoverage: {
+        targetRole,
+        detectedKeywords: local.keywordCoverage.detectedKeywords,
+        missingKeywords,
+        coveragePercent: local.keywordCoverage.coveragePercent
+      },
+      atsBreakdown: {
+        contactInformation,
+        skillsMatch,
+        experienceProjectQuality: projectQuality,
+        keywords: keywordsVal,
+        formatting: formattingScore,
+        actionVerbs: actionVerbScore,
+        total: legacyAtsScore
+      }
+    };
+  } catch (error) {
+    console.error("AI scoreResumeForRole failed, returning local fallback:", error);
+    return local;
+  }
 }

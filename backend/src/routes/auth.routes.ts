@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { validateBody } from "../middlewares/validate.js";
 import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from "../validators/auth.validator.js";
-import { forgotPassword, getMe, loginUser, logoutUser, refreshSession, registerUser, resetPassword, upsertGoogleUser, disconnectGoogle } from "../services/auth.service.js";
+import { forgotPassword, getMe, loginUser, logoutUser, refreshSession, registerUser, resetPassword, upsertGoogleUser, disconnectGoogle, verifyEmailToken } from "../services/auth.service.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { env, isProduction, isTest } from "../config/env.js";
 
@@ -51,6 +51,10 @@ router.post("/forgot-password", authLimiter, validateBody(forgotPasswordSchema),
 
 router.post("/reset-password", authLimiter, validateBody(resetPasswordSchema), asyncHandler(async (req, res) => {
   res.json({ success: true, data: await resetPassword(req.body.token, req.body.password) });
+}));
+
+router.post("/verify-email", authLimiter, asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await verifyEmailToken(req.body.token) });
 }));
 
 router.get("/providers/status", asyncHandler(async (_req, res) => {

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 const RESUME_TYPES = [".pdf", ".docx", ".txt"];
@@ -27,6 +28,12 @@ export default function ResumeUploadPage() {
       data.append("isBaseResume", "true");
       data.append("anonymizePreview", String(anonymizePreview));
       return api.post<any>("/resumes/upload", data);
+    },
+    onSuccess: () => {
+      toast.success("Resume uploaded and parsed successfully!");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to upload resume.");
     }
   });
   const saveParsedData = useMutation({
@@ -35,7 +42,13 @@ export default function ResumeUploadPage() {
         summary: draftSummary,
         skills: draftSkills.split(",").map((skill) => skill.trim()).filter(Boolean)
       }
-    })
+    }),
+    onSuccess: () => {
+      toast.success("Parsed resume edits saved successfully!");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to save parsed edits.");
+    }
   });
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PDFParse } from "pdf-parse";
+import mammoth from "mammoth";
 import { technicalKeywordBank } from "./ats-scoring.service.js";
 
 const knownSkills = technicalKeywordBank;
@@ -133,6 +134,27 @@ async function parsePdfText(filePath: string): Promise<ParserResult> {
   }
 }
 
+async function parseDocxText(filePath: string): Promise<ParserResult> {
+  try {
+    const result = await mammoth.extractRawText({ path: filePath });
+    const text = cleanText(result.value);
+    const warnings = result.messages.map((m) => m.message);
+    return {
+      text,
+      parser: "docx-fallback",
+      quality: "high",
+      warnings,
+      wordCount: countWords(text)
+    };
+  } catch (err: any) {
+    return parseBinaryFallback(
+      filePath,
+      "docx-fallback",
+      `DOCX parser failed: ${err.message}. Safe local fallback extraction was used.`
+    );
+  }
+}
+
 export async function extractResumeTextDetailed(filePath: string, fileType: string): Promise<ParserResult> {
   const detectedType = detectFileType(filePath, fileType);
   if (detectedType === "text/plain") return parsePlainText(filePath);
@@ -140,7 +162,7 @@ export async function extractResumeTextDetailed(filePath: string, fileType: stri
     return parsePdfText(filePath);
   }
   if (detectedType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-    return parseBinaryFallback(filePath, "docx-fallback", "DOCX parsing is using safe local fallback extraction. Add a dedicated DOCX parser package for higher production accuracy.");
+    return parseDocxText(filePath);
   }
   return parseBinaryFallback(filePath, "binary-fallback", "Unknown resume file type used fallback extraction.");
 }

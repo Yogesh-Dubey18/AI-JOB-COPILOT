@@ -20,6 +20,7 @@ export type CollectionName =
   | "portfolioFiles"
   | "portfolioFileAuditEvents"
   | "portfolioFileExportRequests"
+  | "maintenanceRuns"
   | "pdfExports"
   | "jobScamReports"
   | "chatSessions"
@@ -35,7 +36,9 @@ export type CollectionName =
   | "companyResearch"
   | "answerVault"
   | "careerVault"
-  | "contacts";
+  | "contacts"
+  | "emailVerificationTokens"
+  | "passwordResetTokens";
 
 export type StoredRecord = Record<string, any> & {
   _id: string;
@@ -63,6 +66,7 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   portfolioFiles: [],
   portfolioFileAuditEvents: [],
   portfolioFileExportRequests: [],
+  maintenanceRuns: [],
   pdfExports: [],
   jobScamReports: [],
   chatSessions: [],
@@ -78,7 +82,9 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   companyResearch: [],
   answerVault: [],
   careerVault: [],
-  contacts: []
+  contacts: [],
+  emailVerificationTokens: [],
+  passwordResetTokens: []
 };
 
 export function makeId() {

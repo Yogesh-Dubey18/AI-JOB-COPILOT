@@ -6,6 +6,10 @@ const ResumeSchema = new Schema(
     fileName: { type: String, required: true },
     fileUrl: { type: String, required: true },
     fileType: { type: String, required: true },
+    cloudinaryId: { type: String },
+    fileSizeBytes: { type: Number },
+    fileFormat: { type: String },
+    storageProvider: { type: String, default: "local" },
     rawText: { type: String, default: "" },
     parsedData: {
       name: String,

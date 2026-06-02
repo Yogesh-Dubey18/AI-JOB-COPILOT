@@ -19,6 +19,7 @@ import { PublicProfileModel } from "../models/PublicProfile.js";
 import { PortfolioFileModel } from "../models/PortfolioFile.js";
 import { PortfolioFileAuditEventModel } from "../models/PortfolioFileAuditEvent.js";
 import { PortfolioFileExportRequestModel } from "../models/PortfolioFileExportRequest.js";
+import { MaintenanceRunModel } from "../models/MaintenanceRun.js";
 import { PdfExportModel } from "../models/PdfExport.js";
 import { JobScamReportModel } from "../models/JobScamReport.js";
 import { ChatSessionModel } from "../models/ChatSession.js";
@@ -35,6 +36,8 @@ import { CompanyResearchModel } from "../models/CompanyResearch.js";
 import { AnswerVaultModel } from "../models/AnswerVault.js";
 import { CareerVaultModel } from "../models/CareerVault.js";
 import { ContactModel } from "../models/Contact.js";
+import { EmailVerificationTokenModel } from "../models/EmailVerificationToken.js";
+import { PasswordResetTokenModel } from "../models/PasswordResetToken.js";
 import { CollectionName, StoredRecord, makeId, memory } from "./memoryStore.js";
 
 const modelMap: Record<CollectionName, Model<any>> = {
@@ -57,6 +60,7 @@ const modelMap: Record<CollectionName, Model<any>> = {
   portfolioFiles: PortfolioFileModel,
   portfolioFileAuditEvents: PortfolioFileAuditEventModel,
   portfolioFileExportRequests: PortfolioFileExportRequestModel,
+  maintenanceRuns: MaintenanceRunModel,
   pdfExports: PdfExportModel,
   jobScamReports: JobScamReportModel,
   chatSessions: ChatSessionModel,
@@ -72,7 +76,9 @@ const modelMap: Record<CollectionName, Model<any>> = {
   companyResearch: CompanyResearchModel,
   answerVault: AnswerVaultModel,
   careerVault: CareerVaultModel,
-  contacts: ContactModel
+  contacts: ContactModel,
+  emailVerificationTokens: EmailVerificationTokenModel,
+  passwordResetTokens: PasswordResetTokenModel
 };
 
 function clone<T>(value: T): T {

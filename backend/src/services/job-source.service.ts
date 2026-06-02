@@ -177,6 +177,17 @@ export const externalJobProviders: ExternalJobProviderConfig[] = [
     capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
     policy: "Use a real malware scanning provider before marking scans Live. Local validation checks file type and signatures only.",
     notes: "Provider-ready boundary for portfolio proof file malware scanning; local validation remains active by default."
+  },
+  {
+    id: "adzuna",
+    name: "Adzuna Jobs API",
+    type: "api-provider",
+    trustBaseline: 85,
+    requiresReview: true,
+    envVars: ["ADZUNA_APP_ID", "ADZUNA_APP_KEY"],
+    capabilities: { search: true, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Synchronize approved, developer listings located in India using your Adzuna application credentials. Local dev fallback feed remains operational offline.",
+    notes: "Provides developer job listings synchronized from Adzuna APIs."
   }
 ];
 

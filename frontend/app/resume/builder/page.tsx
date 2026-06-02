@@ -30,6 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 interface ExperienceItem {
   company: string;
@@ -169,10 +170,12 @@ export default function ResumeBuilderPage() {
       api.patch<any>("/resumes/" + resumeId + "/parsed-data", { parsedData }),
     onSuccess: (res) => {
       setSaveMessage({ text: "Resume saved successfully!", type: "success" });
+      toast.success("Resume saved successfully!");
       resumes.refetch();
     },
     onError: (err: any) => {
       setSaveMessage({ text: err?.message || "Failed to save resume", type: "error" });
+      toast.error(err?.message || "Failed to save resume");
     }
   });
 
@@ -182,8 +185,14 @@ export default function ResumeBuilderPage() {
     onSuccess: (res) => {
       const url = res?.data?.fileUrl || res?.fileUrl;
       if (url) {
+        toast.success("PDF generated successfully! Opening in a new tab.");
         window.open(url, "_blank");
+      } else {
+        toast.error("Failed to generate PDF URL.");
       }
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to export PDF resume.");
     }
   });
 

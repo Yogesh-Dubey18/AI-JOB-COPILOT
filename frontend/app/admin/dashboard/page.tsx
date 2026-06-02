@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Bot, BriefcaseBusiness, ClipboardList, HeartPulse, MessageSquare, ShieldAlert, Users } from "lucide-react";
+import { Activity, Bot, BriefcaseBusiness, ClipboardList, HeartPulse, MessageSquare, ShieldAlert, Users, Wrench } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ const adminCards = [
   ["/admin/audit-logs", ClipboardList, "Audit logs", "Review sensitive actions, admin access, and operational changes."],
   ["/admin/system-health", HeartPulse, "System health", "Check provider modes, database mode, counts, and runtime status."],
   ["/admin/monitoring", HeartPulse, "Monitoring", "Inspect provider status, monitoring mode, and operational runbook links."],
+  ["/admin/maintenance", Wrench, "Maintenance", "Review proof archive cleanup runs and trigger admin-safe cleanup."],
   ["/admin/risk-signals", ShieldAlert, "Risk signals", "Spot high-risk jobs, fallback spikes, and admin access denials."],
   ["/admin/feedback", MessageSquare, "Feedback", "Review user feedback and convert it into issues."],
   ["/analytics", Activity, "Product analytics", "Inspect application conversion and job-search health."]

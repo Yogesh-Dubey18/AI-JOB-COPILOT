@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { tagline } from "@/lib/constants";
 import { plans } from "@/lib/plans";
+import { LiveAtsDemo } from "@/components/landing/live-ats-demo";
 
 const features: Array<[string, LucideIcon, string]> = [
   ["AI Resume Analyzer", FileText, "ATS score, section feedback, recruiter view, and honest improvement steps."],
@@ -154,6 +155,8 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      <LiveAtsDemo />
 
       <section className="bg-muted/60 py-14">
         <div className="mx-auto max-w-7xl px-4">

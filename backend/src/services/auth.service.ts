@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import { env, isTest } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
-import { createRecord, findOneRecord, findRecordById, updateRecord } from "../utils/repository.js";
+import { createRecord, deleteRecord, deleteRecords, findOneRecord, findRecordById, updateRecord } from "../utils/repository.js";
 import { computeProfileCompleteness } from "./profile.service.js";
 import { sendEmail } from "./email.service.js";
 
@@ -27,6 +27,43 @@ function signTokens(user: any) {
 }
 
 const passwordHashRounds = isTest ? 4 : 12;
+
+export async function sendEmailVerification(userId: string, email: string) {
+  const token = crypto.randomBytes(32).toString("hex");
+  await createRecord("emailVerificationTokens", {
+    userId,
+    token
+  });
+
+  const clientUrl = env.CLIENT_URL || "http://localhost:3000";
+  const verifyUrl = `${clientUrl}/auth/verify-email?token=${token}`;
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: "Verify your email address - AI Job Copilot",
+      text: `Welcome to AI Job Copilot! Please verify your email by clicking the link below:\n\n${verifyUrl}\n\nIf you did not create an account, you can safely ignore this email.`,
+      html: `<p>Welcome to AI Job Copilot!</p><p>Please click the link below to verify your email address:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>If you did not create an account, you can safely ignore this email.</p>`
+    });
+  } catch (err) {
+    console.error("Email verification send failed:", err);
+  }
+
+  return verifyUrl;
+}
+
+export async function verifyEmailToken(token: string) {
+  if (!token) throw new ApiError(400, "Verification token is required");
+  const doc = await findOneRecord("emailVerificationTokens", { token });
+  if (!doc) {
+    throw new ApiError(400, "Invalid or expired email verification token");
+  }
+  
+  await updateRecord("users", String(doc.userId), { isEmailVerified: true });
+  await deleteRecord("emailVerificationTokens", String(doc._id));
+  
+  return { success: true, message: "Email has been successfully verified." };
+}
 
 export async function registerUser(input: { fullName: string; email: string; password: string; phone?: string }) {
   const existing = await findOneRecord("users", { email: input.email.toLowerCase() });
@@ -57,7 +94,12 @@ export async function registerUser(input: { fullName: string; email: string; pas
   });
   const tokens = signTokens(user);
   await updateRecord("users", String(user._id), { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, passwordHashRounds), lastLoginAt: new Date() });
-  return { user: sanitize({ ...user, lastLoginAt: new Date() }), ...tokens };
+  const verifyUrl = await sendEmailVerification(String(user._id), user.email);
+  return {
+    user: sanitize({ ...user, lastLoginAt: new Date() }),
+    ...tokens,
+    verifyUrl: env.NODE_ENV !== "production" ? verifyUrl : undefined
+  };
 }
 
 export async function loginUser(input: { email: string; password: string }) {
@@ -109,16 +151,6 @@ export async function forgotPassword(email: string) {
   const user = await findOneRecord("users", { email: lowercaseEmail });
   
   const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-  if (user) {
-    await updateRecord("users", String(user._id), {
-      passwordResetTokenHash: tokenHash,
-      passwordResetExpires: expires
-    });
-  }
-
   const clientUrl = env.CLIENT_URL || "http://localhost:3000";
   const resetUrl = `${clientUrl}/auth/reset-password?token=${token}`;
 
@@ -126,6 +158,19 @@ export async function forgotPassword(email: string) {
   let emailResult: any = null;
 
   if (user) {
+    await deleteRecords("passwordResetTokens", { userId: user._id });
+    await createRecord("passwordResetTokens", {
+      userId: user._id,
+      token
+    });
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await updateRecord("users", String(user._id), {
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpires: expires
+    });
+
     try {
       emailResult = await sendEmail({
         to: user.email,
@@ -138,7 +183,6 @@ export async function forgotPassword(email: string) {
       // Do not crash
     }
   } else {
-    // Simulate similar workload time to prevent timing analysis
     await new Promise((resolve) => setTimeout(resolve, isTest ? 1 : 50 + Math.random() * 50));
   }
 
@@ -163,7 +207,6 @@ export async function resetPassword(token: string, password: string) {
   if (!token) throw new ApiError(400, "Reset token is required");
   if (!password) throw new ApiError(400, "New password is required");
 
-  // Enforce password validation rules inside service
   const hasMinLen = password.length >= 8;
   const hasMaxLen = password.length <= 128;
   const hasUpper = /[A-Z]/.test(password);
@@ -174,11 +217,12 @@ export async function resetPassword(token: string, password: string) {
     throw new ApiError(400, "Password does not meet complexity requirements");
   }
 
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  const user = await findOneRecord("users", {
-    passwordResetTokenHash: tokenHash
-  });
+  const resetTokenDoc = await findOneRecord("passwordResetTokens", { token });
+  if (!resetTokenDoc) {
+    throw new ApiError(400, "Password reset token is invalid or has expired");
+  }
 
+  const user = await findRecordById("users", String(resetTokenDoc.userId));
   if (!user || !user.passwordResetExpires || new Date(user.passwordResetExpires).getTime() <= Date.now()) {
     throw new ApiError(400, "Password reset token is invalid or has expired");
   }
@@ -193,6 +237,8 @@ export async function resetPassword(token: string, password: string) {
     failedLoginAttempts: 0,
     lockedUntil: null
   });
+
+  await deleteRecord("passwordResetTokens", String(resetTokenDoc._id));
 
   return {
     reset: true,
