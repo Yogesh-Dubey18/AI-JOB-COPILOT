@@ -16,6 +16,7 @@ export const env = {
   AI_MAX_PROMPT_CHARS: Number(process.env.AI_MAX_PROMPT_CHARS || 20_000),
   AI_SAFETY_MODE: process.env.AI_SAFETY_MODE || "strict",
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+  GROQ_API_KEY: process.env.GROQ_API_KEY || "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",

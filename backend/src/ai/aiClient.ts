@@ -50,7 +50,7 @@ export async function checkDailyBudgetLimit(): Promise<{ allowed: boolean; costU
   };
 }
 
-export type AiProvider = "mock" | "openai" | "gemini";
+export type AiProvider = "mock" | "openai" | "gemini" | "groq";
 
 type AiRuntime = {
   provider: AiProvider;
@@ -80,17 +80,24 @@ function resolveRuntime(): AiRuntime {
       ? "openai"
       : requested === "gemini" && env.GEMINI_API_KEY
         ? "gemini"
-        : requested === "mock"
-          ? "mock"
-          : env.OPENAI_API_KEY
-            ? "openai"
-            : env.GEMINI_API_KEY
-              ? "gemini"
-              : "mock";
+        : requested === "groq" && env.GROQ_API_KEY
+          ? "groq"
+          : requested === "mock"
+            ? "mock"
+            : env.OPENAI_API_KEY
+              ? "openai"
+              : env.GEMINI_API_KEY
+                ? "gemini"
+                : env.GROQ_API_KEY
+                  ? "groq"
+                  : "mock";
 
   const model =
     env.AI_MODEL ||
-    (provider === "openai" ? "gpt-4o-mini" : provider === "gemini" ? "gemini-1.5-flash" : "mock-career-copilot");
+    (provider === "openai" ? "gpt-4o-mini" 
+    : provider === "gemini" ? "gemini-1.5-flash"
+    : provider === "groq" ? "llama3-8b-8192"
+    : "mock-career-copilot");
 
   return {
     provider,
@@ -189,6 +196,31 @@ async function callGemini(prompt: string, runtime: AiRuntime) {
   return JSON.parse(extractJson(text));
 }
 
+async function callGroq(prompt: string, runtime: AiRuntime) {
+  const data = await fetchJsonWithTimeout(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + env.GROQ_API_KEY
+      },
+      body: JSON.stringify({
+        model: runtime.model,
+        messages: [
+          { role: "system", content: "Return only strict JSON. No markdown, comments, or prose." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.2
+      })
+    },
+    runtime.timeoutMs
+  );
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Groq response did not include content");
+  return JSON.parse(extractJson(content));
+}
+
 export async function callJsonModelWithMeta<T>(prompt: string, fallback: T, schema?: ZodSchema<T>) {
   const runtime = resolveRuntime();
   const startedAt = Date.now();
@@ -235,7 +267,9 @@ export async function callJsonModelWithMeta<T>(prompt: string, fallback: T, sche
 
   try {
     const json = await withRetry(runtime.retryAttempts, () =>
-      runtime.provider === "openai" ? callOpenAi(prompt, runtime) : callGemini(prompt, runtime),
+      runtime.provider === "openai" ? callOpenAi(prompt, runtime) 
+      : runtime.provider === "groq" ? callGroq(prompt, runtime)
+      : callGemini(prompt, runtime)
     );
     const validated = validateJson(json, fallback, schema);
     return {
