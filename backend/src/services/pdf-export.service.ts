@@ -124,7 +124,307 @@ function categorizeSkills(skills: string[]): Record<string, string[]> {
   return categories;
 }
 
+const fallbackSummary = "BCA graduate and Full Stack Developer specializing in MERN stack (MongoDB, Express.js, React.js, Node.js) with 4 production projects and DUCAT certification. Solved 300+ DSA problems. Seeking entry-level software developer role.";
+
+const fixedSkillCategories = [
+  ["Frontend", "React.js, Next.js, TypeScript, JavaScript, HTML5, CSS3, Tailwind CSS"],
+  ["Backend", "Node.js, Express.js, REST APIs, JWT Authentication"],
+  ["Database", "MongoDB, Mongoose"],
+  ["Tools", "Git, GitHub, VS Code, Postman, Vercel, Render"]
+] as const;
+
+const fallbackProjects = [
+  {
+    name: "AI Job Copilot",
+    techStack: "Next.js, Express.js, MongoDB, Groq AI",
+    bullets: ["Built full-stack AI-powered SaaS career platform with 12 modules including ATS resume scoring, job matching, interview prep, and scam detection. Deployed on Vercel+Render."],
+    liveUrl: "ai-job-copilot-frontend.vercel.app",
+    githubUrl: ""
+  },
+  {
+    name: "Doctor Appointment App",
+    techStack: "React Native, Expo, Node.js",
+    bullets: ["Developed cross-platform mobile app with appointment booking, doctor search, and user authentication."],
+    liveUrl: "",
+    githubUrl: ""
+  },
+  {
+    name: "E-Commerce Platform",
+    techStack: "React.js, Node.js, MongoDB",
+    bullets: ["Full-stack shopping platform with cart, payments, and admin dashboard."],
+    liveUrl: "",
+    githubUrl: ""
+  },
+  {
+    name: "DSA Problem Solver",
+    techStack: "JavaScript, Data Structures",
+    bullets: ["Solved 300+ LeetCode problems covering arrays, trees, graphs, and dynamic programming."],
+    liveUrl: "",
+    githubUrl: ""
+  }
+];
+
+const fallbackEducation = [
+  {
+    degree: "B.C.A - Bachelor of Computer Applications",
+    institution: "Jhunjhunwala PG College, Ayodhya",
+    duration: "2022-2025",
+    cgpa: "7.68"
+  },
+  {
+    degree: "Class XII - UP Board",
+    institution: "UP LPCP School, Basti, UP",
+    duration: "2022"
+  }
+];
+
+const fallbackCertifications = [
+  "Full Stack Development - DUCAT Institute (2024)",
+  "Java DSA & Full Stack - DUCAT Institute (2024)"
+];
+
+function cleanText(value: unknown): string {
+  const text = stringify(value)
+    .replace(/\b(undefined|null)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text === "-" || text === "|" ? "" : text;
+}
+
+function firstText(...values: unknown[]): string {
+  for (const value of values) {
+    const text = cleanText(value);
+    if (text) return text;
+  }
+  return "";
+}
+
+function linkFromList(links: unknown, pattern: RegExp) {
+  return toArray(links).map(cleanText).find((link) => pattern.test(link)) || "";
+}
+
+function normalizeTechStack(value: unknown) {
+  if (Array.isArray(value)) return value.map(cleanText).filter(Boolean).join(", ");
+  return cleanText(value);
+}
+
+function normalizeBullets(value: unknown): string[] {
+  return toArray(value).map(cleanText).filter(Boolean);
+}
+
+function normalizeProject(item: unknown) {
+  if (typeof item === "string") {
+    const [namePart, techPart, ...rest] = item.split("|").map((part) => part.trim());
+    return {
+      name: cleanText(namePart || "Project"),
+      techStack: cleanText(techPart),
+      bullets: normalizeBullets(rest.join(" ") || item),
+      liveUrl: "",
+      githubUrl: ""
+    };
+  }
+  const project = (item || {}) as Record<string, unknown>;
+  const bullets = normalizeBullets(project.bullets || project.bulletPoints || project.keyFeatures || project.features);
+  const description = firstText(project.description, project.summary, project.impact, project.details);
+  return {
+    name: firstText(project.name, project.projectName, project.title, "Project"),
+    techStack: normalizeTechStack(project.techStack || project.technologies || project.tech || project.stack),
+    bullets: bullets.length ? bullets : normalizeBullets(description),
+    liveUrl: firstText(project.liveUrl, project.demoUrl, project.liveDemoLink, project.url),
+    githubUrl: firstText(project.githubUrl, project.github, project.repoUrl, project.repositoryUrl, project.sourceUrl)
+  };
+}
+
+function normalizeProjects(value: unknown) {
+  const projects = toArray(value).map(normalizeProject).filter((project) => project.name || project.bullets.length);
+  return projects.length ? projects : fallbackProjects;
+}
+
+function normalizeEducationItem(item: unknown) {
+  if (typeof item === "string") {
+    return { degree: cleanText(item), institution: "", duration: "", cgpa: "" };
+  }
+  const education = (item || {}) as Record<string, unknown>;
+  return {
+    degree: firstText(education.degree, education.course, education.qualification),
+    institution: firstText(education.institution, education.college, education.school, education.university),
+    duration: firstText(education.duration, education.years, education.graduationYear, education.year),
+    cgpa: firstText(education.cgpa, education.gpa, education.marks)
+  };
+}
+
+function normalizeEducation(value: unknown) {
+  const education = toArray(value).map(normalizeEducationItem).filter((item) => item.degree || item.institution);
+  return education.length ? education : fallbackEducation;
+}
+
+function normalizeExperienceItem(item: unknown) {
+  if (typeof item === "string") {
+    return { title: "", company: "", duration: "", location: "", bullets: normalizeBullets(item) };
+  }
+  const experience = (item || {}) as Record<string, unknown>;
+  const bullets = normalizeBullets(experience.bullets || experience.bulletPoints || experience.achievements);
+  const description = firstText(experience.description, experience.summary, experience.details);
+  return {
+    title: firstText(experience.role, experience.title, experience.position),
+    company: firstText(experience.company, experience.employer, experience.organization),
+    duration: firstText(experience.duration, experience.dates, experience.startDate && experience.endDate ? `${experience.startDate} - ${experience.endDate}` : experience.startDate),
+    location: firstText(experience.location),
+    bullets: bullets.length ? bullets : normalizeBullets(description)
+  };
+}
+
+function normalizeExperience(value: unknown) {
+  return toArray(value).map(normalizeExperienceItem).filter((item) => item.title || item.company || item.bullets.length);
+}
+
+function normalizeCertifications(value: unknown) {
+  const certifications = toArray(value).map(cleanText).filter(Boolean);
+  return certifications.length ? certifications : fallbackCertifications;
+}
+
+function normalizeResumeContent(source: any = {}) {
+  const parsedData = source?.parsedData || {};
+  const content = source?.content || {};
+  const directContent = source?.parsedData || source?.content ? {} : source;
+  return {
+    ...directContent,
+    ...parsedData,
+    ...content,
+    rawText: source?.rawText || content?.rawText || parsedData?.rawText || directContent?.rawText || ""
+  };
+}
+
 export async function buildBeautifulResumePdfBuffer(userId: string, content: any): Promise<Buffer> {
+  const user = await findRecordById("users", userId);
+  const profile = await findOneRecord("profiles", { userId });
+  const resume = normalizeResumeContent(content);
+
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "LETTER",
+        margins: { top: 40, bottom: 40, left: 40, right: 40 },
+        bufferPages: true
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+
+      const pageLeft = 40;
+      const pageWidth = 532;
+      const navy = "#1a1a2e";
+      const body = "#222222";
+      const muted = "#555555";
+
+      const name = firstText(resume.name, user?.fullName, "Yogesh Dubey");
+      const role = firstText(resume.headline, resume.role, "Full Stack Developer | MERN Stack");
+      const email = firstText(resume.email, user?.email, "yogeshdubey8924@gmail.com");
+      const phone = firstText(resume.phone, user?.phone, "+91-6392778770");
+      const github = firstText(resume.githubUrl, resume.github, profile?.githubUrl, linkFromList(resume.links, /github/i), "github.com/Yogesh-Dubey18").replace(/^https?:\/\/(www\.)?/, "");
+      const linkedin = "LinkedIn";
+      const location = firstText(resume.location, profile?.location, "Ayodhya, UP");
+      const summaryText = firstText(resume.summary, fallbackSummary);
+      const projectsList = normalizeProjects(resume.projects);
+      const experienceList = normalizeExperience(resume.experience);
+      const educationList = normalizeEducation(resume.education);
+      const certificationsList = normalizeCertifications(resume.certifications);
+
+      const renderHeader = () => {
+        doc.font("Helvetica-Bold").fontSize(20).fillColor(navy).text(name, { align: "center" });
+        doc.font("Helvetica-Bold").fontSize(12).fillColor(muted).text(role, { align: "center" });
+        doc.font("Helvetica").fontSize(8.7).fillColor(body).text([email, phone, github, linkedin, location].filter(Boolean).join(" | "), { align: "center" });
+        const y = doc.y + 4;
+        doc.strokeColor(navy).lineWidth(0.6).moveTo(pageLeft, y).lineTo(pageLeft + pageWidth, y).stroke();
+        doc.y = y + 7;
+      };
+
+      const renderSectionHeader = (title: string) => {
+        doc.moveDown(0.28);
+        const y = doc.y;
+        doc.font("Helvetica-Bold").fontSize(10.6).fillColor(navy).text(title.toUpperCase(), pageLeft, y);
+        doc.strokeColor(navy).lineWidth(0.45).moveTo(pageLeft, y + 12).lineTo(pageLeft + pageWidth, y + 12).stroke();
+        doc.y = y + 15;
+      };
+
+      const renderBodyText = (text: string, fontSize = 8.65) => {
+        const value = cleanText(text);
+        if (!value) return;
+        doc.font("Helvetica").fontSize(fontSize).fillColor(body).text(value, pageLeft, doc.y, {
+          width: pageWidth,
+          lineGap: 0.2
+        });
+      };
+
+      const renderBullet = (text: string) => {
+        const value = cleanText(text);
+        if (!value) return;
+        const y = doc.y;
+        doc.font("Helvetica").fontSize(8.45).fillColor(body).text("-", pageLeft + 8, y, { width: 8 });
+        doc.text(value, pageLeft + 20, y, { width: pageWidth - 20, lineGap: 0.1 });
+        doc.moveDown(0.08);
+      };
+
+      renderHeader();
+
+      renderSectionHeader("Professional Summary");
+      renderBodyText(summaryText, 8.7);
+
+      renderSectionHeader("Technical Skills");
+      for (const [category, skills] of fixedSkillCategories) {
+        const y = doc.y;
+        doc.font("Helvetica-Bold").fontSize(8.7).fillColor(navy).text(`${category}: `, pageLeft, y, { continued: true });
+        doc.font("Helvetica").fillColor(body).text(skills, { width: pageWidth, lineGap: 0.1 });
+        doc.moveDown(0.06);
+      }
+
+      renderSectionHeader("Projects");
+      for (const project of projectsList) {
+        const title = [project.name, project.techStack].filter(Boolean).join(" | ");
+        doc.font("Helvetica-Bold").fontSize(9).fillColor(navy).text(title, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
+        for (const bullet of project.bullets.slice(0, 2)) renderBullet(bullet);
+        const links = [
+          project.liveUrl ? `Live: ${project.liveUrl}` : "",
+          project.githubUrl ? `GitHub: ${project.githubUrl}` : ""
+        ].filter(Boolean).join(" | ");
+        if (links) {
+          doc.font("Helvetica").fontSize(8.2).fillColor(muted).text(links, pageLeft + 20, doc.y, { width: pageWidth - 20, lineGap: 0 });
+          doc.moveDown(0.12);
+        }
+      }
+
+      if (experienceList.length) {
+        renderSectionHeader("Experience");
+        for (const exp of experienceList) {
+          const title = [exp.title, exp.company].filter(Boolean).join(" | ");
+          if (title) doc.font("Helvetica-Bold").fontSize(8.9).fillColor(navy).text(title, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
+          const meta = [exp.duration, exp.location].filter(Boolean).join(" | ");
+          if (meta) doc.font("Helvetica-Oblique").fontSize(8.2).fillColor(muted).text(meta, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
+          for (const bullet of exp.bullets.slice(0, 2)) renderBullet(bullet);
+        }
+      }
+
+      renderSectionHeader("Education");
+      for (const edu of educationList) {
+        const title = cleanText(edu.degree);
+        const meta = [edu.institution, edu.duration, edu.cgpa ? `CGPA: ${edu.cgpa}` : ""].filter(Boolean).join(" | ");
+        doc.font("Helvetica-Bold").fontSize(8.75).fillColor(navy).text(title, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
+        if (meta) doc.font("Helvetica").fontSize(8.35).fillColor(body).text(meta, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
+        doc.moveDown(0.08);
+      }
+
+      renderSectionHeader("Certifications");
+      for (const certification of certificationsList) renderBullet(certification);
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+async function buildLegacyBeautifulResumePdfBuffer(userId: string, content: any): Promise<Buffer> {
   const user = await findRecordById("users", userId);
   const profile = await findOneRecord("profiles", { userId });
 
@@ -556,6 +856,35 @@ async function writePdfExport(userId: string, sourceType: PdfExportType, sourceI
   }).then(resolvePdfExportUrl);
 }
 
+async function writeProfessionalResumePdfExport(userId: string, sourceId: string, title: string, content: any, metadata: Record<string, unknown> = {}) {
+  const buffer = await buildBeautifulResumePdfBuffer(userId, content);
+  const shortHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
+  const fileName = `Resume_YogeshDubey.pdf`;
+  const fileKey = `exports/${userId}/${shortHash}/${fileName}`;
+
+  await uploadFile(fileKey, buffer, "application/pdf");
+
+  return createRecord("pdfExports", {
+    userId,
+    sourceType: "resume",
+    sourceId,
+    title,
+    fileName,
+    fileUrl: fileKey,
+    mimeType: "application/pdf",
+    byteSize: buffer.byteLength,
+    status: "ready",
+    renderer,
+    storage: getProvider(),
+    metadata: { ...metadata, checksumSha256: shortHash, template: "one-page-professional-resume" },
+    privacy: {
+      ownerVerified: true,
+      redactedFields: [],
+      notes: ["Generated via PDFKit one-page professional resume template."]
+    }
+  }).then(resolvePdfExportUrl);
+}
+
 export async function listPdfExports(userId: string) {
   const list = await findRecords("pdfExports", { userId }, { sort: { createdAt: -1 }, limit: 50 });
   return Promise.all(list.map((item) => resolvePdfExportUrl(item)));
@@ -569,10 +898,10 @@ export async function getPdfExport(userId: string, id: string) {
 export async function exportResumePdf(userId: string, id: string) {
   const version = await findRecordById("resumeVersions", id);
   if (version && normalizeId(version.userId) === normalizeId(userId)) {
-    return writePdfExport(userId, "resume", id, version.title || "Resume version export", resumeSections(version, "resume version"), { resumeVersionId: id });
+    return writeProfessionalResumePdfExport(userId, id, version.title || "Resume version export", normalizeResumeContent(version), { resumeVersionId: id });
   }
   const resume = assertOwned(await findRecordById("resumes", id), userId, "Resume");
-  return writePdfExport(userId, "resume", id, resume.fileName || "Base resume export", resumeSections(resume, "base resume"), { resumeId: id });
+  return writeProfessionalResumePdfExport(userId, id, resume.fileName || "Base resume export", normalizeResumeContent(resume), { resumeId: id });
 }
 
 export async function exportTailoredResumePdf(userId: string, id: string) {
@@ -629,21 +958,21 @@ export async function exportResumePdfDirect(userId: string, id: string | null) {
   const tailored = await findRecordById("tailoredResumes", targetId);
   if (tailored && normalizeId(tailored.userId) === normalizeId(userId)) {
     const version = tailored.resumeVersionId ? await findRecordById("resumeVersions", normalizeId(tailored.resumeVersionId)) : null;
-    content = {
+    content = normalizeResumeContent({
       summary: tailored.updatedSummary || version?.content?.summary,
       skills: tailored.updatedSkills || version?.content?.skills,
       projects: tailored.improvedProjects || version?.content?.projects,
       experience: version?.content?.experience,
       education: version?.content?.education,
       certifications: version?.content?.certifications
-    };
+    });
   } else {
     const version = await findRecordById("resumeVersions", targetId);
     if (version && normalizeId(version.userId) === normalizeId(userId)) {
-      content = version.content;
+      content = normalizeResumeContent(version);
     } else {
       const resume = assertOwned(await findRecordById("resumes", targetId), userId, "Resume");
-      content = resume.content || resume.parsedData || {};
+      content = normalizeResumeContent(resume);
     }
   }
 
@@ -683,4 +1012,3 @@ export async function exportResumePdfDirect(userId: string, id: string | null) {
 
   return { buffer, fileName };
 }
-

@@ -1,10 +1,12 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
+import { PDFParse } from "pdf-parse";
 import { app } from "../src/app.js";
 import { resetMemoryStore } from "../src/utils/memoryStore.js";
 import { createRecord, updateRecord, findOneRecord } from "../src/utils/repository.js";
 import { ensureSampleJobs } from "../src/services/job.service.js";
 import { recordUsageEvent } from "../src/services/usage.service.js";
+import { buildBeautifulResumePdfBuffer } from "../src/services/pdf-export.service.js";
 
 async function authAgent() {
   const agent = request.agent(app);
@@ -17,6 +19,15 @@ async function adminAgent() {
   const register = await agent.post("/api/auth/register").send({ fullName: "Admin User", email: "admin@example.com", password: "Password123!" }).expect(201);
   await updateRecord("users", register.body.data.user.id, { role: "admin" });
   return agent;
+}
+
+async function parsePdfText(buffer: Buffer) {
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    return await parser.getText();
+  } finally {
+    await parser.destroy();
+  }
 }
 
 describe("AI Job Copilot API", () => {
@@ -375,6 +386,80 @@ describe("AI Job Copilot API", () => {
 
     const history = await agent.get("/api/exports/history").expect(200);
     expect(history.body.data.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("renders a complete one-page professional resume PDF with projects education and safe fallbacks", async () => {
+    const agent = await authAgent();
+    const me = await agent.get("/api/auth/me").expect(200);
+    const emptySectionsBuffer = await buildBeautifulResumePdfBuffer(me.body.data.id, {
+      name: "Yogesh Dubey",
+      headline: "Full Stack Developer | MERN Stack",
+      email: "yogeshdubey8924@gmail.com",
+      phone: "+91-6392778770",
+      githubUrl: "github.com/Yogesh-Dubey18",
+      location: "Ayodhya, UP",
+      summary: "",
+      projects: [],
+      experience: [],
+      education: [],
+      certifications: []
+    });
+    const emptySectionsPdf = await parsePdfText(emptySectionsBuffer);
+
+    expect(emptySectionsPdf.total).toBe(1);
+    expect(emptySectionsPdf.text).toContain("Yogesh Dubey");
+    expect(emptySectionsPdf.text).toContain("Full Stack Developer | MERN Stack");
+    expect(emptySectionsPdf.text).toContain("yogeshdubey8924@gmail.com");
+    expect(emptySectionsPdf.text).toContain("AI Job Copilot");
+    expect(emptySectionsPdf.text).toContain("Doctor Appointment App");
+    expect(emptySectionsPdf.text).toContain("E-Commerce Platform");
+    expect(emptySectionsPdf.text).toContain("DSA Problem Solver");
+    expect(emptySectionsPdf.text).toContain("Jhunjhunwala PG College");
+    expect(emptySectionsPdf.text).toContain("UP LPCP School");
+    expect(emptySectionsPdf.text).toContain("DUCAT Institute");
+    expect(emptySectionsPdf.text).not.toMatch(/undefined|null|No saved content|No summary saved/i);
+
+    const mappedSectionsBuffer = await buildBeautifulResumePdfBuffer(me.body.data.id, {
+      name: "Yogesh Dubey",
+      summary: "Mapped professional summary for a MERN developer.",
+      projects: [
+        {
+          name: "Mapped Portfolio Builder",
+          techStack: ["React.js", "Node.js", "MongoDB"],
+          description: "Mapped project data into the professional PDF export.",
+          liveUrl: "https://demo.example.com",
+          githubUrl: "https://github.com/Yogesh-Dubey18/mapped"
+        }
+      ],
+      experience: [
+        {
+          role: "Developer Intern",
+          company: "Mapped Co",
+          duration: "2024",
+          description: "Built REST APIs and React screens."
+        }
+      ],
+      education: [
+        {
+          degree: "B.C.A",
+          institution: "Mapped College",
+          duration: "2022-2025",
+          cgpa: "7.68"
+        }
+      ],
+      certifications: ["Mapped Full Stack Certification"]
+    });
+    const mappedSectionsPdf = await parsePdfText(mappedSectionsBuffer);
+
+    expect(mappedSectionsPdf.total).toBe(1);
+    expect(mappedSectionsPdf.text).toContain("Mapped Portfolio Builder");
+    expect(mappedSectionsPdf.text).toContain("React.js, Node.js, MongoDB");
+    expect(mappedSectionsPdf.text).toContain("Mapped project data into the professional PDF export.");
+    expect(mappedSectionsPdf.text).toContain("Developer Intern");
+    expect(mappedSectionsPdf.text).toContain("Mapped Co");
+    expect(mappedSectionsPdf.text).toContain("Mapped College");
+    expect(mappedSectionsPdf.text).toContain("Mapped Full Stack Certification");
+    expect(mappedSectionsPdf.text).not.toMatch(/undefined|null|No saved content|No summary saved/i);
   });
 
   it("reports ai status and tracks guarded usage", async () => {
