@@ -37,7 +37,7 @@ const localValidationChecks = [
 ];
 
 function envExists(name: string) {
-  return typeof process.env[name] !== "undefined";
+  return typeof process.env[name] !== "undefined" && process.env[name] !== "";
 }
 
 function configuredVars() {
