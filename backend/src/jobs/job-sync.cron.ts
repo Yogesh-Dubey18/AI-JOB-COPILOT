@@ -1,14 +1,14 @@
 import cron from "node-cron";
-import { syncAdzunaJobs } from "../services/job-providers/adzuna.provider.js";
+import { runFullAdzunaSync } from "../services/job-providers/adzuna.provider.js";
 
 export function initJobSyncCron() {
   console.info("Initializing job synchronization cron job...");
   
-  // Runs every day at midnight (00:00)
-  cron.schedule("0 0 * * *", async () => {
+  // Runs every 6 hours (0 */6 * * *)
+  cron.schedule("0 */6 * * *", async () => {
     console.info("Running scheduled Adzuna job synchronization...");
     try {
-      await syncAdzunaJobs("developer", "in", 15);
+      await runFullAdzunaSync();
     } catch (err: any) {
       console.error("Cron job synchronization failed:", err.message);
     }
@@ -18,7 +18,7 @@ export function initJobSyncCron() {
   setTimeout(async () => {
     console.info("Running startup background Adzuna job synchronization...");
     try {
-      await syncAdzunaJobs("developer", "in", 10);
+      await runFullAdzunaSync();
     } catch (err: any) {
       console.error("Startup background synchronization failed:", err.message);
     }

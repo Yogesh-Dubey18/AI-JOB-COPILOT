@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAdmin, requireAuth } from "../middlewares/auth.middleware.js";
 import { validateBody } from "../middlewares/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { syncAdzunaJobs } from "../services/job-providers/adzuna.provider.js";
+import { runFullAdzunaSync, syncAdzunaJobs } from "../services/job-providers/adzuna.provider.js";
 import { aiUsage, auditLogs, createAdminJob, deleteAdminJob, feedback, listAdminJobs, listUsers, monitoringStatus, reports, riskSignals, systemHealth, updateAdminJob, usageAnalytics } from "../services/admin.service.js";
 import { createFeedbackIssueDraft, updateFeedbackTriage } from "../services/feedback.service.js";
 import { getMaintenanceRun, listMaintenanceRuns } from "../services/maintenance-run.service.js";
@@ -40,6 +40,10 @@ router.post("/jobs/sync", asyncHandler(async (req, res) => {
     req.body.country || "in",
     req.body.limit || 15
   );
+  res.json({ success: true, data: result });
+}));
+router.post("/sync-jobs", asyncHandler(async (req, res) => {
+  const result = await runFullAdzunaSync();
   res.json({ success: true, data: result });
 }));
 router.get("/feedback", asyncHandler(async (_req, res) => res.json({ success: true, data: await feedback() })));

@@ -1,5 +1,5 @@
 import { connectDB } from "../config/db.js";
-import { syncAdzunaJobs } from "../services/job-providers/adzuna.provider.js";
+import { runFullAdzunaSync } from "../services/job-providers/adzuna.provider.js";
 import mongoose from "mongoose";
 
 async function run() {
@@ -7,7 +7,7 @@ async function run() {
   await connectDB();
   console.log("Starting Adzuna sync...");
   try {
-    const result = await syncAdzunaJobs("developer", "in", 15);
+    const result = await runFullAdzunaSync();
     console.log("Sync result:", result);
   } catch (err: any) {
     console.error("Sync failed with error:", err.message);
