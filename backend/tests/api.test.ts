@@ -144,6 +144,48 @@ describe("AI Job Copilot API", () => {
     expect(res.body.data.jobDescriptionCoverage.coveragePercent).toBeGreaterThan(0);
   });
 
+  it("generates a world-class resume from uploaded parsed data without inventing private claims", async () => {
+    const agent = await authAgent();
+    await agent.post("/api/resumes/generate-world-class").send({}).expect(400);
+    const upload = await agent.post("/api/resumes/upload")
+      .attach("resume", Buffer.from([
+        "Yogesh Dubey",
+        "yogeshdubey8924@gmail.com",
+        "+91-6392778770",
+        "github.com/Yogesh-Dubey18",
+        "Skills React.js Node.js Express.js MongoDB JWT Tailwind CSS Git GitHub Postman",
+        "Projects AI Job Copilot platform with ATS resume scoring job matching and interview prep",
+        "Education BCA Jhunjhunwala PG College Ayodhya CGPA 7.68",
+        "Certification Full Stack Development DUCAT Institute"
+      ].join("\n")), "resume.txt")
+      .expect(201);
+
+    const generated = await agent.post("/api/resumes/generate-world-class").send({
+      resumeId: upload.body.data._id,
+      targetRole: "MERN Stack Developer"
+    }).expect(201);
+
+    expect(generated.body.data.generatedResume.name).toBe("Yogesh Dubey");
+    expect(generated.body.data.generatedResume.title).toBeTruthy();
+    expect(generated.body.data.generatedResume.contact.email).toBe("yogeshdubey8924@gmail.com");
+    expect(generated.body.data.generatedResume.skills.frontend).toEqual(expect.arrayContaining(["React.js"]));
+    expect(generated.body.data.generatedResume.skills.backend).toEqual(expect.arrayContaining(["Node.js", "Express.js"]));
+    expect(generated.body.data.generatedResume.skills.database).toEqual(expect.arrayContaining(["MongoDB"]));
+    expect(generated.body.data.generatedResume.projects[0].name).toMatch(/AI Job Copilot/i);
+    expect(Array.isArray(generated.body.data.generatedResume.education)).toBe(true);
+    expect(generated.body.data.generatedResume.education[0].degree).toMatch(/Education BCA|BCA/i);
+    expect(generated.body.data.resumeVersionId).toBeTruthy();
+    expect(generated.body.data.safety.noFakeExperience).toBe(true);
+    expect(JSON.stringify(generated.body.data.generatedResume)).not.toMatch(/Google|Amazon|Microsoft|Flipkart|TCS Digital/i);
+
+    const versions = await agent.get("/api/resumes/versions").expect(200);
+    expect(versions.body.data.some((version: any) => version._id === generated.body.data.resumeVersionId)).toBe(true);
+
+    const otherAgent = request.agent(app);
+    await otherAgent.post("/api/auth/register").send({ fullName: "Other Resume User", email: "other-resume@example.com", password: "Password123!" }).expect(201);
+    await otherAgent.post("/api/resumes/generate-world-class").send({ resumeId: upload.body.data._id }).expect(404);
+  });
+
   it("rejects fake PDF resume uploads with bad magic numbers", async () => {
     const agent = await authAgent();
     await agent.post("/api/resumes/upload")

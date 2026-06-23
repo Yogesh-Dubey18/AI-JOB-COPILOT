@@ -36,6 +36,21 @@ function computeChangeSummary(baseResume: any, tailoredContent: { skills?: strin
   return { addedSkills, removedSkills, summaryChanged, projectsChanged };
 }
 
+function flattenWorldClassSkills(skills: any = {}) {
+  return Array.from(new Set(Object.values(skills).flatMap((value: any) => Array.isArray(value) ? value : []).map(String).filter(Boolean)));
+}
+
+function buildWorldClassVersionContent(generated: any) {
+  return {
+    summary: generated.summary || "",
+    skills: flattenWorldClassSkills(generated.skills),
+    projects: Array.isArray(generated.projects) ? generated.projects : [],
+    experience: Array.isArray(generated.experience) ? generated.experience : [],
+    education: Array.isArray(generated.education) ? generated.education : [],
+    certifications: Array.isArray(generated.certifications) ? generated.certifications : []
+  };
+}
+
 export async function analyzeResume(userId: string, resumeId: string, options: AnalyzeResumeOptions = "Full Stack Developer") {
   const normalized = normalizeOptions(options);
   const resume = await findRecordById("resumes", resumeId);
@@ -71,6 +86,48 @@ export async function analyzeResume(userId: string, resumeId: string, options: A
     redactedFields,
     parserWarnings: resume.parsedData?.parserWarnings || []
   });
+}
+
+export async function generateWorldClassResume(userId: string, resumeId: string, targetRole = "Full Stack Developer") {
+  if (!resumeId) throw new ApiError(400, "resumeId is required");
+  const resume = await findRecordById("resumes", resumeId);
+  if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
+
+  const generatedResume = await aiService.generateWorldClassResume(userId, {
+    resume: {
+      id: resume._id,
+      fileName: resume.fileName,
+      rawText: resume.rawText,
+      parsedData: resume.parsedData
+    },
+    targetRole
+  });
+  const content = buildWorldClassVersionContent(generatedResume);
+  const changeSummary = computeChangeSummary(resume, content);
+  const version = await createRecord("resumeVersions", {
+    userId,
+    baseResumeId: resumeId,
+    title: `${generatedResume.title || targetRole} world-class resume`,
+    targetRole: generatedResume.title || targetRole,
+    sourceType: "generated",
+    template: "compact",
+    content,
+    atsScore: undefined,
+    pdfUrl: "",
+    changeSummary
+  });
+
+  return {
+    generatedResume,
+    resumeVersionId: version._id,
+    baseResumeId: resumeId,
+    provider: aiService.status(),
+    safety: {
+      noFakeExperience: true,
+      noFakeSkills: true,
+      usesUploadedResumeDataOnly: true
+    }
+  };
 }
 
 export async function improveResume(userId: string, resumeId: string, targetRole = "Full Stack Developer") {

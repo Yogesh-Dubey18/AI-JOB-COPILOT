@@ -60,6 +60,10 @@ export default function ResumeAnalyzerPage() {
   const improve = useMutation({
     mutationFn: () => api.post<any>("/resumes/" + resumeId + "/improve", { targetRole })
   });
+  const worldClass = useMutation({
+    mutationFn: () => api.post<any>("/resumes/generate-world-class", { resumeId, targetRole })
+  });
+  const worldClassResume = worldClass.data?.generatedResume;
 
   useEffect(() => {
     if (result?.improvementSuggestions) {
@@ -131,9 +135,23 @@ export default function ResumeAnalyzerPage() {
               <Sparkles className="h-4 w-4" />
               {analyze.isPending ? "Analyzing..." : "Analyze resume"}
             </Button>
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled={!resumeId || worldClass.isPending}
+              onClick={() => worldClass.mutate()}
+            >
+              <Sparkles className="h-4 w-4" />
+              {worldClass.isPending ? "Generating..." : "Generate world-class resume"}
+            </Button>
             {analyze.isError && (
               <p className="text-sm text-destructive" role="alert">
                 {analyze.error instanceof Error ? analyze.error.message : "Analysis failed. Please try again."}
+              </p>
+            )}
+            {worldClass.isError && (
+              <p className="text-sm text-destructive" role="alert">
+                {worldClass.error instanceof Error ? worldClass.error.message : "World-class resume generation failed. Please try again."}
               </p>
             )}
           </CardContent>
@@ -228,6 +246,95 @@ export default function ResumeAnalyzerPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* World-class resume generator */}
+          {worldClassResume && (
+            <Card className="border-primary/30" data-testid="world-class-resume-preview">
+              <CardHeader>
+                <CardTitle className="text-base">World-class generated resume</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                  <p className="font-bold">{worldClassResume.name || "Candidate"}</p>
+                  <p className="text-muted-foreground">{worldClassResume.title || targetRole}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    AI/provider status: {worldClass.data?.provider?.providerConfigured ? "configured" : "mock/fallback"}.
+                    Uses uploaded resume data only; review before applying.
+                  </p>
+                </div>
+                {worldClassResume.summary ? (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Professional summary</p>
+                    <p className="rounded border bg-background p-3 text-sm leading-relaxed">{worldClassResume.summary}</p>
+                  </div>
+                ) : null}
+                {worldClassResume.skills ? (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Categorized skills</p>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {Object.entries(worldClassResume.skills).map(([category, skills]) => Array.isArray(skills) && skills.length ? (
+                        <div key={category} className="rounded border p-3">
+                          <p className="text-xs font-semibold capitalize text-muted-foreground">{category}</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {skills.map((skill: string) => (
+                              <span key={`${category}-${skill}`} className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{skill}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null)}
+                    </div>
+                  </div>
+                ) : null}
+                {(worldClassResume.projects || []).length ? (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Projects</p>
+                    <div className="space-y-2">
+                      {(worldClassResume.projects || []).map((project: any, index: number) => (
+                        <div key={`${project.name}-${index}`} className="rounded border p-3 text-sm">
+                          <p className="font-semibold">{project.name}</p>
+                          {(project.techStack || []).length ? <p className="text-xs text-muted-foreground">{project.techStack.join(", ")}</p> : null}
+                          <ul className="mt-2 list-disc pl-5 text-muted-foreground">
+                            {(project.bullets || []).map((bullet: string) => <li key={bullet}>{bullet}</li>)}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {(worldClassResume.education || []).length ? (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Education</p>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      {(worldClassResume.education || []).map((education: any, index: number) => (
+                        <li key={`${education.degree}-${index}`}>
+                          <strong className="text-foreground">{education.degree}</strong>
+                          {[education.institution, education.duration, education.cgpa ? `CGPA: ${education.cgpa}` : ""].filter(Boolean).join(" | ")}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {(worldClassResume.certifications || []).length ? (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Certifications</p>
+                    <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                      {(worldClassResume.certifications || []).map((certification: string) => <li key={certification}>{certification}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap gap-2 border-t pt-3">
+                  {worldClass.data?.resumeVersionId ? (
+                    <Link href={`/pdf-export?versionId=${worldClass.data.resumeVersionId}`}>
+                      <Button>Export world-class PDF</Button>
+                    </Link>
+                  ) : null}
+                  <Link href="/resume/builder">
+                    <Button variant="outline">Edit in resume builder</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Keyword Coverage */}
           {keywordCoverage && (

@@ -19,6 +19,7 @@ import { buildrejectionAnalysisPrompt } from "./prompts/rejectionAnalysis.prompt
 import { buildportfolioGeneratorPrompt } from "./prompts/portfolioGenerator.prompt.js";
 import { buildlinkedinOptimizerPrompt } from "./prompts/linkedinOptimizer.prompt.js";
 import { buildfollowUpPrompt } from "./prompts/followUp.prompt.js";
+import { buildWorldClassResumePrompt } from "./prompts/worldClassResume.prompt.js";
 import {
   applicationKitOutputSchema,
   interviewCoachOutputSchema,
@@ -30,7 +31,8 @@ import {
   resumeAnalysisOutputSchema,
   scamDetectorOutputSchema,
   skillGapOutputSchema,
-  tailoredResumeOutputSchema
+  tailoredResumeOutputSchema,
+  worldClassResumeOutputSchema
 } from "./schemas/outputs.js";
 import { buildGuardedPrompt, getAiSafetyStatus, type GuardrailResult } from "./guardrails.js";
 
@@ -72,6 +74,194 @@ const tailoredResumeFallback = {
   changedSections: ["summary", "skills", "projects"],
   pdfUrl: ""
 };
+
+function cleanText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value.replace(/\b(undefined|null)\b/gi, "").replace(/\s+/g, " ").trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(cleanText).filter(Boolean).join(", ");
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).map(cleanText).filter(Boolean).join(" | ");
+  }
+  return String(value).trim();
+}
+
+function toArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean);
+  if (value == null) return [];
+  return [value];
+}
+
+function uniqueStrings(values: unknown[]) {
+  return Array.from(new Set(values.map(cleanText).filter(Boolean)));
+}
+
+function firstText(...values: unknown[]) {
+  for (const value of values) {
+    const text = cleanText(value);
+    if (text) return text;
+  }
+  return "";
+}
+
+function linkMatching(links: unknown, pattern: RegExp) {
+  return toArray(links).map(cleanText).find((link) => pattern.test(link)) || "";
+}
+
+function categorizeWorldClassSkills(skills: string[]) {
+  const categories = {
+    frontend: [] as string[],
+    backend: [] as string[],
+    database: [] as string[],
+    tools: [] as string[],
+    programming: [] as string[],
+    other: [] as string[]
+  };
+  const frontend = /react|next|vue|angular|html|css|tailwind|bootstrap|redux|frontend|ui|typescript|javascript/i;
+  const backend = /node|express|nestjs|api|rest|graphql|jwt|auth|server|backend|django|flask|spring/i;
+  const database = /mongo|mongoose|mysql|postgres|sql|redis|database|firebase|prisma/i;
+  const tools = /git|github|postman|vercel|render|docker|aws|azure|gcp|linux|vs code|vscode/i;
+  const programming = /javascript|typescript|java|python|c\+\+|c#|dsa|data structures|algorithms/i;
+
+  for (const skill of uniqueStrings(skills)) {
+    if (frontend.test(skill)) categories.frontend.push(skill);
+    else if (backend.test(skill)) categories.backend.push(skill);
+    else if (database.test(skill)) categories.database.push(skill);
+    else if (tools.test(skill)) categories.tools.push(skill);
+    else if (programming.test(skill)) categories.programming.push(skill);
+    else categories.other.push(skill);
+  }
+
+  return categories;
+}
+
+function normalizeWorldClassProject(item: unknown, fallbackSkills: string[]) {
+  if (typeof item === "string") {
+    const [namePart, techPart, ...rest] = item.split("|").map((part) => part.trim());
+    const name = cleanText(namePart || item);
+    const techStack = uniqueStrings((techPart ? techPart.split(",") : fallbackSkills.slice(0, 4)));
+    const originalDetail = cleanText(rest.join(" "));
+    return {
+      name,
+      techStack,
+      bullets: [
+        originalDetail
+          ? `Developed ${name} using ${techStack.join(", ") || "the listed technology stack"}, focusing on ${originalDetail}.`
+          : `Built ${name}${techStack.length ? ` using ${techStack.join(", ")}` : ""}, demonstrating hands-on implementation from the uploaded resume.`
+      ],
+      liveUrl: "",
+      githubUrl: ""
+    };
+  }
+
+  const project = (item || {}) as Record<string, unknown>;
+  const name = firstText(project.name, project.projectName, project.title, "Project");
+  const techStack = uniqueStrings([
+    ...toArray(project.techStack || project.technologies || project.tech || project.stack),
+    ...fallbackSkills.slice(0, 4)
+  ]).slice(0, 8);
+  const details = uniqueStrings([
+    ...toArray(project.bullets || project.bulletPoints || project.keyFeatures || project.features),
+    firstText(project.description, project.summary, project.impact, project.details)
+  ]);
+  const bullets = details.length
+    ? details.map((detail) => `Developed ${name}${techStack.length ? ` with ${techStack.join(", ")}` : ""}, delivering ${detail}.`).slice(0, 3)
+    : [`Built ${name}${techStack.length ? ` using ${techStack.join(", ")}` : ""}, demonstrating practical project ownership from the uploaded resume.`];
+
+  return {
+    name,
+    techStack,
+    bullets,
+    liveUrl: firstText(project.liveUrl, project.demoUrl, project.liveDemoLink, project.url),
+    githubUrl: firstText(project.githubUrl, project.github, project.repoUrl, project.repositoryUrl, project.sourceUrl)
+  };
+}
+
+function normalizeWorldClassExperience(item: unknown) {
+  if (typeof item === "string") {
+    const line = cleanText(item);
+    return { role: line, company: "", duration: "", location: "", bullets: line ? [`Contributed to ${line} with structured execution and clear ownership.`] : [] };
+  }
+  const exp = (item || {}) as Record<string, unknown>;
+  const role = firstText(exp.role, exp.title, exp.position);
+  const company = firstText(exp.company, exp.employer, exp.organization);
+  const details = uniqueStrings([
+    ...toArray(exp.bullets || exp.bulletPoints || exp.achievements),
+    firstText(exp.description, exp.summary, exp.details)
+  ]);
+  return {
+    role,
+    company,
+    duration: firstText(exp.duration, exp.dates, exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate),
+    location: firstText(exp.location),
+    bullets: details.map((detail) => `Delivered ${detail}${role || company ? ` as ${[role, company].filter(Boolean).join(" at ")}` : ""}.`).slice(0, 3)
+  };
+}
+
+function normalizeWorldClassEducation(item: unknown) {
+  if (typeof item === "string") {
+    return { degree: cleanText(item), institution: "", duration: "", cgpa: "", details: "" };
+  }
+  const edu = (item || {}) as Record<string, unknown>;
+  return {
+    degree: firstText(edu.degree, edu.course, edu.qualification),
+    institution: firstText(edu.institution, edu.college, edu.school, edu.university),
+    duration: firstText(edu.duration, edu.years, edu.graduationYear, edu.year),
+    cgpa: firstText(edu.cgpa, edu.gpa, edu.marks),
+    details: firstText(edu.field, edu.major, edu.specialization, edu.details)
+  };
+}
+
+function deriveWorldClassTitle(skills: string[], fallback = "Software Developer") {
+  const joined = skills.join(" ").toLowerCase();
+  if (/(react|node|express|mongodb|mern)/.test(joined)) return "Full Stack Developer | MERN Stack";
+  if (/react|next|frontend|tailwind/.test(joined)) return "Frontend Developer";
+  if (/node|express|backend|api/.test(joined)) return "Backend Developer";
+  return fallback;
+}
+
+function getWorldClassResumeFallback(context: any) {
+  const resume = context?.resume || {};
+  const parsed = resume.parsedData || context?.parsedData || resume.content || {};
+  const rawText = cleanText(resume.rawText || context?.rawText || "");
+  const skills = uniqueStrings([
+    ...toArray(parsed.skills),
+    ...(rawText.match(/\b(React\.?js|Next\.?js|TypeScript|JavaScript|Node\.?js|Express\.?js|MongoDB|Mongoose|REST APIs?|JWT|Tailwind CSS|GitHub|Git|Postman|Vercel|Render|DSA|Data Structures)\b/gi) || [])
+  ]);
+  const title = firstText(context?.targetRole, parsed.title, parsed.role, deriveWorldClassTitle(skills));
+  const projects = toArray(parsed.projects).map((project) => normalizeWorldClassProject(project, skills)).filter((project) => project.name);
+  const experience = toArray(parsed.experience).map(normalizeWorldClassExperience).filter((exp) => exp.role || exp.company || exp.bullets.length);
+  const education = toArray(parsed.education).map(normalizeWorldClassEducation).filter((edu) => edu.degree || edu.institution);
+  const certifications = uniqueStrings(toArray(parsed.certifications));
+  const summaryBase = firstText(parsed.summary, rawText.split(/\n/).slice(0, 3).join(" "));
+  const summary = summaryBase
+    ? `${summaryBase} Positioned for ${title} roles with ATS-aligned keywords and project-focused proof.`
+    : `${title} with hands-on skills in ${skills.slice(0, 6).join(", ") || "software development"}. Focused on clean implementation, practical projects, and continuous learning.`;
+
+  return {
+    name: firstText(parsed.name, "Candidate"),
+    title,
+    contact: {
+      email: firstText(parsed.email),
+      phone: firstText(parsed.phone),
+      github: firstText(parsed.github, parsed.githubUrl, linkMatching(parsed.links, /github/i)),
+      linkedin: firstText(parsed.linkedin, parsed.linkedinUrl, linkMatching(parsed.links, /linkedin/i)),
+      location: firstText(parsed.location)
+    },
+    summary,
+    skills: categorizeWorldClassSkills(skills),
+    projects,
+    experience,
+    education,
+    certifications,
+    atsKeywords: skills.slice(0, 20),
+    formattingNotes: [
+      "ATS-safe section order: Summary, Skills, Projects, Experience, Education, Certifications.",
+      "Content uses only parsed resume data and avoids unsupported claims or fake metrics."
+    ]
+  };
+}
 
 export function getDeterministicKitFallback(context: any) {
   const tone = context.tone || "Professional";
@@ -339,6 +529,7 @@ export const aiService = {
   },
   usage: (userId: string) => getUsageSummary(userId),
   analyzeResume: (userId: string | undefined, context: any) => run(userId, "resume-analysis", buildresumeAnalysisPrompt(context), resumeAnalysisFallback, resumeAnalysisOutputSchema),
+  generateWorldClassResume: (userId: string | undefined, context: any) => run(userId, "world-class-resume", buildWorldClassResumePrompt(context), getWorldClassResumeFallback(context), worldClassResumeOutputSchema),
   matchJob: (userId: string | undefined, context: any) => run(userId, "job-match", buildjobMatchPrompt(context), jobMatchFallback, jobMatchOutputSchema),
   tailorResume: (userId: string | undefined, context: any) => run(userId, "tailor-resume", buildtailorResumePrompt(context), tailoredResumeFallback, tailoredResumeOutputSchema),
   generateApplicationKit: (userId: string | undefined, context: any) => run(userId, "application-kit", buildapplicationKitPrompt(context), getDeterministicKitFallback(context), applicationKitOutputSchema),

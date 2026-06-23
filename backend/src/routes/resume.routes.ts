@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { resumeUpload } from "../middlewares/upload.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { analyzeResume, improveResume } from "../services/resume-analysis.service.js";
+import { analyzeResume, generateWorldClassResume, improveResume } from "../services/resume-analysis.service.js";
 import { getResume, getResumeVersion, listResumeVersions, listResumes, updateResumeParsedData, uploadResume } from "../services/resume.service.js";
 import { exportResumePdf } from "../services/pdf-export.service.js";
 import { scoreResumeForRole, scoreResumeAgainstJobDescription } from "../services/ats-scoring.service.js";
@@ -48,6 +48,16 @@ router.post("/score-draft", asyncHandler(async (req, res) => {
       ...localScore,
       jobDescriptionCoverage
     }
+  });
+}));
+router.post("/generate-world-class", asyncHandler(async (req, res) => {
+  const { resumeId, targetRole } = req.body;
+  if (!resumeId) {
+    throw new ApiError(400, "resumeId is required");
+  }
+  res.status(201).json({
+    success: true,
+    data: await generateWorldClassResume(req.user!.id, resumeId, targetRole || "Full Stack Developer")
   });
 }));
 router.post("/upload", resumeUpload.single("resume"), asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await uploadResume(req.user!.id, req.file!, req.body.isBaseResume !== "false", { anonymizePreview: req.body.anonymizePreview === "true" }) })));

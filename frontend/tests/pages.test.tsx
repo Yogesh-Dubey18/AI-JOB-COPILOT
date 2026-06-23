@@ -207,7 +207,7 @@ describe("frontend pages", () => {
 
   it("resume analyzer page renders disclaimers and suggestions after analysis", async () => {
     const fetchMock = vi.fn().mockImplementation((url) => {
-      if (String(url).includes("/resumes") && !String(url).includes("/analyze") && !String(url).includes("/improve")) {
+      if (String(url).includes("/resumes") && !String(url).includes("/analyze") && !String(url).includes("/improve") && !String(url).includes("/generate-world-class")) {
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -226,6 +226,37 @@ describe("frontend pages", () => {
             atsBreakdown: { contactInformation: 10, skillsMatch: 20, experienceProjectQuality: 20, keywords: 15, formatting: 10, actionVerbs: 10, total: 85 },
             improvementSuggestions: ["Add Docker keywords", "Improve project metrics"],
             recruiterView: "Recruiter feedback here."
+          })
+        });
+      }
+      if (String(url).includes("/generate-world-class")) {
+        return Promise.resolve({
+          ok: true,
+          status: 201,
+          headers: new Headers(),
+          json: async () => ({
+            generatedResume: {
+              name: "Yogesh Dubey",
+              title: "Full Stack Developer | MERN Stack",
+              contact: { email: "yogesh@example.com", phone: "", github: "github.com/Yogesh-Dubey18", linkedin: "", location: "" },
+              summary: "Full stack developer with React, Node.js, Express.js, and MongoDB project experience.",
+              skills: {
+                frontend: ["React.js", "TypeScript"],
+                backend: ["Node.js", "Express.js"],
+                database: ["MongoDB"],
+                tools: ["GitHub"],
+                programming: ["JavaScript"],
+                other: []
+              },
+              projects: [{ name: "AI Job Copilot", techStack: ["Next.js", "Express.js"], bullets: ["Built an ATS resume workflow using uploaded resume data."] }],
+              education: [{ degree: "BCA", institution: "Jhunjhunwala PG College", duration: "2022-2025", cgpa: "7.68" }],
+              certifications: ["Full Stack Development - DUCAT Institute"],
+              atsKeywords: ["React.js", "Node.js"],
+              formattingNotes: ["ATS-safe section order."]
+            },
+            resumeVersionId: "version-world-class",
+            provider: { providerConfigured: false },
+            safety: { noFakeExperience: true, noFakeSkills: true, usesUploadedResumeDataOnly: true }
           })
         });
       }
@@ -250,6 +281,17 @@ describe("frontend pages", () => {
       expect(screen.getByTestId("suggestions-checklist")).toBeInTheDocument();
       expect(screen.getAllByText("Add Docker keywords")[0]).toBeInTheDocument();
       expect(screen.getByTestId("apply-suggestions-button")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /Generate world-class resume/i }));
+
+    await waitFor(() => {
+      const preview = screen.getByTestId("world-class-resume-preview");
+      expect(preview).toBeInTheDocument();
+      expect(within(preview).getByText("Yogesh Dubey")).toBeInTheDocument();
+      expect(within(preview).getByText(/Full stack developer with React/i)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Export world-class PDF/i })).toHaveAttribute("href", "/pdf-export?versionId=version-world-class");
+      expect(screen.getByText(/mock\/fallback/i)).toBeInTheDocument();
     });
   });
 
