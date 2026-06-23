@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import PDFDocument from "pdfkit";
 import { ApiError } from "../utils/ApiError.js";
-import { createRecord, findRecordById, findRecords } from "../utils/repository.js";
+import { createRecord, findRecordById, findRecords, findOneRecord } from "../utils/repository.js";
 import { uploadFile, getSignedUrl, getProvider } from "./storage.service.js";
 
 export type PdfExportType = "resume" | "tailored-resume" | "application-kit" | "portfolio" | "interview-prep";
@@ -60,82 +61,391 @@ function normalizePdfText(value: unknown): string {
     .trim();
 }
 
-function wrapLine(line: string, width = 92) {
-  const words = line.split(/\s+/).filter(Boolean);
-  const wrapped: string[] = [];
-  let current = "";
-  for (const word of words) {
-    if ((current + " " + word).trim().length > width) {
-      if (current) wrapped.push(current);
-      current = word;
+function categorizeSkills(skills: string[]): Record<string, string[]> {
+  const categories: Record<string, string[]> = {
+    "Frontend": [],
+    "Backend": [],
+    "Database": [],
+    "Tools": []
+  };
+  
+  const frontendKeywords = ["react", "vue", "angular", "html", "css", "next", "tailwind", "typescript", "javascript", "js", "ts", "redux", "jquery", "sass", "bootstrap", "flutter", "swiftui", "webpack"];
+  const backendKeywords = ["node", "express", "python", "java", "go", "golang", "c++", "c#", "django", "ruby", "rails", "rust", "php", "nestjs", "graphql", "spring", "flask", "fastapi", "solidity"];
+  const databaseKeywords = ["mongodb", "postgresql", "postgres", "mysql", "redis", "sqlite", "oracle", "mariadb", "cassandra", "firebase", "dynamodb", "neo4j", "prisma", "sequelize"];
+  const toolsKeywords = ["git", "docker", "kubernetes", "aws", "gcp", "azure", "jenkins", "vite", "npm", "github", "gitlab", "jira", "postman", "linux", "nginx", "ci/cd", "terraform"];
+
+  const other: string[] = [];
+
+  for (const skill of skills) {
+    const trimmed = skill.trim();
+    if (!trimmed) continue;
+
+    if (trimmed.includes(":")) {
+      const parts = trimmed.split(":");
+      const cat = parts[0].trim();
+      const sks = parts[1].split(",").map(s => s.trim()).filter(Boolean);
+      
+      let matchedKey = Object.keys(categories).find(
+        key => key.toLowerCase() === cat.toLowerCase()
+      );
+      if (matchedKey) {
+        categories[matchedKey].push(...sks);
+      } else {
+        categories[cat] = sks;
+      }
+      continue;
+    }
+
+    const lower = trimmed.toLowerCase();
+    if (frontendKeywords.some(kw => lower.includes(kw))) {
+      categories.Frontend.push(trimmed);
+    } else if (databaseKeywords.some(kw => lower.includes(kw))) {
+      categories.Database.push(trimmed);
+    } else if (backendKeywords.some(kw => lower.includes(kw))) {
+      categories.Backend.push(trimmed);
+    } else if (toolsKeywords.some(kw => lower.includes(kw))) {
+      categories.Tools.push(trimmed);
     } else {
-      current = (current + " " + word).trim();
+      other.push(trimmed);
     }
   }
-  if (current) wrapped.push(current);
-  return wrapped.length ? wrapped : [""];
-}
 
-function pdfLines(title: string, sections: PdfSection[]) {
-  const lines = [
-    "AI Job Copilot Export",
-    title,
-    `Generated at ${new Date().toISOString()}`,
-    ""
-  ];
-  for (const section of sections) {
-    lines.push(section.heading.toUpperCase());
-    const sectionLines = section.lines.flatMap((line) => toArray(line)).map(normalizePdfText).filter(Boolean);
-    if (!sectionLines.length) lines.push("No saved content yet.");
-    for (const line of sectionLines) {
-      lines.push(...wrapLine(line).map((item) => `- ${item}`));
+  if (other.length > 0) {
+    if (!categories.Tools) categories.Tools = [];
+    categories.Tools.push(...other);
+  }
+
+  for (const key of Object.keys(categories)) {
+    if (categories[key].length === 0) {
+      delete categories[key];
     }
-    lines.push("");
   }
-  return lines.map((line) => normalizePdfText(line));
+
+  return categories;
 }
 
-function buildPdfBuffer(title: string, sections: PdfSection[]) {
-  const lines = pdfLines(title, sections);
-  const pages: string[][] = [];
-  for (let index = 0; index < lines.length; index += 42) {
-    pages.push(lines.slice(index, index + 42));
-  }
-  const objects: string[] = [];
-  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
-  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
-  const kids: string[] = [];
-  let objectId = 4;
-  for (const pageLines of pages) {
-    const pageId = objectId++;
-    const contentId = objectId++;
-    kids.push(`${pageId} 0 R`);
-    const stream = [
-      "BT",
-      "/F1 11 Tf",
-      "50 790 Td",
-      "15 TL",
-      ...pageLines.map((line) => `(${line}) Tj T*`),
-      "ET"
-    ].join("\n");
-    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`;
-    objects[contentId] = `<< /Length ${Buffer.byteLength(stream, "utf8")} >>\nstream\n${stream}\nendstream`;
-  }
-  objects[2] = `<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${pages.length} >>`;
+export async function buildBeautifulResumePdfBuffer(userId: string, content: any): Promise<Buffer> {
+  const user = await findRecordById("users", userId);
+  const profile = await findOneRecord("profiles", { userId });
 
-  let pdf = "%PDF-1.4\n";
-  const offsets = [0];
-  for (let id = 1; id < objects.length; id += 1) {
-    offsets[id] = Buffer.byteLength(pdf, "utf8");
-    pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`;
-  }
-  const xrefOffset = Buffer.byteLength(pdf, "utf8");
-  pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
-  for (let id = 1; id < objects.length; id += 1) {
-    pdf += `${String(offsets[id]).padStart(10, "0")} 00000 n \n`;
-  }
-  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
-  return Buffer.from(pdf, "utf8");
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "LETTER",
+        margins: { top: 40, bottom: 40, left: 40, right: 40 },
+        bufferPages: true
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+
+      const name = user?.fullName || "Yogesh Dubey";
+      const role = profile?.currentRole || (profile?.targetRoles && profile.targetRoles[0]) || "Full-Stack Developer";
+      const email = user?.email || "";
+      const phone = user?.phone || "";
+      const github = profile?.githubUrl || "";
+      const linkedin = profile?.linkedinUrl || "";
+
+      doc.font("Helvetica-Bold")
+         .fontSize(20)
+         .fillColor("#1a1a2e")
+         .text(name, { align: "center" });
+
+      if (role) {
+        doc.font("Helvetica-Bold")
+           .fontSize(11)
+           .fillColor("#555555")
+           .text(role, { align: "center" })
+           .moveDown(0.2);
+      }
+
+      const contactParts = [
+        email,
+        phone,
+        github ? github.replace(/^https?:\/\/(www\.)?/, "") : "",
+        linkedin ? linkedin.replace(/^https?:\/\/(www\.)?/, "") : ""
+      ].filter(Boolean);
+
+      doc.font("Helvetica")
+         .fontSize(9.5)
+         .fillColor("#222222")
+         .text(contactParts.join("  |  "), { align: "center" });
+
+      doc.moveDown(0.6);
+
+      const renderSectionHeader = (title: string) => {
+        doc.moveDown(0.8);
+        const y = doc.y;
+        
+        doc.font("Helvetica-Bold")
+           .fontSize(12)
+           .fillColor("#1a1a2e")
+           .text(title, 40, y);
+
+        doc.strokeColor("#1a1a2e")
+           .lineWidth(0.75)
+           .moveTo(40, y + 14)
+           .lineTo(572, y + 14)
+           .stroke();
+
+        doc.moveDown(0.6);
+      };
+
+      const renderBullets = (bullets: any) => {
+        const bulletList = toArray(bullets);
+        for (const bullet of bulletList) {
+          const bulletStr = String(bullet).trim();
+          if (!bulletStr) continue;
+          
+          const currentY = doc.y;
+          doc.font("Helvetica")
+             .fontSize(9.5)
+             .fillColor("#222222")
+             .text("•", 52, currentY);
+          
+          doc.text(bulletStr, 62, currentY, {
+            width: 510,
+            align: "justify",
+            lineGap: 1.5
+          });
+          doc.moveDown(0.25);
+        }
+      };
+
+      const summaryText = content?.summary || "";
+      if (summaryText) {
+        renderSectionHeader("Professional Summary");
+        doc.font("Helvetica")
+           .fontSize(9.5)
+           .fillColor("#222222")
+           .text(summaryText, 40, doc.y, {
+             width: 532,
+             align: "justify",
+             lineGap: 2
+           });
+      }
+
+      const skillsList = toArray(content?.skills);
+      if (skillsList.length > 0) {
+        renderSectionHeader("Technical Skills");
+        const categories = categorizeSkills(skillsList as string[]);
+        for (const [category, skills] of Object.entries(categories)) {
+          if (skills.length === 0) continue;
+          
+          const currentY = doc.y;
+          doc.font("Helvetica-Bold")
+             .fontSize(9.5)
+             .fillColor("#1a1a2e")
+             .text(`${category}: `, 40, currentY, { continued: true });
+             
+          doc.font("Helvetica")
+             .fillColor("#222222")
+             .text(skills.join(", "), {
+               width: 532,
+               lineGap: 1.5
+             });
+          doc.moveDown(0.2);
+        }
+      }
+
+      const projectsList = toArray(content?.projects);
+      if (projectsList.length > 0) {
+        renderSectionHeader("Projects");
+        for (let i = 0; i < projectsList.length; i++) {
+          const p = projectsList[i] as any;
+          if (!p) continue;
+          
+          if (i > 0) doc.moveDown(0.4);
+
+          const name = p.name || p.projectName || p.title || "Project";
+          const tech = p.technologies || p.techStack || p.tech || "";
+          const bullets = p.bullets || p.bulletPoints || p.description || p.details || [];
+          
+          const currentY = doc.y;
+          doc.font("Helvetica-Bold")
+             .fontSize(10.5)
+             .fillColor("#1a1a2e")
+             .text(name, 40, currentY, { continued: true });
+
+          if (tech) {
+            doc.font("Helvetica-Oblique")
+               .fontSize(9.5)
+               .fillColor("#555555")
+               .text(`  (${tech})`, { continued: false });
+          } else {
+            doc.text("", { continued: false });
+          }
+          
+          doc.moveDown(0.2);
+          renderBullets(bullets);
+        }
+      }
+
+      const experienceList = toArray(content?.experience);
+      if (experienceList.length > 0) {
+        renderSectionHeader("Experience");
+        for (let i = 0; i < experienceList.length; i++) {
+          const exp = experienceList[i] as any;
+          if (!exp) continue;
+          
+          if (i > 0) doc.moveDown(0.4);
+
+          const company = exp.company || exp.employer || exp.organization || "";
+          const role = exp.role || exp.title || exp.position || "";
+          const duration = exp.duration || exp.dates || (exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate || "");
+          const location = exp.location || "";
+          const bullets = exp.bullets || exp.bulletPoints || exp.description || exp.details || [];
+
+          const currentY = doc.y;
+          doc.font("Helvetica-Bold")
+             .fontSize(10.5)
+             .fillColor("#1a1a2e")
+             .text(`${role} at ${company}`, 40, currentY);
+             
+          if (duration || location) {
+            const locDur = [duration, location].filter(Boolean).join(" | ");
+            doc.font("Helvetica-Oblique")
+               .fontSize(9.5)
+               .fillColor("#555555")
+               .text(locDur, 40, currentY, {
+                 align: "right",
+                 width: 532
+               });
+          }
+          
+          doc.moveDown(0.2);
+          renderBullets(bullets);
+        }
+      }
+
+      const educationList = toArray(content?.education);
+      if (educationList.length > 0) {
+        renderSectionHeader("Education");
+        for (let i = 0; i < educationList.length; i++) {
+          const edu = educationList[i] as any;
+          if (!edu) continue;
+          
+          if (i > 0) doc.moveDown(0.4);
+
+          const institution = edu.institution || edu.college || edu.school || edu.university || "";
+          const degree = edu.degree || "";
+          const field = edu.field || edu.major || edu.specialization || "";
+          const duration = edu.duration || edu.graduationYear || edu.year || "";
+          const cgpa = edu.cgpa || edu.gpa || edu.marks || "";
+
+          const currentY = doc.y;
+          doc.font("Helvetica-Bold")
+             .fontSize(10.5)
+             .fillColor("#1a1a2e")
+             .text(`${degree}${field ? ` in ${field}` : ""}`, 40, currentY, { continued: true });
+             
+          doc.font("Helvetica-Oblique")
+             .fillColor("#555555")
+             .text(` - ${institution}`, { continued: false });
+
+          if (duration || cgpa) {
+            const rightText = [duration, cgpa ? `CGPA: ${cgpa}` : ""].filter(Boolean).join("  |  ");
+            doc.font("Helvetica")
+               .fontSize(9.5)
+               .fillColor("#555555")
+               .text(rightText, 40, currentY, {
+                 align: "right",
+                 width: 532
+               });
+          }
+          doc.moveDown(0.25);
+        }
+      }
+
+      const certificationsList = toArray(content?.certifications);
+      if (certificationsList.length > 0) {
+        renderSectionHeader("Certifications");
+        renderBullets(certificationsList);
+      }
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+export function buildGenericPdfBuffer(title: string, sections: PdfSection[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "LETTER",
+        margins: { top: 50, bottom: 50, left: 50, right: 50 }
+      });
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+
+      doc.font("Helvetica-Bold")
+         .fontSize(18)
+         .fillColor("#1a1a2e")
+         .text(title, { align: "center" });
+
+      doc.font("Helvetica-Oblique")
+         .fontSize(9)
+         .fillColor("#666666")
+         .text(`Generated at ${new Date().toISOString()}`, { align: "center" })
+         .moveDown(1.5);
+
+      for (const section of sections) {
+        const heading = section.heading.trim();
+        if (!heading) continue;
+
+        doc.font("Helvetica-Bold")
+           .fontSize(12)
+           .fillColor("#1a1a2e")
+           .text(heading.toUpperCase());
+
+        const y = doc.y;
+        doc.strokeColor("#cccccc")
+           .lineWidth(0.5)
+           .moveTo(50, y + 2)
+           .lineTo(562, y + 2)
+           .stroke();
+
+        doc.moveDown(0.6);
+
+        const sectionLines = section.lines.flatMap((line) => toArray(line)).map(normalizePdfText).filter(Boolean);
+        if (sectionLines.length === 0) {
+          doc.font("Helvetica-Oblique")
+             .fontSize(10)
+             .fillColor("#777777")
+             .text("No saved content yet.");
+          doc.moveDown(0.8);
+          continue;
+        }
+
+        for (const line of sectionLines) {
+          if (line.startsWith("- ") || line.startsWith("* ")) {
+            const bulletText = line.slice(2).trim();
+            const currentY = doc.y;
+            doc.font("Helvetica")
+               .fontSize(10)
+               .fillColor("#222222")
+               .text("•", 60, currentY);
+            doc.text(bulletText, 70, currentY, { width: 492, align: "justify", lineGap: 2 });
+          } else {
+            doc.font("Helvetica")
+               .fontSize(10)
+               .fillColor("#222222")
+               .text(line, { width: 512, align: "justify", lineGap: 2 });
+          }
+          doc.moveDown(0.4);
+        }
+        doc.moveDown(0.8);
+      }
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 function resumeSections(source: any, sourceLabel: string): PdfSection[] {
@@ -218,12 +528,11 @@ export async function resolvePdfExportUrl(exportDoc: any) {
 }
 
 async function writePdfExport(userId: string, sourceType: PdfExportType, sourceId: string, title: string, sections: PdfSection[], metadata: Record<string, unknown> = {}, privacyNotes: string[] = []) {
-  const buffer = buildPdfBuffer(title, sections);
+  const buffer = await buildGenericPdfBuffer(title, sections);
   const shortHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
   const fileName = `${Date.now()}-${safeSegment(sourceType)}-${safeSegment(sourceId).slice(-16)}-${shortHash}.pdf`;
   const fileKey = `exports/${fileName}`;
 
-  // Upload file key and buffer to configured S3/R2 storage or local fallback
   await uploadFile(fileKey, buffer, "application/pdf");
 
   return createRecord("pdfExports", {
@@ -301,3 +610,77 @@ export async function exportInterviewPrepPdf(userId: string, id: string) {
     applicationId: interview.applicationId
   });
 }
+
+export async function exportResumePdfDirect(userId: string, id: string | null) {
+  let content: any = null;
+  let targetId = id;
+
+  if (!targetId) {
+    const latestResume = await findRecords("resumes", { userId }, { sort: { createdAt: -1 }, limit: 1 });
+    if (latestResume && latestResume.length > 0) {
+      targetId = normalizeId(latestResume[0]);
+    }
+  }
+
+  if (!targetId) {
+    throw new ApiError(404, "No resumes found to export");
+  }
+
+  const tailored = await findRecordById("tailoredResumes", targetId);
+  if (tailored && normalizeId(tailored.userId) === normalizeId(userId)) {
+    const version = tailored.resumeVersionId ? await findRecordById("resumeVersions", normalizeId(tailored.resumeVersionId)) : null;
+    content = {
+      summary: tailored.updatedSummary || version?.content?.summary,
+      skills: tailored.updatedSkills || version?.content?.skills,
+      projects: tailored.improvedProjects || version?.content?.projects,
+      experience: version?.content?.experience,
+      education: version?.content?.education,
+      certifications: version?.content?.certifications
+    };
+  } else {
+    const version = await findRecordById("resumeVersions", targetId);
+    if (version && normalizeId(version.userId) === normalizeId(userId)) {
+      content = version.content;
+    } else {
+      const resume = assertOwned(await findRecordById("resumes", targetId), userId, "Resume");
+      content = resume.content || resume.parsedData || {};
+    }
+  }
+
+  const buffer = await buildBeautifulResumePdfBuffer(userId, content);
+
+  const user = await findRecordById("users", userId);
+  const profile = await findOneRecord("profiles", { userId });
+  const role = profile?.currentRole || (profile?.targetRoles && profile.targetRoles[0]) || "FullStackDeveloper";
+  const cleanName = (user?.fullName || "Yogesh Dubey").replace(/\s+/g, "");
+  const cleanRole = role.replace(/\s+/g, "");
+  
+  const fileName = `Resume_YogeshDubey.pdf`;
+  const shortHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
+  const fileKey = `exports/${userId}/${shortHash}/${fileName}`;
+
+  await uploadFile(fileKey, buffer, "application/pdf");
+
+  await createRecord("pdfExports", {
+    userId,
+    sourceType: "resume",
+    sourceId: targetId,
+    title: "Resume Export",
+    fileName,
+    fileUrl: fileKey,
+    mimeType: "application/pdf",
+    byteSize: buffer.byteLength,
+    status: "ready",
+    renderer,
+    storage: getProvider(),
+    metadata: { resumeId: targetId, checksumSha256: shortHash },
+    privacy: {
+      ownerVerified: true,
+      redactedFields: [],
+      notes: ["Generated via PDFKit professional resume template."]
+    }
+  });
+
+  return { buffer, fileName };
+}
+

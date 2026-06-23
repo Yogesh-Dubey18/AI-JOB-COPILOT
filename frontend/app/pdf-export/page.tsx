@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { getStoredAccessToken } from "@/lib/auth-session";
 
 const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, "");
 
@@ -51,14 +52,41 @@ function PdfExportContent() {
     }
   }, []); // Run only on mount to prevent infinite re-render loops in test environments
 
-  const history = useQuery({ queryKey: ["pdf-exports"], queryFn: () => api.get<any[]>("/exports/history"), retry: false });
+  const history = useQuery({ queryKey: ["pdf-exports"], queryFn: () => api.get<any[]>("/pdf-export/history"), retry: false });
   const createExport = useMutation({
-    mutationFn: ({ type, id }: { type: string; id: string }) => api.post<any>(`/exports/${type}/${id}`, {}),
+    mutationFn: async ({ type, id }: { type: string; id: string }) => {
+      if (type === "resume") {
+        const token = getStoredAccessToken();
+        const response = await fetch(`${backendOrigin}/api/pdf-export/resume`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ id })
+        });
+        if (!response.ok) {
+          throw new Error("Failed to generate PDF");
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Resume_YogeshDubey.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return { fileName: "Resume_YogeshDubey.pdf", fileUrl: url };
+      } else {
+        return api.post<any>(`/exports/${type}/${id}`, {});
+      }
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pdf-exports"] })
   });
 
   function fileHref(fileUrl: string) {
-    return fileUrl?.startsWith("http") ? fileUrl : `${backendOrigin}${fileUrl}`;
+    if (!fileUrl) return "";
+    return fileUrl.startsWith("http") || fileUrl.startsWith("blob:") ? fileUrl : `${backendOrigin}${fileUrl}`;
   }
 
   return (
