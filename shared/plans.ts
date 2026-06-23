@@ -17,7 +17,7 @@ export const PLAN_CATALOG: Record<PlanId, PlanConfig> = {
     id: "free",
     name: "Free",
     monthlyPriceInr: 0,
-    aiCreditsPerMonth: 50,
+    aiCreditsPerMonth: 999,
     dailyJobMatches: 5,
     resumeTailoring: 2,
     upgradePrompt: "Upgrade when you need more resume tailoring, application kits, and interview prep.",

@@ -1,8 +1,14 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
+import { PDFParse } from "pdf-parse";
+import fs from "fs";
+import path from "node:path";
 import { technicalKeywordBank } from "./ats-scoring.service.js";
+
+async function pdfParse(dataBuffer: Buffer) {
+  const uint8 = new Uint8Array(dataBuffer);
+  const parser = new PDFParse(uint8);
+  return parser.getText();
+}
 
 const knownSkills = technicalKeywordBank;
 
@@ -19,13 +25,13 @@ const phonePattern = /(?:\+?\d[\s-]?){10,14}/g;
 const urlPattern = /https?:\/\/[^\s)]+/g;
 
 async function parsePlainText(filePath: string): Promise<ParserResult> {
-  const buffer = await fs.readFile(filePath);
+  const buffer = await fs.promises.readFile(filePath);
   const text = cleanText(buffer.toString("utf8"));
   return { text, parser: "plain-text", quality: "high", warnings: [], wordCount: countWords(text) };
 }
 
 async function parseBinaryFallback(filePath: string, parser: ParserResult["parser"], warning: string): Promise<ParserResult> {
-  const buffer = await fs.readFile(filePath);
+  const buffer = await fs.promises.readFile(filePath);
   const rough = buffer.toString("latin1").replace(/[^\x20-\x7E\n]/g, " ");
   const words = rough.split(/\s+/).filter((word) => word.length > 2 && word.length < 40);
   const text = cleanText(words.slice(0, 1_200).join(" ") || "Text extraction fallback: upload a TXT resume for highest local parsing accuracy.");
@@ -113,11 +119,10 @@ export function anonymizeResumeRecord<T extends Record<string, any>>(resume: T) 
 
 async function parsePdfText(filePath: string): Promise<ParserResult> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const uint8 = new Uint8Array(buffer);
-    const parser = new PDFParse(uint8);
-    const result = await parser.getText();
-    const text = cleanText(result.text);
+    const buffer = fs.readFileSync(filePath);
+    const pdfData = await pdfParse(buffer);
+    const extractedText = pdfData.text;
+    const text = cleanText(extractedText);
     return {
       text,
       parser: "plain-text",
@@ -137,7 +142,8 @@ async function parsePdfText(filePath: string): Promise<ParserResult> {
 async function parseDocxText(filePath: string): Promise<ParserResult> {
   try {
     const result = await mammoth.extractRawText({ path: filePath });
-    const text = cleanText(result.value);
+    const extractedText = result.value;
+    const text = cleanText(extractedText);
     const warnings = result.messages.map((m) => m.message);
     return {
       text,

@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { ReactNode } from "react";
 import { Archive, BarChart3, Bell, Bot, BriefcaseBusiness, Building2, Download, FileText, Gauge, Github, Globe2, Home, Layers, Linkedin, MessageSquare, MessageSquarePlus, Route, Settings, ShieldAlert, UserRound, Users2, Wrench } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
+import { clearAuthSession } from "@/lib/auth-session";
+import { api } from "@/lib/api";
 
 const nav = [
   ["/dashboard", Home, "Dashboard"],
@@ -26,6 +32,16 @@ const nav = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const router = useRouter();
+
+  async function handleLogout() {
+    try {
+      await api.post("/auth/logout");
+    } catch {}
+    clearAuthSession();
+    router.push("/login");
+  }
+
   const mobileNav = nav.slice(0, 5);
   return (
     <div className="min-h-screen bg-background">
@@ -50,9 +66,37 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link href="/notifications" aria-label="Notifications" className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground"><Bell className="h-4 w-4" /><span className="hidden sm:inline">Notifications</span></Link>
             <Link href="/feedback" aria-label="Feedback" className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground"><MessageSquarePlus className="h-4 w-4" /><span className="hidden sm:inline">Feedback</span></Link>
             <Link href="/profile" aria-label="Profile" className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground"><UserRound className="h-4 w-4" /><span className="hidden sm:inline">Profile</span></Link>
+            <button
+              onClick={handleLogout}
+              aria-label="Logout"
+              className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted hover:text-foreground text-sm text-muted-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
         </header>
         <main className="mx-auto max-w-7xl px-4 py-5 sm:py-6 lg:px-8">{children}</main>
+        <footer className="border-t py-3 px-4 lg:px-8 text-center text-xs text-muted-foreground">
+          Built by{" "}
+          <a
+            href="https://github.com/Yogesh-Dubey18"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Yogesh Dubey
+          </a>
+          {" · "}
+          <a
+            href="https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            GitHub
+          </a>
+        </footer>
       </div>
       <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur lg:hidden">
         {mobileNav.map(([href, Icon, label]) => (

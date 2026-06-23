@@ -17,6 +17,20 @@ export function normalizePlanId(value: string | undefined): PlanId {
 }
 
 export async function getOrCreateSubscription(userId: string) {
+  // Check if user has admin role — admins always get admin plan
+  const user = await findOneRecord("users", { _id: userId });
+  if (user?.role === "admin") {
+    return {
+      userId,
+      planId: "admin" as PlanId,
+      status: "active",
+      provider: "internal",
+      plan: PLAN_CATALOG.admin,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+    };
+  }
+
   const existing = await findOneRecord("subscriptions", { userId, status: { $ne: "canceled" } });
   if (existing) {
     return { ...existing, plan: PLAN_CATALOG[normalizePlanId(existing.planId)] };

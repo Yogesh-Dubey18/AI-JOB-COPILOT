@@ -9,7 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "seed": "tsx src/seed/seed.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "make-admin": "npx tsx src/scripts/make-admin.ts"
   },
   "dependencies": {
     "@ai-job-copilot/shared": "file:../shared",

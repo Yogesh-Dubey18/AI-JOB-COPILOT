@@ -287,6 +287,7 @@ export async function callJsonModelWithMeta<T>(prompt: string, fallback: T, sche
       }
     };
   } catch (error) {
+    console.error("🔴 AI_ERROR:", runtime.provider, runtime.model, error instanceof Error ? error.message : String(error));
     const validated = validateJson(fallback, fallback, schema);
     return {
       data: validated.data,
