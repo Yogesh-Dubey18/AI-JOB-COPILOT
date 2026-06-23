@@ -184,7 +184,7 @@ export const externalJobProviders: ExternalJobProviderConfig[] = [
     type: "api-provider",
     trustBaseline: 85,
     requiresReview: true,
-    envVars: ["ADZUNA_APP_ID", "ADZUNA_APP_KEY"],
+    envVars: ["ADZUNA_APP_ID", "ADZUNA_API_KEY"],
     capabilities: { search: true, easyApply: false, statusTracking: false, oauthImport: false },
     policy: "Synchronize approved, developer listings located in India using your Adzuna application credentials. Local dev fallback feed remains operational offline.",
     notes: "Provides developer job listings synchronized from Adzuna APIs."

@@ -30,7 +30,7 @@ export const env = {
   EMAIL_FROM: process.env.EMAIL_FROM || "AI Job Copilot <no-reply@example.local>",
   RESEND_API_KEY: process.env.RESEND_API_KEY || "",
   ADZUNA_APP_ID: process.env.ADZUNA_APP_ID || "",
-  ADZUNA_APP_KEY: process.env.ADZUNA_APP_KEY || "",
+  ADZUNA_APP_KEY: process.env.ADZUNA_APP_KEY || process.env.ADZUNA_API_KEY || "",
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || "",
   CALENDAR_PROVIDER: process.env.CALENDAR_PROVIDER || "mock",
   GOOGLE_CALENDAR_CLIENT_ID: process.env.GOOGLE_CALENDAR_CLIENT_ID || "",
