@@ -6,7 +6,7 @@ This document outlines the current authentication session persistence strategy, 
 
 To store authentication state securely and support persistence across page reloads without introducing XSS vulnerabilities (e.g., storing raw JWT tokens in `localStorage`), the system utilizes a combination of:
 1. **Client-side State (`sessionStorage`)**: Holds the active JWT access token in memory/session-level storage (`ajc_access_token`) for the duration of the browser session. This protects the token from being permanently persisted on the disk or accessed after the browser is closed.
-2. **Server-side Session Indicator Cookie (`ajc_session`)**: A client-readable (or HTTP-only where possible) cookie that signals to Next.js middleware that an active session exists. This allows fast, low-latency checks in client-side routing middleware (e.g., Next.js middleware) to decide if a page should load or redirect to `/login` without first hitting the backend API.
+2. **UX Session Indicator Cookie (`ajc_session`)**: A client-writable, non-`httpOnly` cookie set by client JS upon successful login. It serves strictly as a **UX indicator** for the Next.js middleware to prevent page flicker/false redirects. The middleware performs a presence-only check (`req.cookies.has("ajc_session")`). This is **not a security guard**. True authorization is enforced by the backend on every API request using the actual JWT access token sent in the `Authorization` header. If a user manually sets `ajc_session` without a valid token, the backend API requests will fail with `401 Unauthorized`, and the client-side API layer will immediately clear the session state and redirect to `/login`.
 
 ---
 
