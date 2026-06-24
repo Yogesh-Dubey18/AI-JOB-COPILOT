@@ -168,4 +168,122 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
     await expect(page.getByText("Provider-ready").first()).toBeVisible();
     await expect(page.getByText("Not configured").first()).toBeVisible();
   });
+
+  test("logged-in session survives a browser reload and navigation", async ({ page }) => {
+    // 1. Mock the API endpoints required by login, dashboard, jobs, settings
+    await page.route("**/api/auth/providers/status", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            google: { configured: false, status: "ready" },
+            email: { configured: false, provider: "mock", status: "ready" }
+          }
+        })
+      });
+    });
+    await page.route("**/api/auth/login", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            accessToken: "test-real-reload-token",
+            refreshToken: "test-real-refresh-token",
+            user: { id: "user-1", fullName: "Asha Dev", email: "asha@example.com", role: "job_seeker" }
+          }
+        }),
+        headers: {
+          "Set-Cookie": "ajc_session=1; Path=/; SameSite=Lax"
+        }
+      });
+    });
+    await page.route("**/api/profile", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { fullName: "Asha Dev", email: "asha@example.com" } })
+      });
+    });
+    await page.route("**/api/analytics/overview", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { totalDiscovered: 12, totalSavedJobs: 2, totalApplied: 5 } })
+      });
+    });
+    await page.route("**/api/jobs/daily-feed", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { today: [] } })
+      });
+    });
+    await page.route("**/api/jobs/sources", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { externalProviders: [] } })
+      });
+    });
+    await page.route("**/api/jobs?*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { items: [], total: 0 } })
+      });
+    });
+    await page.route("**/api/applications", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+    await page.route("**/api/jobs/sync-status", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { lastSyncedAt: new Date().toISOString(), status: "success" } })
+      });
+    });
+
+    // 2. Perform actual login as a test user
+    await page.goto("/login");
+    await page.getByLabel(/^Email$/i).fill("asha@example.com");
+    await page.getByLabel(/^Password$/i).fill("Password123!");
+    await page.getByRole("main").getByRole("button", { name: "Login" }).click();
+
+    // 3. Assert navigation to protected route (/dashboard) and verify content
+    await expect(page).toHaveURL(/.*dashboard/);
+    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+
+    // 4. Force a browser page reload and verify we stay logged in on the protected route
+    await page.reload();
+    await expect(page).toHaveURL(/.*dashboard/);
+    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+
+    // 5. Navigate to /jobs (another protected route)
+    await page.goto("/jobs");
+    await expect(page).toHaveURL(/.*jobs/);
+    await expect(page.getByRole("heading", { name: "Jobs" })).toBeVisible();
+
+    // 6. Force a browser page reload on /jobs and verify we stay logged in
+    await page.reload();
+    await expect(page).toHaveURL(/.*jobs/);
+    await expect(page.getByRole("heading", { name: "Jobs" })).toBeVisible();
+
+    // 7. Navigate to /settings/integrations (another protected route)
+    await page.goto("/settings/integrations");
+    await expect(page).toHaveURL(/.*settings\/integrations/);
+    await expect(page.getByRole("heading", { name: "Integrations & provider status" })).toBeVisible();
+
+    // 8. Force a browser page reload on /settings/integrations and verify we stay logged in
+    await page.reload();
+    await expect(page).toHaveURL(/.*settings\/integrations/);
+    await expect(page.getByRole("heading", { name: "Integrations & provider status" })).toBeVisible();
+  });
 });
