@@ -46,7 +46,7 @@ function setSessionCookie(accessToken?: string) {
 
 export function getStoredAccessToken() {
   if (!browserAvailable()) return undefined;
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY) || window.sessionStorage.getItem(ACCESS_TOKEN_KEY) || undefined;
+  return window.sessionStorage.getItem(ACCESS_TOKEN_KEY) || undefined;
 }
 
 let refreshTimer: any = null;
@@ -112,10 +112,8 @@ export function persistAuthSession(value: unknown) {
   const accessToken = payload.accessToken || payload.token;
   if (!accessToken) return false;
 
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   window.sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   if (payload.user) {
-    window.localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
     window.sessionStorage.setItem(USER_KEY, JSON.stringify(payload.user));
   }
   setSessionCookie(accessToken);
@@ -125,9 +123,7 @@ export function persistAuthSession(value: unknown) {
 
 export function clearAuthSession() {
   if (!browserAvailable()) return;
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-  window.localStorage.removeItem(USER_KEY);
   window.sessionStorage.removeItem(USER_KEY);
   document.cookie = `${SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
   document.cookie = `accessToken=; Path=/; Max-Age=0; SameSite=Lax`;

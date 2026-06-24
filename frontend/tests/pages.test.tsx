@@ -1190,6 +1190,63 @@ describe("frontend pages", () => {
     expect(window.sessionStorage.getItem("ajc_access_token")).toBe("new-access-token");
   });
 
+  it("concurrent 401 requests trigger exactly ONE call to /auth/refresh", async () => {
+    const { api } = await import("@/lib/api");
+    window.sessionStorage.setItem("ajc_access_token", "expired-access-token");
+    
+    let refreshCount = 0;
+    const fetchMock = vi.fn((url: string, options: any = {}) => {
+      if (url.includes("/auth/refresh")) {
+        refreshCount++;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: { accessToken: "new-access-token", user: { id: "user-1", fullName: "Asha Dev", email: "asha@example.com", role: "job_seeker" } }
+          })
+        });
+      }
+      
+      const authHeader = options.headers?.Authorization;
+      if (authHeader === "Bearer expired-access-token") {
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          headers: new Headers(),
+          json: async () => ({ message: "Unauthorized" })
+        });
+      } else if (authHeader === "Bearer new-access-token") {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ success: true, data: { result: "success-data" } })
+        });
+      }
+
+      return Promise.resolve({
+        ok: false,
+        status: 404,
+        headers: new Headers(),
+        json: async () => ({})
+      });
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promises = Array.from({ length: 5 }).map(() => api.get<{ result: string }>("/resumes"));
+    const results = await Promise.all(promises);
+
+    results.forEach((res) => {
+      expect(res).toEqual({ result: "success-data" });
+    });
+
+    expect(refreshCount).toBe(1);
+    expect(window.sessionStorage.getItem("ajc_access_token")).toBe("new-access-token");
+  });
+
   it("google oauth button is disabled when provider is not configured", async () => {
     mockApiResponse({
       success: true,
