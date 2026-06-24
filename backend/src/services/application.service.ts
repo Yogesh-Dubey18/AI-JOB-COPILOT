@@ -1,5 +1,5 @@
 import { ApiError } from "../utils/ApiError.js";
-import { createRecord, deleteRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
+import { createRecord, deleteRecord, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { buildTimelineEvent, enrichApplicationForStage, summarizeApplications } from "./application-intelligence.service.js";
 import { createNotification } from "./notification.service.js";
 
@@ -31,6 +31,32 @@ async function enrichListWithContacts(userId: string, apps: any[]) {
 
 export async function createApplication(userId: string, input: any) {
   const status = input.status || "Saved";
+  if (input.jobId) {
+    const existing = await findOneRecord("applications", { userId, jobId: input.jobId });
+    if (existing) {
+      const updates: any = {
+        status,
+        updatedAt: new Date()
+      };
+      if (status === "Applied" && existing.status !== "Applied") {
+        updates.appliedDate = input.appliedDate || new Date();
+      }
+      if (input.resumeVersionId) updates.resumeVersionId = input.resumeVersionId;
+      if (input.applicationKitId) updates.applicationKitId = input.applicationKitId;
+      if (input.contactId) updates.contactId = input.contactId;
+      if (input.notes) updates.notes = input.notes;
+
+      const currentHistory = existing.statusHistory || [];
+      const statusChanged = existing.status !== status;
+      if (statusChanged) {
+        updates.statusHistory = [...currentHistory, { status, note: `Status updated to ${status}`, changedAt: new Date() }];
+      }
+
+      const updated = await updateRecord("applications", String(existing._id), enrichApplicationForStage(updates, existing));
+      return enrichWithContact(userId, updated);
+    }
+  }
+
   const created = await createRecord("applications", enrichApplicationForStage({
     userId,
     jobId: input.jobId,
