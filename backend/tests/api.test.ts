@@ -549,9 +549,7 @@ describe("AI Job Copilot API", () => {
   it("enforces ai usage limits", async () => {
     const agent = await authAgent();
     const me = await agent.get("/api/auth/me").expect(200);
-    for (let i = 0; i < 50; i += 1) {
-      await recordUsageEvent(me.body.data.id, "test-fill", 1, "test");
-    }
+    await recordUsageEvent(me.body.data.id, "test-fill", 1000, "test");
     const limited = await agent.post("/api/ai/chat").send({ message: "Will this run?" }).expect(402);
     expect(limited.body.message).toMatch(/credit limit/i);
   });

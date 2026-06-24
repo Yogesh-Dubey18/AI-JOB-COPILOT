@@ -335,7 +335,7 @@ function getResumeDataForPdf(content: any): WorldClassResume {
     return {
       name: firstText(proj.name, proj.title),
       tech: firstText(proj.tech, proj.techStack, proj.technologies),
-      bullets: bullets.length ? bullets : [firstText(proj.description, proj.summary)],
+      bullets: (bullets.length ? bullets : [firstText(proj.description, proj.summary)]).map(String),
       live: firstText(proj.live, proj.liveUrl, proj.demoUrl),
       github: firstText(proj.github, proj.githubUrl)
     };
@@ -358,7 +358,7 @@ function getResumeDataForPdf(content: any): WorldClassResume {
       title: firstText(exp.title, exp.role),
       company: firstText(exp.company, exp.employer),
       duration: firstText(exp.duration, exp.dates),
-      bullets: bullets.length ? bullets : [firstText(exp.description, exp.summary)]
+      bullets: (bullets.length ? bullets : [firstText(exp.description, exp.summary)]).map(String)
     };
   }).filter(e => e.title || e.company);
 
