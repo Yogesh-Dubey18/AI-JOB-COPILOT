@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Filter, PlusCircle, Search, Sparkles, X } from "lucide-react";
-import { useMemo, useState, Suspense } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Filter, PlusCircle, Search, Sparkles, X, RefreshCw, Clock } from "lucide-react";
+import { useMemo, useState, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { JobCard } from "@/components/jobs/job-card";
@@ -16,6 +16,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 function JobsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const qc = useQueryClient();
   const fromResume = searchParams.get("fromResume");
 
   const [search, setSearch] = useState("");
@@ -24,8 +25,12 @@ function JobsContent() {
   const [trustMin, setTrustMin] = useState("");
   const [salaryMin, setSalaryMin] = useState("");
   const [experience, setExperience] = useState("");
-  const [sort, setSort] = useState("postedAt");
+  const [sort, setSort] = useState(fromResume ? "match" : "postedAt");
+  const [hideApplied, setHideApplied] = useState(true);
   const debounced = useDebounce(search);
+
+  const [refreshMessage, setRefreshMessage] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -36,15 +41,68 @@ function JobsContent() {
     if (salaryMin) params.set("salaryMin", salaryMin);
     if (experience) params.set("experience", experience);
     if (sort) params.set("sort", sort);
+    params.set("hideApplied", hideApplied ? "true" : "false");
     return params.toString();
-  }, [debounced, experience, jobType, remoteType, salaryMin, sort, trustMin]);
+  }, [debounced, experience, jobType, remoteType, salaryMin, sort, trustMin, hideApplied]);
 
   const jobs = useQuery({ queryKey: ["jobs", query], queryFn: () => api.get<any>("/jobs" + (query ? "?" + query : "")), retry: false });
   const sources = useQuery({ queryKey: ["job-sources"], queryFn: () => api.get<any>("/jobs/sources"), retry: false });
   const applications = useQuery({ queryKey: ["applications"], queryFn: () => api.get<any[]>("/applications"), retry: false });
+  const syncStatus = useQuery({ queryKey: ["sync-status"], queryFn: () => api.get<any>("/jobs/sync-status"), retry: false });
 
-  console.log("DEBUG: jobs.data=", jobs.data, "isLoading=", jobs.isLoading, "isError=", jobs.isError, "error=", jobs.error);
-  // Query specific resume if fromResume parameter is set
+  const [cooldownTimeLeft, setCooldownTimeLeft] = useState(0);
+
+  useEffect(() => {
+    if (syncStatus.data?.cooldownRemainingMs) {
+      setCooldownTimeLeft(Math.ceil(syncStatus.data.cooldownRemainingMs / 1000));
+    }
+  }, [syncStatus.data?.cooldownRemainingMs]);
+
+  useEffect(() => {
+    if (cooldownTimeLeft > 0) {
+      const timer = setTimeout(() => {
+        setCooldownTimeLeft((prev) => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldownTimeLeft]);
+
+  useEffect(() => {
+    if (jobs.isSuccess) {
+      api.post("/jobs/viewed").catch(() => {});
+    }
+  }, [jobs.isSuccess]);
+
+  const refreshMutation = useMutation({
+    mutationFn: () => api.post<any>("/jobs/refresh"),
+    onMutate: () => {
+      setIsRefreshing(true);
+      setRefreshMessage("Searching for fresh jobs...");
+    },
+    onSuccess: (res: any) => {
+      setIsRefreshing(false);
+      const data = res?.data || {};
+      if (data.cooldownRemainingMs > 0 && data.newJobsCount === 0) {
+        setRefreshMessage(data.message || "Refresh cooldown active. Feed is already up-to-date.");
+      } else {
+        setRefreshMessage(data.newJobsCount > 0 ? `${data.newJobsCount} new jobs found!` : "No new jobs found. Feed is up-to-date.");
+      }
+      void qc.invalidateQueries({ queryKey: ["jobs"] });
+      void qc.invalidateQueries({ queryKey: ["sync-status"] });
+      setTimeout(() => setRefreshMessage(""), 5000);
+    },
+    onError: (err: any) => {
+      setIsRefreshing(false);
+      setRefreshMessage(err instanceof Error ? err.message : "Refresh failed.");
+      setTimeout(() => setRefreshMessage(""), 5000);
+    }
+  });
+
+  const handleRefresh = () => {
+    if (cooldownTimeLeft > 0 || isRefreshing) return;
+    refreshMutation.mutate();
+  };
+
   const resumeQuery = useQuery({
     queryKey: ["resume", fromResume],
     queryFn: () => api.get<any>("/resumes/" + fromResume),
@@ -62,12 +120,20 @@ function JobsContent() {
       : Array.isArray((applications.data as any)?.items)
       ? (applications.data as any).items
       : [];
-    return list.map((a: any) => String(a.jobId));
+    return list.filter((a: any) => a.status === "Saved").map((a: any) => String(a.jobId));
+  }, [applications.data]);
+
+  const appliedJobIds = useMemo(() => {
+    const list = Array.isArray(applications.data)
+      ? applications.data
+      : Array.isArray((applications.data as any)?.items)
+      ? (applications.data as any).items
+      : [];
+    return list.filter((a: any) => a.status !== "Saved").map((a: any) => String(a.jobId));
   }, [applications.data]);
 
   const items = jobs.data?.items || [];
 
-  // Dynamically compute match scores based on resume query context
   const processedItems = useMemo(() => {
     if (!fromResume || !resumeSkills.length) return items;
     
@@ -107,10 +173,45 @@ function JobsContent() {
     <>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
         <PageHeading title="Jobs" description="Search, filter, save, analyze, and open official job links. AI match and trust score help you decide before applying." />
-        <Button onClick={() => router.push("/jobs/import")}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Import job
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing || refreshMutation.isPending || cooldownTimeLeft > 0}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing || refreshMutation.isPending ? "animate-spin" : ""}`} />
+            {isRefreshing || refreshMutation.isPending 
+              ? "Refreshing..." 
+              : cooldownTimeLeft > 0 
+              ? `Refresh (${cooldownTimeLeft}s)` 
+              : "Refresh Jobs"}
+          </Button>
+          <Button onClick={() => router.push("/jobs/import")}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Import job
+          </Button>
+        </div>
       </div>
+
+      {/* Sync status indicator */}
+      {(syncStatus.data?.lastSyncedAt || refreshMessage) && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground animate-fadeIn">
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            <span>
+              {syncStatus.data?.lastSyncedAt
+                ? `Last updated: ${new Date(syncStatus.data.lastSyncedAt).toLocaleTimeString()}`
+                : "Not synced recently"}
+              {syncStatus.data?.cooldownRemainingMs > 0 && cooldownTimeLeft > 0 && (
+                <span className="ml-2 rounded bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
+                  Cooldown active ({cooldownTimeLeft}s remaining)
+                </span>
+              )}
+            </span>
+          </div>
+          {refreshMessage && (
+            <div className="flex items-center gap-1 font-semibold text-primary animate-pulse">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>{refreshMessage}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Resume context match banner */}
       {fromResume && resumeQuery.data && (
@@ -167,6 +268,7 @@ function JobsContent() {
           <option value="1500000">15 LPA+</option>
         </select>
         <select aria-label="Sort jobs" className="h-10 rounded-md border bg-background px-3 text-sm" value={sort} onChange={(event) => setSort(event.target.value)}>
+          <option value="match">AI match score</option>
           <option value="postedAt">Newest</option>
           <option value="trust">Trust score</option>
           <option value="salary">Salary</option>
@@ -180,9 +282,20 @@ function JobsContent() {
         </div>
       ) : null}
 
-      <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-        <Filter className="h-4 w-4" />
-        <span aria-live="polite">{jobs.isLoading ? "Loading jobs..." : `${processedItems.length} of ${jobs.data?.total || 0} normalized jobs shown`}</span>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4" />
+          <span aria-live="polite">{jobs.isLoading ? "Loading jobs..." : `${processedItems.length} of ${jobs.data?.total || 0} normalized jobs shown`}</span>
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer font-medium select-none text-xs">
+          <input 
+            type="checkbox" 
+            className="rounded border-input text-primary focus:ring-ring focus:ring-offset-2" 
+            checked={hideApplied} 
+            onChange={(e) => setHideApplied(e.target.checked)} 
+          />
+          Hide jobs I've already applied to
+        </label>
       </div>
 
       {jobs.isLoading ? <LoadingState title="Loading normalized jobs" description="Fetching curated, deduplicated, and trust-scored jobs for this search." /> : null}
@@ -200,6 +313,7 @@ function JobsContent() {
             key={job._id}
             job={job}
             isSaved={savedJobIds.includes(String(job._id))}
+            isApplied={appliedJobIds.includes(String(job._id))}
           />
         ))}
       </div>

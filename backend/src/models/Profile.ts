@@ -27,7 +27,8 @@ const ProfileSchema = new Schema(
     githubUrl: String,
     linkedinUrl: String,
     portfolioUrl: String,
-    profileCompletenessScore: { type: Number, default: 0 }
+    profileCompletenessScore: { type: Number, default: 0 },
+    lastJobsViewedAt: Date
   },
   { timestamps: true }
 );

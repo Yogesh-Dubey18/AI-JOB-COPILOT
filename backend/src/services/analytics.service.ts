@@ -1,16 +1,17 @@
-import { findRecords } from "../utils/repository.js";
+import { findRecords, countRecords } from "../utils/repository.js";
 import { getJobSearchIntelligence } from "./job-search-intelligence.service.js";
 
 export async function getAnalyticsOverview(userId: string) {
-  const [applications, analyses, jobSearchHealth] = await Promise.all([
+  const [applications, analyses, jobSearchHealth, totalDiscovered] = await Promise.all([
     findRecords("applications", { userId }),
     findRecords("resumeAnalyses", { userId }),
-    getJobSearchIntelligence(userId)
+    getJobSearchIntelligence(userId),
+    countRecords("jobs")
   ]);
   const totalApplied = applications.filter((app: any) => app.status !== "Saved").length;
-  const totalInterviews = applications.filter((app: any) => /Round|Call|Assignment|Offer|Selected/i.test(app.status)).length;
+  const totalInterviews = applications.filter((app: any) => /Scheduled|Round|Offer/i.test(app.status)).length;
   const totalRejected = applications.filter((app: any) => app.status === "Rejected").length;
-  const totalOffers = applications.filter((app: any) => ["Offer", "Selected"].includes(app.status)).length;
+  const totalOffers = applications.filter((app: any) => app.status === "Offer").length;
   const averageAtsScore = analyses.length ? Math.round(analyses.reduce((sum: number, item: any) => sum + (item.atsScore || 0), 0) / analyses.length) : 82;
   const statusCounts = applications.reduce((acc: Record<string, number>, app: any) => {
     acc[app.status] = (acc[app.status] || 0) + 1;
@@ -22,9 +23,10 @@ export async function getAnalyticsOverview(userId: string) {
     return acc;
   }, {});
   return {
+    totalDiscovered,
     totalSavedJobs: applications.filter((app: any) => app.status === "Saved").length,
     totalApplied,
-    totalShortlisted: applications.filter((app: any) => ["Resume Viewed", "HR Call", "Assignment"].includes(app.status)).length,
+    totalShortlisted: applications.filter((app: any) => ["Interview Scheduled"].includes(app.status)).length,
     totalInterviews,
     totalRejected,
     totalOffers,

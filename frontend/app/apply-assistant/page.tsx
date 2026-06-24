@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,8 +17,10 @@ import {
   ShieldAlert,
   Info,
   ChevronRight,
-  ListRestart
+  ListRestart,
+  PlusCircle
 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
 import { Button } from "@/components/ui/button";
@@ -87,6 +89,13 @@ function ApplyAssistantForm() {
     retry: false
   });
 
+  const jobQuery = useQuery({
+    queryKey: ["job", prefillJobId],
+    queryFn: () => api.get<any>(`/jobs/${prefillJobId}`),
+    enabled: !!prefillJobId,
+    retry: false
+  });
+
   // State
   const [selectedAppId, setSelectedAppId] = useState<string>("");
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
@@ -103,6 +112,26 @@ function ApplyAssistantForm() {
   const applications = appsQuery.data || [];
   const resumeVersions = resumesQuery.data || [];
   const contacts = contactsQuery.data || [];
+
+  const isPrefillInApps = useMemo(() => {
+    if (!prefillJobId || !applications.length) return false;
+    return applications.some((app: any) => String(app.jobId) === prefillJobId || String(app._id) === prefillJobId);
+  }, [applications, prefillJobId]);
+
+  const saveToTrackerMutation = useMutation({
+    mutationFn: () => api.post(`/jobs/${prefillJobId}/save`),
+    onSuccess: (res: any) => {
+      toast.success("Job saved to tracker successfully!");
+      void qc.invalidateQueries({ queryKey: ["applications"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to save job to tracker.");
+    }
+  });
+
+  const handleSaveToTracker = () => {
+    saveToTrackerMutation.mutate();
+  };
 
   // Mutations
   const generate = useMutation({
@@ -310,8 +339,24 @@ function ApplyAssistantForm() {
                     ))}
                   </select>
                 )}
-                {applications.length === 0 && !appsQuery.isLoading && (
+                {applications.length === 0 && !appsQuery.isLoading && !prefillJobId && (
                   <p className="text-xs text-amber-600">No applications tracked yet. Add one in the application tracker.</p>
+                )}
+                {prefillJobId && jobQuery.data && !isPrefillInApps && (
+                  <div className="rounded bg-violet-50 border border-violet-200 p-2.5 dark:bg-violet-950/20 dark:border-violet-900 flex flex-col gap-2 animate-fadeIn">
+                    <p className="text-xs text-violet-850 dark:text-violet-200">
+                      <strong>{jobQuery.data.company} · {jobQuery.data.title}</strong> is not saved in your tracker yet. Save it to start generating application templates.
+                    </p>
+                    <Button
+                      type="button"
+                      className="bg-violet-600 hover:bg-violet-700 text-white font-medium text-[11px] h-7 w-fit self-end"
+                      onClick={handleSaveToTracker}
+                      disabled={saveToTrackerMutation.isPending}
+                    >
+                      <PlusCircle className="mr-1 h-3.5 w-3.5" />
+                      {saveToTrackerMutation.isPending ? "Saving..." : "Save to Tracker"}
+                    </Button>
+                  </div>
                 )}
               </div>
 

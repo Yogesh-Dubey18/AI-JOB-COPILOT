@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findRecordById } from "../utils/repository.js";
 import { scoreResumeAgainstJobDescription, scoreResumeForRole } from "./ats-scoring.service.js";
 import { anonymizeResumeRecord } from "./resume-parser.service.js";
+import { createNotification } from "./notification.service.js";
 
 type AnalyzeResumeOptions = string | {
   targetRole?: string;
@@ -62,7 +63,7 @@ export async function analyzeResume(userId: string, resumeId: string, options: A
   const jdWeightedScore = jobDescriptionCoverage ? Math.round((localScore.atsScore * 0.75) + (jobDescriptionCoverage.coveragePercent * 0.25)) : localScore.atsScore;
   const atsScore = Math.round((Number(analysis.atsScore || jdWeightedScore) * 0.35) + (jdWeightedScore * 0.65));
   const redactedFields = normalized.anonymizeForAnalysis ? (resumeForAi as any).parsedData?.redactedFields || [] : [];
-  return createRecord("resumeAnalyses", {
+  const analysisRecord = await createRecord("resumeAnalyses", {
     userId,
     resumeId,
     targetRole: normalized.targetRole,
@@ -86,6 +87,20 @@ export async function analyzeResume(userId: string, resumeId: string, options: A
     redactedFields,
     parserWarnings: resume.parsedData?.parserWarnings || []
   });
+
+  try {
+    await createNotification(userId, {
+      type: "resume_analysis_complete",
+      title: "Resume Analysis Complete",
+      message: `Your resume "${resume.fileName}" has been analyzed for the "${normalized.targetRole}" role. ATS Score: ${atsScore}%.`,
+      actionUrl: `/resume/analyzer?resumeId=${resumeId}`,
+      dedupeKey: `resume-analysis-complete:${analysisRecord._id}`
+    });
+  } catch (error) {
+    console.error("Failed to trigger resume analysis notification:", error);
+  }
+
+  return analysisRecord;
 }
 
 function calculateAtsScore(resume: any): number {
@@ -183,6 +198,18 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     changeSummary
   });
 
+  try {
+    await createNotification(userId, {
+      type: "resume_analysis_complete",
+      title: "World-Class Resume Ready",
+      message: `A new world-class resume version has been generated for "${targetRole}" with ATS Score: ${score}%.`,
+      actionUrl: `/resume/versions`,
+      dedupeKey: `world-class-ready:${version._id}`
+    });
+  } catch (error) {
+    console.error("Failed to trigger world-class resume notification:", error);
+  }
+
   return {
     generatedResume,
     resumeVersionId: version._id,
@@ -209,7 +236,7 @@ export async function improveResume(userId: string, resumeId: string, targetRole
     certifications: resume.parsedData?.certifications || []
   };
   const changeSummary = computeChangeSummary(resume, content);
-  return createRecord("resumeVersions", {
+  const version = await createRecord("resumeVersions", {
     userId,
     baseResumeId: resumeId,
     title: targetRole + " improved resume",
@@ -221,4 +248,18 @@ export async function improveResume(userId: string, resumeId: string, targetRole
     pdfUrl: tailored.pdfUrl,
     changeSummary
   });
+
+  try {
+    await createNotification(userId, {
+      type: "resume_analysis_complete",
+      title: "Resume Improved",
+      message: `Your resume has been improved for "${targetRole}" with ATS Score: ${tailored.afterAtsScore}%.`,
+      actionUrl: `/resume/versions`,
+      dedupeKey: `resume-improved:${version._id}`
+    });
+  } catch (error) {
+    console.error("Failed to trigger improve resume notification:", error);
+  }
+
+  return version;
 }

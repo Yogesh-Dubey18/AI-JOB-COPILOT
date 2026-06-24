@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BriefcaseBusiness, CalendarClock, FileText, HeartPulse, Layers, MessageSquarePlus, Sparkles, Target, TrendingUp, Wrench } from "lucide-react";
+import { BriefcaseBusiness, CalendarClock, FileText, HeartPulse, Layers, MessageSquarePlus, Sparkles, Target, TrendingUp, Wrench, Bookmark, Award } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/app-shell";
 import { MetricCard } from "@/components/shared/metric-card";
@@ -31,11 +31,11 @@ export default function DashboardPage() {
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard label="Profile completion" value={(profile.data?.profileCompletenessScore || 35) + "%"} icon={<Target className="h-5 w-5" />} hint="Complete onboarding for better matches" />
-        <MetricCard label="Average ATS score" value={data.averageAtsScore || 82} icon={<FileText className="h-5 w-5" />} />
-        <MetricCard label="Job-search health" value={(health.healthScore || 0) + "/100"} icon={<HeartPulse className="h-5 w-5" />} hint={health.healthLevel || "Needs data"} />
-        <MetricCard label="Applications" value={data.totalApplied || 0} icon={<Layers className="h-5 w-5" />} />
-        <MetricCard label="Upcoming interviews" value={data.totalInterviews || 0} icon={<CalendarClock className="h-5 w-5" />} />
+        <MetricCard label="Jobs Discovered" value={data.totalDiscovered || 0} icon={<BriefcaseBusiness className="h-5 w-5" />} />
+        <MetricCard label="Jobs Saved" value={data.totalSavedJobs || 0} icon={<Bookmark className="h-5 w-5" />} />
+        <MetricCard label="Jobs Applied" value={data.totalApplied || 0} icon={<Layers className="h-5 w-5" />} />
+        <MetricCard label="Interviews Scheduled" value={data.totalInterviews || 0} icon={<CalendarClock className="h-5 w-5" />} />
+        <MetricCard label="Offers Received" value={data.totalOffers || 0} icon={<Award className="h-5 w-5" />} />
       </div>
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">

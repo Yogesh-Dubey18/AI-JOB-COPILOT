@@ -23,11 +23,16 @@ function SourceBadge({ sourceType }: { sourceType?: string }) {
 interface JobCardProps {
   job: any;
   isSaved?: boolean;
+  isApplied?: boolean;
 }
 
-export function JobCard({ job, isSaved = false }: JobCardProps) {
+export function JobCard({ job, isSaved = false, isApplied = false }: JobCardProps) {
   const router = useRouter();
   const qc = useQueryClient();
+  
+  const savedState = job.isSaved || isSaved;
+  const appliedState = job.isApplied || isApplied;
+  
   const trustColor = (job.trustScore || 0) >= 70 ? "text-success" : (job.trustScore || 0) >= 40 ? "text-amber-600" : "text-danger";
 
   const trackMutation = useMutation({
@@ -38,7 +43,8 @@ export function JobCard({ job, isSaved = false }: JobCardProps) {
       status: status
     }),
     onSuccess: (res: any) => {
-      qc.invalidateQueries({ queryKey: ["applications"] });
+      void qc.invalidateQueries({ queryKey: ["applications"] });
+      void qc.invalidateQueries({ queryKey: ["jobs"] });
       if (res?.data?.status === "Applied") {
         router.push("/applications");
       }
@@ -46,12 +52,13 @@ export function JobCard({ job, isSaved = false }: JobCardProps) {
   });
 
   const handleSave = () => {
-    if (isSaved) return;
+    if (savedState || appliedState) return;
     trackMutation.mutate("Saved");
   };
 
   const handleTrack = () => {
-    if (isSaved) {
+    if (appliedState) return;
+    if (savedState) {
       router.push("/applications");
       return;
     }
@@ -59,12 +66,19 @@ export function JobCard({ job, isSaved = false }: JobCardProps) {
   };
 
   return (
-    <Card className={isSaved ? "border-primary/40 bg-primary/[0.01]" : ""}>
+    <Card className={savedState ? "border-primary/40 bg-primary/[0.01]" : appliedState ? "border-emerald-500/30 bg-emerald-500/[0.01]" : ""}>
       <CardContent className="space-y-3 p-4">
         {/* Header */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="font-bold">{job.title}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold">{job.title}</h3>
+              {job.isNew ? (
+                <span className="rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground uppercase tracking-wider animate-pulse">
+                  New
+                </span>
+              ) : null}
+            </div>
             <p className="text-sm text-muted-foreground">{job.company}{job.location ? ` · ${job.location}` : ""}{job.remoteType ? ` · ${job.remoteType}` : ""}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -128,30 +142,30 @@ export function JobCard({ job, isSaved = false }: JobCardProps) {
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
           <Link href={"/jobs/" + job._id}><Button>Analyze</Button></Link>
-          <Link href={`/application-kit/${job._id}`}><Button variant="outline"><Sparkles className="h-4 w-4" /> Apply kit</Button></Link>
+          <Link href={`/application-kit/${job._id}`}><Button variant="outline"><Sparkles className="h-4 w-4" /> Generate Application Kit</Button></Link>
           
           <Button
             type="button"
-            variant={isSaved ? "primary" : "outline"}
+            variant={appliedState ? "outline" : savedState ? "primary" : "outline"}
             onClick={handleTrack}
-            disabled={trackMutation.isPending}
-            aria-label={isSaved ? "View Tracker" : `Track ${job.title}`}
+            disabled={trackMutation.isPending || appliedState}
+            aria-label={appliedState ? "Applied" : savedState ? "View Tracker" : `Track ${job.title}`}
           >
-            <PlusCircle className="h-4 w-4" /> {isSaved ? "View Tracker" : "Track App"}
+            <PlusCircle className="h-4 w-4" /> {appliedState ? "Applied" : savedState ? "View Tracker" : "Track App"}
           </Button>
 
           {job.applyUrl ? <a href={job.applyUrl} target="_blank" rel="noopener noreferrer"><Button variant="outline">Official link</Button></a> : null}
           
           <Button
             type="button"
-            title={isSaved ? "Saved" : "Save job"}
-            aria-label={isSaved ? "Saved" : `Save ${job.title}`}
+            title={appliedState ? "Applied" : savedState ? "Saved" : "Save job"}
+            aria-label={appliedState ? "Applied" : savedState ? "Saved" : `Save ${job.title}`}
             variant="ghost"
             className="w-10 px-0"
             onClick={handleSave}
-            disabled={isSaved || trackMutation.isPending}
+            disabled={savedState || appliedState || trackMutation.isPending}
           >
-            <Bookmark className={`h-4 w-4 ${isSaved ? "fill-primary text-primary" : ""}`} />
+            <Bookmark className={`h-4 w-4 ${savedState || appliedState ? "fill-primary text-primary" : ""}`} />
           </Button>
         </div>
       </CardContent>

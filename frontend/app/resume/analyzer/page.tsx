@@ -244,6 +244,15 @@ export default function ResumeAnalyzerPage() {
                   AI analysis used anonymized resume details. Redacted fields: {(result.redactedFields || []).join(", ") || "none"}.
                 </div>
               )}
+              {result && (
+                <div className="flex justify-center border-t pt-4">
+                  <Link href={`/jobs?fromResume=${resumeId}&role=${encodeURIComponent(targetRole)}`} className="w-full">
+                    <Button className="w-full gap-2">
+                      Find Matching Jobs
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -338,6 +347,9 @@ export default function ResumeAnalyzerPage() {
                       <Button>Export world-class PDF</Button>
                     </Link>
                   ) : null}
+                  <Link href={`/jobs?role=${encodeURIComponent(targetRole)}`}>
+                    <Button variant="secondary">Find Matching Jobs</Button>
+                  </Link>
                   <Link href="/resume/builder">
                     <Button variant="outline">Edit in resume builder</Button>
                   </Link>

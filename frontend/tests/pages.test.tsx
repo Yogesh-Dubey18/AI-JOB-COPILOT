@@ -322,7 +322,7 @@ describe("frontend pages", () => {
       expect(screen.getByText("Full Stack Engineer")).toBeInTheDocument();
       expect(screen.getByText(/Test Co/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Track Full Stack Engineer/i })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /Apply kit/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Generate Application Kit/i })).toBeInTheDocument();
       expect(screen.getByRole("link", { name: /Official link/i })).toBeInTheDocument();
     });
   });

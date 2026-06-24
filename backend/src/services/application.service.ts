@@ -75,7 +75,7 @@ export async function updateApplicationStatus(userId: string, id: string, status
   if (status === "Applied") updates.appliedDate = new Date();
   updates.statusHistory = [...(app.statusHistory || []), { status, note: "Status updated", changedAt: new Date() }];
   const updated = await updateApplication(userId, id, updates);
-  if (["HR Call", "Assignment", "Technical Round 1", "Technical Round 2", "Managerial Round", "HR Round", "Offer"].includes(status)) {
+  if (["Interview Scheduled", "Technical Round", "HR Round", "Offer"].includes(status)) {
     await createNotification(userId, {
       type: "application_stage",
       title: `${status}: ${updated.role}`,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
@@ -112,6 +113,7 @@ export default function ResumeBuilderPage() {
   const [newSkill, setNewSkill] = useState("");
   const [newLink, setNewLink] = useState("");
   const [saveMessage, setSaveMessage] = useState({ text: "", type: "" });
+  const [showFindJobsCta, setShowFindJobsCta] = useState(false);
 
   const resumes = useQuery({
     queryKey: ["resumes"],
@@ -142,6 +144,10 @@ export default function ResumeBuilderPage() {
       setParsedData(defaultParsedData);
     }
   }, [selectedResume]);
+
+  useEffect(() => {
+    setShowFindJobsCta(false);
+  }, [resumeId]);
 
   // Live scoring mutation (de-bouced)
   const scoreMutation = useMutation({
@@ -187,6 +193,7 @@ export default function ResumeBuilderPage() {
       if (url) {
         toast.success("PDF generated successfully! Opening in a new tab.");
         window.open(url, "_blank");
+        setShowFindJobsCta(true);
       } else {
         toast.error("Failed to generate PDF URL.");
       }
@@ -456,6 +463,20 @@ export default function ResumeBuilderPage() {
             }`}>
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               <span>{saveMessage.text}</span>
+            </div>
+          )}
+
+          {showFindJobsCta && (
+            <div className="p-4 rounded-md text-sm border bg-violet-50 border-violet-200 text-violet-800 dark:bg-violet-950/25 dark:border-violet-900 dark:text-violet-300 flex flex-col gap-3 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4.5 w-4.5 shrink-0 text-violet-600 animate-pulse" />
+                <span className="font-semibold">Resume PDF exported successfully! Ready to apply?</span>
+              </div>
+              <Link href={`/jobs?fromResume=${resumeId}`} className="w-full">
+                <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium">
+                  Find Matching Jobs
+                </Button>
+              </Link>
             </div>
           )}
 

@@ -1,5 +1,5 @@
-const terminalStatuses = new Set(["Selected", "Rejected", "Withdrawn"]);
-const interviewStatuses = new Set(["HR Call", "Assignment", "Technical Round 1", "Technical Round 2", "Managerial Round", "HR Round", "Offer"]);
+const terminalStatuses = new Set(["Rejected", "Withdrawn"]);
+const interviewStatuses = new Set(["Interview Scheduled", "Technical Round", "HR Round", "Offer"]);
 
 function addDays(date: Date, days: number) {
   const copy = new Date(date);
@@ -8,13 +8,10 @@ function addDays(date: Date, days: number) {
 }
 
 export function deriveRound(status: string) {
-  if (status === "Technical Round 1") return { currentRound: "Technical Round", roundNumber: 1 };
-  if (status === "Technical Round 2") return { currentRound: "Technical Round", roundNumber: 2 };
-  if (status === "Managerial Round") return { currentRound: "Managerial Round", roundNumber: 3 };
-  if (status === "HR Round") return { currentRound: "HR Round", roundNumber: 4 };
-  if (status === "HR Call") return { currentRound: "HR Call", roundNumber: 1 };
-  if (status === "Assignment") return { currentRound: "Assignment", roundNumber: 2 };
-  if (status === "Offer") return { currentRound: "Offer", roundNumber: 5 };
+  if (status === "Interview Scheduled") return { currentRound: "Interview Scheduled", roundNumber: 1 };
+  if (status === "Technical Round") return { currentRound: "Technical Round", roundNumber: 2 };
+  if (status === "HR Round") return { currentRound: "HR Round", roundNumber: 3 };
+  if (status === "Offer") return { currentRound: "Offer", roundNumber: 4 };
   return { currentRound: "", roundNumber: 0 };
 }
 
@@ -22,10 +19,10 @@ export function defaultFollowUpDate(status: string, now = new Date()) {
   if (terminalStatuses.has(status)) return undefined;
   if (status === "Saved") return addDays(now, 7);
   if (status === "Applied") return addDays(now, 5);
-  if (status === "Resume Viewed") return addDays(now, 3);
-  if (status === "HR Call") return addDays(now, 2);
-  if (status === "Assignment") return addDays(now, 1);
-  if (interviewStatuses.has(status)) return addDays(now, 2);
+  if (status === "Interview Scheduled") return addDays(now, 2);
+  if (status === "Technical Round") return addDays(now, 2);
+  if (status === "HR Round") return addDays(now, 2);
+  if (status === "Offer") return addDays(now, 1);
   return addDays(now, 5);
 }
 

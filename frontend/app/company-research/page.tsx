@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, DollarSign, Globe, Info, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Building2, DollarSign, Globe, Info, Plus, Trash2, MessageSquare } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeading } from "@/components/shared/page-heading";
 import { EmptyState, ErrorState, LoadingState, RetryButton } from "@/components/shared/status-state";
@@ -163,6 +164,13 @@ export default function CompanyResearchPage() {
               {company.culture ? <p className="text-xs text-muted-foreground">Culture: {company.culture}</p> : null}
               {company.interviewProcess ? <p className="rounded bg-muted/60 px-2 py-1 text-xs text-muted-foreground">Process: {company.interviewProcess}</p> : null}
               {company.notes ? <p className="rounded bg-muted/60 px-2 py-1 text-xs text-muted-foreground">{company.notes}</p> : null}
+              <div className="mt-3 border-t pt-2">
+                <Link href={`/interviews/prep?company=${encodeURIComponent(company.companyName)}`}>
+                  <Button variant="outline" className="w-full h-8 text-xs gap-1.5 font-medium">
+                    <MessageSquare className="h-3.5 w-3.5" /> Open Interview Prep
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         ))}

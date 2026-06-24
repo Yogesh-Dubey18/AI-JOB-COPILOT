@@ -8,36 +8,76 @@ import { requireAuth } from "../middlewares/auth.middleware.js";
 import { env, isProduction, isTest } from "../config/env.js";
 
 const router = Router();
-const cookieOptions = { httpOnly: true, secure: isProduction, sameSite: (isProduction ? "none" : "lax") as "none" | "lax", path: "/" };
 const authLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 20, standardHeaders: true, legacyHeaders: false, skip: () => isTest });
 
-function setAuthCookies(res: any, accessToken: string, refreshToken: string) {
-  res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
-  res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+function getCookieOptions(req: any) {
+  const isProd = env.NODE_ENV === "production";
+  const origin = req.headers.origin || req.headers.referer;
+  const host = req.headers.host;
+  
+  let sameSite: "none" | "lax" = isProd ? "none" : "lax";
+  let domain: string | undefined = undefined;
+
+  if (isProd && origin && host) {
+    try {
+      const originHostname = new URL(origin).hostname;
+      const hostHostname = host.split(":")[0];
+      
+      const originParts = originHostname.split(".");
+      const hostParts = hostHostname.split(".");
+      
+      if (originParts.length >= 2 && hostParts.length >= 2) {
+        const originPrimary = originParts.slice(-2).join(".");
+        const hostPrimary = hostParts.slice(-2).join(".");
+        
+        if (originPrimary === hostPrimary) {
+          sameSite = "lax";
+          domain = `.${originPrimary}`;
+        }
+      }
+    } catch (e) {
+      // ignore URL parsing failures
+    }
+  }
+
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite,
+    domain,
+    path: "/"
+  };
+}
+
+function setAuthCookies(req: any, res: any, accessToken: string, refreshToken: string) {
+  const options = getCookieOptions(req);
+  res.cookie("accessToken", accessToken, { ...options, maxAge: 15 * 60 * 1000 });
+  res.cookie("refreshToken", refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 }
 
 router.post("/register", authLimiter, validateBody(registerSchema), asyncHandler(async (req, res) => {
   const result = await registerUser(req.body);
-  setAuthCookies(res, result.accessToken, result.refreshToken);
+  setAuthCookies(req, res, result.accessToken, result.refreshToken);
   res.status(201).json({ success: true, data: result });
 }));
 
 router.post("/login", authLimiter, validateBody(loginSchema), asyncHandler(async (req, res) => {
   const result = await loginUser(req.body);
-  setAuthCookies(res, result.accessToken, result.refreshToken);
+  setAuthCookies(req, res, result.accessToken, result.refreshToken);
   res.json({ success: true, data: result });
 }));
 
 router.post("/logout", requireAuth, asyncHandler(async (req, res) => {
   await logoutUser(req.user?.id);
-  res.clearCookie("accessToken", cookieOptions);
-  res.clearCookie("refreshToken", cookieOptions);
+  const options = getCookieOptions(req);
+  res.clearCookie("accessToken", options);
+  res.clearCookie("refreshToken", options);
   res.json({ success: true, data: { ok: true } });
 }));
 
 router.post("/refresh", asyncHandler(async (req, res) => {
   const result = await refreshSession(req.cookies?.refreshToken || req.body.refreshToken);
-  setAuthCookies(res, result.accessToken, result.refreshToken);
+  setAuthCookies(req, res, result.accessToken, result.refreshToken);
   res.json({ success: true, data: result });
 }));
 
@@ -153,7 +193,7 @@ router.get("/google/callback", asyncHandler(async (req, res) => {
       avatarUrl: googleProfile.picture
     });
 
-    setAuthCookies(res, result.accessToken, result.refreshToken);
+    setAuthCookies(req, res, result.accessToken, result.refreshToken);
     res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?googleToken=${result.accessToken}`);
   } catch (error) {
     return res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?error=Google authentication failed`);

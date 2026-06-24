@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   AlertCircle,
   BookOpen,
@@ -9,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
   ClipboardCopy,
+  DollarSign,
   Info,
   Mic2,
   Save,
@@ -161,10 +163,26 @@ export default function InterviewPrepPage() {
   // ────────────────────────────────────────────────────────
   return (
     <AppShell>
-      <PageHeading
-        title="Advanced interview preparation"
-        description="Select a prep mode, practice questions, build STAR answers, and track your readiness. All answers are reviewed by you before use."
-      />
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold tracking-normal md:text-3xl">Advanced interview preparation</h1>
+          <p className="mt-2 max-w-3xl text-sm text-muted-foreground md:text-base">
+            Select a prep mode, practice questions, build STAR answers, and track your readiness. All answers are reviewed by you before use.
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2 sm:mt-1">
+          <Link href="/answer-vault">
+            <Button className="gap-2 font-semibold">
+              <BookOpen className="h-4 w-4" /> Go to Answer Vault
+            </Button>
+          </Link>
+          <Link href="/answer-vault?tab=salary">
+            <Button variant="outline" className="gap-2 font-semibold border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
+              <DollarSign className="h-4 w-4" /> View Salary Negotiation Answers
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       {/* Manual Review Warning */}
       <div

@@ -259,8 +259,8 @@ describe("AI Job Copilot API", () => {
     expect(res.body.data.status).toBe("Applied");
     expect(res.body.data.nextFollowUpDate).toBeTruthy();
     expect(res.body.data.priorityScore).toBeGreaterThan(0);
-    const updated = await agent.patch("/api/applications/" + res.body.data._id + "/status").send({ status: "HR Call" }).expect(200);
-    expect(updated.body.data.currentRound).toBe("HR Call");
+    const updated = await agent.patch("/api/applications/" + res.body.data._id + "/status").send({ status: "Technical Round" }).expect(200);
+    expect(updated.body.data.currentRound).toBe("Technical Round");
     expect(updated.body.data.timeline.length).toBeGreaterThan(1);
     const insights = await agent.get("/api/applications/insights").expect(200);
     expect(insights.body.data.active).toBe(1);
@@ -271,7 +271,7 @@ describe("AI Job Copilot API", () => {
     const me = await agent.get("/api/auth/me").expect(200);
     await agent.put("/api/profile").send({ headline: "Analytics developer", profileCompletenessScore: 85, skills: ["React", "Node.js"] }).expect(200);
     await agent.post("/api/applications").send({ company: "Analytics Co", role: "React Developer", status: "Applied", applicationSource: "Company careers" }).expect(201);
-    await agent.post("/api/applications").send({ company: "Interview Co", role: "Node Developer", status: "HR Call", applicationSource: "Referral", nextFollowUpDate: new Date(Date.now() - 86400000).toISOString() }).expect(201);
+    await agent.post("/api/applications").send({ company: "Interview Co", role: "Node Developer", status: "Technical Round", applicationSource: "Referral", nextFollowUpDate: new Date(Date.now() - 86400000).toISOString() }).expect(201);
     await createRecord("resumeAnalyses", { userId: me.body.data.id, atsScore: 78, missingKeywords: ["Docker", "Testing"] });
     await createRecord("jobMatches", { userId: me.body.data.id, missingSkills: ["Docker", "AWS"], matchScore: 72 });
     const overview = await agent.get("/api/analytics/overview").expect(200);

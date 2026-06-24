@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { DragEvent } from "react";
+import Link from "next/link";
 import { applicationStatuses } from "@/lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,9 @@ export function KanbanBoard({ applications }: { applications: any[] }) {
               {!items.length ? <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">No applications in this stage.</p> : null}
               {items.map((app) => (
                 <div key={app._id} className="cursor-grab rounded-md border bg-background p-3 active:cursor-grabbing" draggable onDragStart={(event) => handleDragStart(event, app._id)}>
-                  <p className="text-sm font-semibold">{app.role}</p>
+                  <Link href={`/applications/${app._id}`} className="hover:underline">
+                    <p className="text-sm font-semibold">{app.role}</p>
+                  </Link>
                   <p className="text-xs text-muted-foreground">{app.company}</p>
                   <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
                     {app.matchScore ? <Badge className="bg-background">{app.matchScore}% match</Badge> : null}
@@ -58,6 +61,14 @@ export function KanbanBoard({ applications }: { applications: any[] }) {
                     {app.currentRound ? <Badge className="bg-background">{app.currentRound}</Badge> : null}
                   </div>
                   {app.notes ? <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{app.notes}</p> : null}
+                  <div className="mt-3 flex gap-2 border-t pt-2">
+                    <Link href={`/company-research?company=${encodeURIComponent(app.company)}`} className="inline-flex items-center justify-center rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all">
+                      Research
+                    </Link>
+                    <Link href={`/interviews/prep?applicationId=${app._id}`} className="inline-flex items-center justify-center rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all">
+                      Prepare
+                    </Link>
+                  </div>
                 </div>
               ))}
             </CardContent>

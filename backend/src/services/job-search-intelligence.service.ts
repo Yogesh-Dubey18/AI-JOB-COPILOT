@@ -1,7 +1,7 @@
 import { findOneRecord, findRecords } from "../utils/repository.js";
 
-const activeStatuses = ["Saved", "Applied", "Resume Viewed", "HR Call", "Assignment", "Technical Round 1", "Technical Round 2", "Managerial Round", "HR Round", "Offer"];
-const interviewStatuses = ["HR Call", "Assignment", "Technical Round 1", "Technical Round 2", "Managerial Round", "HR Round", "Offer", "Selected"];
+const activeStatuses = ["Saved", "Applied", "Interview Scheduled", "Technical Round", "HR Round", "Offer"];
+const interviewStatuses = ["Interview Scheduled", "Technical Round", "HR Round", "Offer"];
 
 function toDate(value: any) {
   const date = value ? new Date(value) : null;

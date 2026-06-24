@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Copy, Plus, Tag, Trash2, Check, Sparkles, DollarSign, Briefcase } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
@@ -57,6 +57,19 @@ export default function AnswerVaultPage() {
   const [filter, setFilter] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab");
+      if (t === "templates" || t === "salary") {
+        setActiveTab("templates");
+      }
+      if (t === "salary") {
+        setFilter("Salary");
+      }
+    }
+  }, []);
 
   // Placeholders state
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({
