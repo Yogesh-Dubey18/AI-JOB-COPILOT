@@ -1,6 +1,8 @@
 import { getStoredAccessToken, persistAuthSession, clearAuthSession } from "./auth-session";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_URL = typeof window === "undefined"
+  ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")
+  : "/api";
 
 export type ApiEnvelope<T> = { success: boolean; data: T; message?: string };
 

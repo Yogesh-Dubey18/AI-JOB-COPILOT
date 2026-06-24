@@ -130,8 +130,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             <button
               type="button"
               onClick={() => {
-                const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-                window.location.href = API_URL + "/auth/google";
+                window.location.href = "/api/auth/google";
               }}
               className="flex w-full items-center justify-center gap-3 rounded-md border bg-background hover:bg-muted px-4 py-2.5 text-sm font-medium transition"
               aria-label="Continue with Google"

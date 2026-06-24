@@ -58,7 +58,9 @@ function clearProactiveRefreshTimer() {
   }
 }
 
-const API_URL = (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "http://localhost:5000/api";
+const API_URL = typeof window === "undefined"
+  ? ((typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "http://localhost:5000/api")
+  : "/api";
 
 function scheduleProactiveRefresh(accessToken: string) {
   clearProactiveRefreshTimer();
