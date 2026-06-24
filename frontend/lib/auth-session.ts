@@ -35,13 +35,10 @@ function getJwtMaxAgeSeconds(token: string) {
   }
 }
 
-function setSessionCookie(accessToken?: string) {
+function setSessionCookie() {
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   const maxAge = 7 * 24 * 60 * 60; // 7 days (matching refresh token)
   document.cookie = `${SESSION_COOKIE}=1; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
-  if (accessToken) {
-    document.cookie = `accessToken=${accessToken}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
-  }
 }
 
 export function getStoredAccessToken() {
@@ -118,7 +115,7 @@ export function persistAuthSession(value: unknown) {
   if (payload.user) {
     window.sessionStorage.setItem(USER_KEY, JSON.stringify(payload.user));
   }
-  setSessionCookie(accessToken);
+  setSessionCookie();
   scheduleProactiveRefresh(accessToken);
   return true;
 }
@@ -128,7 +125,6 @@ export function clearAuthSession() {
   window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
   window.sessionStorage.removeItem(USER_KEY);
   document.cookie = `${SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
-  document.cookie = `accessToken=; Path=/; Max-Age=0; SameSite=Lax`;
   clearProactiveRefreshTimer();
 }
 
