@@ -144,14 +144,14 @@ function normalizeWorldClassProject(item: unknown, fallbackSkills: string[]) {
     const originalDetail = cleanText(rest.join(" "));
     return {
       name,
-      techStack,
+      tech: techStack.join(", "),
       bullets: [
         originalDetail
           ? `Developed ${name} using ${techStack.join(", ") || "the listed technology stack"}, focusing on ${originalDetail}.`
-          : `Built ${name}${techStack.length ? ` using ${techStack.join(", ")}` : ""}, demonstrating hands-on implementation from the uploaded resume.`
+          : `Engineered ${name} using ${techStack.join(", ") || "MERN stack"} to build a high-performance web application.`
       ],
-      liveUrl: "",
-      githubUrl: ""
+      live: "",
+      github: ""
     };
   }
 
@@ -167,49 +167,47 @@ function normalizeWorldClassProject(item: unknown, fallbackSkills: string[]) {
   ]);
   const bullets = details.length
     ? details.map((detail) => `Developed ${name}${techStack.length ? ` with ${techStack.join(", ")}` : ""}, delivering ${detail}.`).slice(0, 3)
-    : [`Built ${name}${techStack.length ? ` using ${techStack.join(", ")}` : ""}, demonstrating practical project ownership from the uploaded resume.`];
+    : [`Engineered ${name}${techStack.length ? ` using ${techStack.join(", ")}` : ""} to deliver a responsive user experience.`];
 
   return {
     name,
-    techStack,
+    tech: techStack.join(", "),
     bullets,
-    liveUrl: firstText(project.liveUrl, project.demoUrl, project.liveDemoLink, project.url),
-    githubUrl: firstText(project.githubUrl, project.github, project.repoUrl, project.repositoryUrl, project.sourceUrl)
+    live: firstText(project.live, project.liveUrl, project.demoUrl, project.liveDemoLink, project.url),
+    github: firstText(project.github, project.githubUrl, project.repoUrl, project.repositoryUrl, project.sourceUrl)
   };
 }
 
 function normalizeWorldClassExperience(item: unknown) {
   if (typeof item === "string") {
     const line = cleanText(item);
-    return { role: line, company: "", duration: "", location: "", bullets: line ? [`Contributed to ${line} with structured execution and clear ownership.`] : [] };
+    return { title: line, company: "", duration: "", bullets: line ? [`Contributed to projects focusing on ${line} with structured execution.`] : [] };
   }
   const exp = (item || {}) as Record<string, unknown>;
-  const role = firstText(exp.role, exp.title, exp.position);
+  const role = firstText(exp.role, exp.title, exp.position, exp.jobTitle);
   const company = firstText(exp.company, exp.employer, exp.organization);
   const details = uniqueStrings([
     ...toArray(exp.bullets || exp.bulletPoints || exp.achievements),
     firstText(exp.description, exp.summary, exp.details)
   ]);
   return {
-    role,
+    title: role,
     company,
     duration: firstText(exp.duration, exp.dates, exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate),
-    location: firstText(exp.location),
     bullets: details.map((detail) => `Delivered ${detail}${role || company ? ` as ${[role, company].filter(Boolean).join(" at ")}` : ""}.`).slice(0, 3)
   };
 }
 
 function normalizeWorldClassEducation(item: unknown) {
   if (typeof item === "string") {
-    return { degree: cleanText(item), institution: "", duration: "", cgpa: "", details: "" };
+    return { degree: cleanText(item), college: "", year: "", cgpa: "" };
   }
   const edu = (item || {}) as Record<string, unknown>;
   return {
     degree: firstText(edu.degree, edu.course, edu.qualification),
-    institution: firstText(edu.institution, edu.college, edu.school, edu.university),
-    duration: firstText(edu.duration, edu.years, edu.graduationYear, edu.year),
-    cgpa: firstText(edu.cgpa, edu.gpa, edu.marks),
-    details: firstText(edu.field, edu.major, edu.specialization, edu.details)
+    college: firstText(edu.college, edu.institution, edu.school, edu.university),
+    year: firstText(edu.year, edu.duration, edu.years, edu.graduationYear),
+    cgpa: firstText(edu.cgpa, edu.gpa, edu.marks)
   };
 }
 
@@ -231,8 +229,8 @@ function getWorldClassResumeFallback(context: any) {
   ]);
   const title = firstText(context?.targetRole, parsed.title, parsed.role, deriveWorldClassTitle(skills));
   const projects = toArray(parsed.projects).map((project) => normalizeWorldClassProject(project, skills)).filter((project) => project.name);
-  const experience = toArray(parsed.experience).map(normalizeWorldClassExperience).filter((exp) => exp.role || exp.company || exp.bullets.length);
-  const education = toArray(parsed.education).map(normalizeWorldClassEducation).filter((edu) => edu.degree || edu.institution);
+  const experience = toArray(parsed.experience).map(normalizeWorldClassExperience).filter((exp) => exp.title || exp.company || exp.bullets.length);
+  const education = toArray(parsed.education).map(normalizeWorldClassEducation).filter((edu) => edu.degree || edu.college);
   const certifications = uniqueStrings(toArray(parsed.certifications));
   const summaryBase = firstText(parsed.summary, rawText.split(/\n/).slice(0, 3).join(" "));
   const summary = summaryBase

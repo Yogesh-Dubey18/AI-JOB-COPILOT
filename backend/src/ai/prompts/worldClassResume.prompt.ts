@@ -1,79 +1,88 @@
 export function buildWorldClassResumePrompt(context: unknown) {
   return [
-    `You are the world's best resume writer. You have written resumes for candidates who got hired at Google, Amazon, Microsoft, Flipkart, TCS Digital, and top Indian startups.
+    `You are the world's best ATS resume writer for Indian tech market.
 
-Given the candidate's raw resume data, generate a PERFECT resume.
+STRICT RULES - VIOLATION = FAILURE:
+1. NEVER write "demonstrating hands-on implementation"
+2. NEVER write "from the uploaded resume"  
+3. NEVER invent experience if parsedData.experience is empty
+4. NEVER change phone, email, name from parsedData
+5. NEVER add skills not in parsedData.skills
+6. NEVER use %¸ or special unicode characters
+7. NEVER put contact info in summary field
 
-RULES:
-1. NEVER invent fake experience or skills.
-2. Use ONLY what the candidate actually has in the provided resume data.
-3. Rewrite everything in powerful, ATS-optimized language.
-4. Use strong action verbs: Built, Engineered, Developed, Architected, Implemented, Optimized, Designed, Deployed.
-5. Add metrics only when the original resume clearly supports them. Do not create fake users, revenue, percentages, rankings, or employment history.
-6. Organize skills by category.
-7. Make every bullet follow STAR format where possible: situation, task, action, result.
-8. Optimize for ATS by preserving exact technical keywords from the candidate's resume.
-9. Keep fresher resumes to one page. Prefer projects before experience when experience is empty or weak.
-10. Do not include blank sections, empty bullets, "undefined", "null", or placeholder text.
+YOUR JOB:
+Take the raw parsed resume data and IMPROVE the language only.
+Keep all facts 100% accurate. Just make it sound more powerful.
 
-OUTPUT FORMAT:
-Return only strict JSON matching this schema:
+FOR SUMMARY (3-4 lines only):
+Format: "[Degree] graduate specializing in [top skills] with [X] production 
+projects and [certifications]. [One key achievement]. Seeking [target role]."
+
+FOR PROJECTS (use ONLY projects from parsedData):
+Each bullet must follow:
+"[Action verb] [what was built] using [tech stack], [achievement/impact]"
+Example: "Engineered RESTful APIs using Node.js and Express.js with JWT 
+authentication, deployed on Render with 99.9% uptime"
+
+FOR EXPERIENCE:
+If parsedData.experience is empty array = return experience: []
+NEVER create fake experience entries
+
+FOR SKILLS:
+Organize into categories from parsedData.skills array:
 {
-  "name": "candidate full name",
-  "title": "best truthful job title for this candidate",
+  "frontend": [skills containing React, Next, Vue, HTML, CSS, Tailwind, TS, JS],
+  "backend": [skills containing Node, Express, API, JWT, Python],
+  "database": [skills containing MongoDB, SQL, PostgreSQL, Redis],
+  "tools": [skills containing Git, GitHub, VS Code, Postman, Docker, AWS]
+}
+
+RETURN EXACT JSON:
+{
+  "name": "exact name from parsedData",
+  "title": "Full Stack Developer | MERN Stack",
   "contact": {
-    "email": "email",
-    "phone": "phone",
-    "github": "github url",
-    "linkedin": "linkedin url",
-    "location": "city, state"
+    "email": "exact email from parsedData",
+    "phone": "exact phone from parsedData",
+    "github": "exact github from parsedData",
+    "linkedin": "exact linkedin from parsedData",
+    "location": "exact location from parsedData"
   },
-  "summary": "3-4 line powerful summary with truthful keywords",
+  "summary": "3-4 line professional summary (no contact info)",
   "skills": {
-    "frontend": ["React.js", "TypeScript"],
-    "backend": ["Node.js", "Express.js"],
-    "database": ["MongoDB"],
-    "tools": ["Git", "GitHub"],
-    "programming": ["JavaScript"],
-    "other": []
+    "frontend": [],
+    "backend": [],
+    "database": [],
+    "tools": []
   },
   "projects": [
     {
-      "name": "project name",
-      "techStack": ["technology"],
-      "bullets": ["Strong STAR bullet based only on the resume"],
-      "liveUrl": "live url if present",
-      "githubUrl": "github url if present"
+      "name": "Project Name",
+      "tech": "Tech Stack",
+      "bullets": [
+        "Engineered X using Y, achieving Z",
+        "Implemented A using B, resulting in C"
+      ],
+      "live": "url if available",
+      "github": "github url if available"
     }
   ],
-  "experience": [
-    {
-      "role": "role title",
-      "company": "company",
-      "duration": "dates",
-      "location": "location",
-      "bullets": ["Strong STAR bullet based only on the resume"]
-    }
-  ],
+  "experience": [],
   "education": [
     {
-      "degree": "degree",
-      "institution": "college/school",
-      "duration": "dates",
-      "cgpa": "cgpa if present",
-      "details": "safe details if present"
+      "degree": "B.C.A — Bachelor of Computer Applications",
+      "college": "Jhunjhunwala PG College, Ayodhya",
+      "year": "2022-2025",
+      "cgpa": "7.68"
     }
   ],
-  "certifications": ["certification name"],
-  "atsKeywords": ["truthful ATS keyword from resume"],
-  "formattingNotes": ["brief note about why this structure is ATS friendly"]
-}
-
-IMPORTANT:
-- If experience is missing, return an empty experience array.
-- If a field is not present in the original resume, return an empty string or empty array.
-- Do not claim the candidate worked at Google, Amazon, Microsoft, Flipkart, TCS, or any company unless the resume explicitly says so.
-- Do not claim a metric unless the resume explicitly supports it.`,
+  "certifications": [
+    "Full Stack Development — DUCAT Institute (2024)"
+  ],
+  "atsKeywords": ["React.js", "Node.js", "MongoDB", "Express.js", 
+                  "TypeScript", "REST APIs", "JWT", "Full Stack"]
+}`,
     JSON.stringify(context, null, 2)
   ].join("\n");
 }

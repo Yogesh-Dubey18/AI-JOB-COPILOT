@@ -39,14 +39,12 @@ const worldClassSkillSchema = z.object({
   frontend: z.array(z.string()).default([]),
   backend: z.array(z.string()).default([]),
   database: z.array(z.string()).default([]),
-  tools: z.array(z.string()).default([]),
-  programming: z.array(z.string()).default([]),
-  other: z.array(z.string()).default([])
+  tools: z.array(z.string()).default([])
 });
 
 export const worldClassResumeOutputSchema = z.object({
   name: z.string().default(""),
-  title: z.string().default("Software Developer"),
+  title: z.string().default("Full Stack Developer | MERN Stack"),
   contact: z.object({
     email: z.string().default(""),
     phone: z.string().default(""),
@@ -59,34 +57,29 @@ export const worldClassResumeOutputSchema = z.object({
     frontend: [],
     backend: [],
     database: [],
-    tools: [],
-    programming: [],
-    other: []
+    tools: []
   }),
   projects: z.array(z.object({
     name: z.string().default(""),
-    techStack: z.array(z.string()).default([]),
+    tech: z.string().default(""),
     bullets: z.array(z.string()).default([]),
-    liveUrl: z.string().default(""),
-    githubUrl: z.string().default("")
+    live: z.string().default(""),
+    github: z.string().default("")
   })).default([]),
   experience: z.array(z.object({
-    role: z.string().default(""),
+    title: z.string().default(""),
     company: z.string().default(""),
     duration: z.string().default(""),
-    location: z.string().default(""),
     bullets: z.array(z.string()).default([])
   })).default([]),
   education: z.array(z.object({
     degree: z.string().default(""),
-    institution: z.string().default(""),
-    duration: z.string().default(""),
-    cgpa: z.string().default(""),
-    details: z.string().default("")
+    college: z.string().default(""),
+    year: z.string().default(""),
+    cgpa: z.string().default("")
   })).default([]),
   certifications: z.array(z.string()).default([]),
-  atsKeywords: z.array(z.string()).default([]),
-  formattingNotes: z.array(z.string()).default([])
+  atsKeywords: z.array(z.string()).default([])
 });
 
 export const applicationKitOutputSchema = z.object({

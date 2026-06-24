@@ -88,6 +88,69 @@ export async function analyzeResume(userId: string, resumeId: string, options: A
   });
 }
 
+function calculateAtsScore(resume: any): number {
+  let score = 0;
+
+  // 1. Has strong summary: +15
+  if (resume.summary && resume.summary.trim().length >= 80) {
+    score += 15;
+  }
+
+  // 2. Skills categorized: +15
+  const skills = resume.skills || {};
+  const hasFrontend = Array.isArray(skills.frontend) && skills.frontend.length > 0;
+  const hasBackend = Array.isArray(skills.backend) && skills.backend.length > 0;
+  const hasDatabase = Array.isArray(skills.database) && skills.database.length > 0;
+  const hasTools = Array.isArray(skills.tools) && skills.tools.length > 0;
+  if (hasFrontend || hasBackend || hasDatabase || hasTools) {
+    score += 15;
+  }
+
+  // 3. Projects have STAR bullets: +20
+  const projects = resume.projects || [];
+  let hasStarBullets = false;
+  if (projects.length > 0) {
+    const actionVerbs = ["built", "created", "developed", "implemented", "designed", "integrated", "optimized", "engineered", "deployed", "scaled"];
+    const allBullets = projects.flatMap((p: any) => p.bullets || []);
+    const hasVerbsOrMetrics = allBullets.some((b: string) => {
+      const lower = b.toLowerCase();
+      const hasVerb = actionVerbs.some(v => lower.includes(v));
+      const hasMetric = /\d+/.test(lower);
+      return hasVerb || hasMetric;
+    });
+    if (hasVerbsOrMetrics) {
+      hasStarBullets = true;
+    }
+  }
+  if (hasStarBullets) {
+    score += 20;
+  }
+
+  // 4. No generic phrases: +15
+  const textStr = JSON.stringify(resume).toLowerCase();
+  const hasGeneric = textStr.includes("demonstrating hands-on implementation") || 
+                     textStr.includes("from the uploaded resume") ||
+                     textStr.includes("%¸");
+  if (!hasGeneric) {
+    score += 15;
+  }
+
+  // 5. Keywords present: +20
+  if (Array.isArray(resume.atsKeywords) && resume.atsKeywords.length >= 5) {
+    score += 20;
+  }
+
+  // 6. Clean formatting: +15
+  const hasName = resume.name && resume.name.length > 2;
+  const hasContact = resume.contact && resume.contact.email && resume.contact.phone;
+  const hasEducation = Array.isArray(resume.education) && resume.education.length > 0;
+  if (hasName && hasContact && hasEducation) {
+    score += 15;
+  }
+
+  return score;
+}
+
 export async function generateWorldClassResume(userId: string, resumeId: string, targetRole = "Full Stack Developer") {
   if (!resumeId) throw new ApiError(400, "resumeId is required");
   const resume = await findRecordById("resumes", resumeId);
@@ -104,6 +167,9 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
   });
   const content = buildWorldClassVersionContent(generatedResume);
   const changeSummary = computeChangeSummary(resume, content);
+  
+  const score = calculateAtsScore(generatedResume);
+
   const version = await createRecord("resumeVersions", {
     userId,
     baseResumeId: resumeId,
@@ -112,7 +178,7 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     sourceType: "generated",
     template: "compact",
     content,
-    atsScore: undefined,
+    atsScore: score,
     pdfUrl: "",
     changeSummary
   });
@@ -121,6 +187,7 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     generatedResume,
     resumeVersionId: version._id,
     baseResumeId: resumeId,
+    atsScore: score,
     provider: aiService.status(),
     safety: {
       noFakeExperience: true,

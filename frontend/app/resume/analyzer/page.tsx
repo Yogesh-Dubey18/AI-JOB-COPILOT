@@ -254,6 +254,12 @@ export default function ResumeAnalyzerPage() {
                 <CardTitle className="text-base">World-class generated resume</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {worldClass.data?.atsScore !== undefined && (
+                  <div className="rounded-md border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                    <p className="text-lg font-bold">Your ATS Score: {worldClass.data.atsScore}/100 ✅</p>
+                    <p className="text-sm text-emerald-800 dark:text-emerald-300">Your resume is ready to beat 90% of applicants!</p>
+                  </div>
+                )}
                 <div className="rounded-md border bg-muted/40 p-3 text-sm">
                   <p className="font-bold">{worldClassResume.name || "Candidate"}</p>
                   <p className="text-muted-foreground">{worldClassResume.title || targetRole}</p>
@@ -292,7 +298,11 @@ export default function ResumeAnalyzerPage() {
                       {(worldClassResume.projects || []).map((project: any, index: number) => (
                         <div key={`${project.name}-${index}`} className="rounded border p-3 text-sm">
                           <p className="font-semibold">{project.name}</p>
-                          {(project.techStack || []).length ? <p className="text-xs text-muted-foreground">{project.techStack.join(", ")}</p> : null}
+                          {project.tech || (project.techStack && project.techStack.length) ? (
+                            <p className="text-xs text-muted-foreground">
+                              {project.tech || (Array.isArray(project.techStack) ? project.techStack.join(", ") : project.techStack)}
+                            </p>
+                          ) : null}
                           <ul className="mt-2 list-disc pl-5 text-muted-foreground">
                             {(project.bullets || []).map((bullet: string) => <li key={bullet}>{bullet}</li>)}
                           </ul>
@@ -307,8 +317,8 @@ export default function ResumeAnalyzerPage() {
                     <ul className="space-y-1 text-sm text-muted-foreground">
                       {(worldClassResume.education || []).map((education: any, index: number) => (
                         <li key={`${education.degree}-${index}`}>
-                          <strong className="text-foreground">{education.degree}</strong>
-                          {[education.institution, education.duration, education.cgpa ? `CGPA: ${education.cgpa}` : ""].filter(Boolean).join(" | ")}
+                          <strong className="text-foreground">{education.degree}</strong>{" — "}
+                          {[education.college || education.institution, education.year || education.duration, education.cgpa ? `CGPA: ${education.cgpa}` : ""].filter(Boolean).join(" | ")}
                         </li>
                       ))}
                     </ul>

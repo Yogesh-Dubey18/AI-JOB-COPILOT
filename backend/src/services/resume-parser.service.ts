@@ -179,23 +179,281 @@ export async function extractResumeText(filePath: string, fileType: string) {
 }
 
 export function parseResumeText(text: string) {
+  const lines = text.split(/\r?\n/).map(l => l.trim());
+  const nonDbLines = lines.filter(Boolean);
+  
+  // 1. Name: Extract ONLY the first line, stop at first comma, newline, or email or separator
+  let name = "";
+  if (nonDbLines.length > 0) {
+    const firstLine = nonDbLines[0];
+    let parsedName = firstLine;
+    
+    const commaIndex = parsedName.indexOf(",");
+    if (commaIndex !== -1) {
+      parsedName = parsedName.substring(0, commaIndex);
+    }
+    
+    const emailIndex = parsedName.search(/[\w.-]+@[\w.-]+\.\w{2,}/);
+    if (emailIndex !== -1) {
+      parsedName = parsedName.substring(0, emailIndex);
+    }
+
+    const separatorIndex = parsedName.search(/[|•]/);
+    if (separatorIndex !== -1) {
+      parsedName = parsedName.substring(0, separatorIndex);
+    }
+    
+    name = parsedName.trim();
+  }
+
+  // 2. Contact Info
+  const emailPattern = /[\w.-]+@[\w.-]+\.\w{2,}/i;
+  const phonePattern = /(\+91[\s-]?)?[6-9]\d{9}/g;
+  const githubPattern = /github\.com\/[\w-]+/i;
+  const linkedinPattern = /linkedin\.com\/in\/[\w-]+/i;
+  
   const email = text.match(emailPattern)?.[0] || "";
   const phone = text.match(phonePattern)?.[0] || "";
-  const links = Array.from(text.matchAll(urlPattern)).map((m) => m[0]);
-  const skills = knownSkills.filter((skill) => new RegExp("\\b" + skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(text));
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const detectedSections = ["summary", "skills", "experience", "projects", "education", "certifications"].filter((section) => new RegExp("\\b" + section + "\\b", "i").test(text));
+  const githubMatch = text.match(githubPattern)?.[0] || "";
+  const linkedinMatch = text.match(linkedinPattern)?.[0] || "";
+  
+  let location = "";
+  const locationMatch = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*(UP|Uttar\s+Pradesh|Delhi|New\s+Delhi|Haryana|Karnataka|Maharashtra|India)\b/i);
+  if (locationMatch) {
+    location = locationMatch[0].trim();
+  } else {
+    for (const line of nonDbLines) {
+      if (line.includes(",") && !line.includes("@") && !line.includes("github.com") && !line.includes("linkedin.com") && line.length < 40) {
+        const parts = line.split(",");
+        if (parts.length === 2 && parts[0].trim().match(/^[a-zA-Z\s]+$/) && parts[1].trim().match(/^[a-zA-Z\s]+$/)) {
+          location = line.trim();
+          break;
+        }
+      }
+    }
+  }
+
+  // Group lines into sections
+  type SectionName = "summary" | "skills" | "projects" | "experience" | "education" | "certifications" | "none";
+  let currentSection: SectionName = "none";
+  const sections: Record<SectionName, string[]> = {
+    summary: [],
+    skills: [],
+    projects: [],
+    experience: [],
+    education: [],
+    certifications: [],
+    none: []
+  };
+
+  const headerPatterns: { name: SectionName; regex: RegExp }[] = [
+    { name: "summary", regex: /^(?:professional\s+)?summary\b/i },
+    { name: "summary", regex: /^(?:career\s+)?objective\b/i },
+    { name: "summary", regex: /^about(?:\s+me)?\b/i },
+    { name: "skills", regex: /^(?:technical\s+)?skills\b/i },
+    { name: "projects", regex: /^(?:academic\s+)?projects\b/i },
+    { name: "experience", regex: /^(?:work\s+|professional\s+)?experience\b/i },
+    { name: "experience", regex: /^employment\b/i },
+    { name: "experience", regex: /^work\s+history\b/i },
+    { name: "education", regex: /^education\b/i },
+    { name: "education", regex: /^academic\s+background\b/i },
+    { name: "certifications", regex: /^certifications?\b/i },
+    { name: "certifications", regex: /^certificates?\b/i },
+    { name: "certifications", regex: /^achievements?\b/i }
+  ];
+
+  for (const line of lines) {
+    const cleanLine = line.trim();
+    if (!cleanLine) continue;
+
+    let matchedSection: SectionName | null = null;
+    let remainingText = cleanLine;
+
+    for (const pattern of headerPatterns) {
+      const match = cleanLine.match(pattern.regex);
+      if (match) {
+        matchedSection = pattern.name;
+        remainingText = cleanLine.substring(match[0].length).trim();
+        remainingText = remainingText.replace(/^[:\-\s•|·]+/, "").trim();
+        break;
+      }
+    }
+
+    if (matchedSection) {
+      currentSection = matchedSection;
+      if (remainingText) {
+        sections[currentSection].push(remainingText);
+      }
+    } else {
+      if (currentSection !== "none") {
+        sections[currentSection].push(cleanLine);
+      }
+    }
+  }
+
+  // 3. Process Summary
+  let summaryText = sections.summary.join(" ")
+    .replace(/[·%!•]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (summaryText.includes("@") || summaryText.match(/\d{10}/)) {
+    summaryText = "";
+  }
+
+  // 4. Process Skills
+  const allSkillsText = sections.skills.join(" ");
+  const skills = knownSkills.filter(skill => {
+    const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp("\\b" + escaped + "\\b", "i").test(allSkillsText);
+  });
+
+  // 5. Process Projects
+  const projects: any[] = [];
+  let currentProject: any = null;
+
+  for (const line of sections.projects) {
+    const isBullet = line.startsWith("-") || line.startsWith("•") || line.startsWith("*");
+    let bulletText = line.replace(/^[-•*]\s*/, "").trim();
+    bulletText = bulletText.replace(/%¸/g, "").replace(/demonstrating hands-on implementation/gi, "").replace(/from the uploaded resume/gi, "").trim();
+
+    if (!isBullet && line.length < 100 && (line.includes("|") || line.includes("-") || /^[A-Z]/.test(line))) {
+      if (currentProject) {
+        projects.push(currentProject);
+      }
+      
+      let namePart = line;
+      let techPart = "";
+      if (line.includes("|")) {
+        const parts = line.split("|");
+        namePart = parts[0].trim();
+        techPart = parts[1].trim();
+      } else if (line.includes("-") && !line.includes(" - ")) {
+        const parts = line.split("-");
+        namePart = parts[0].trim();
+        techPart = parts[1].trim();
+      }
+      
+      currentProject = {
+        name: namePart.replace(/%¸/g, "").trim(),
+        technologies: techPart.replace(/%¸/g, "").trim(),
+        bullets: []
+      };
+    } else if (currentProject && bulletText) {
+      currentProject.bullets.push(bulletText);
+    }
+  }
+  if (currentProject) {
+    projects.push(currentProject);
+  }
+
+  const finalProjects = projects.map(p => {
+    if (p.bullets.length === 0) {
+      if (p.name.length > 40) {
+        const desc = p.name;
+        const words = p.name.split(" ");
+        p.name = words.slice(0, 4).join(" ");
+        p.bullets.push(desc);
+      } else {
+        p.bullets.push(p.name);
+      }
+    }
+    return p;
+  }).filter(p => p.name);
+
+  // 6. Process Experience
+  const experience: any[] = [];
+  let currentExp: any = null;
+
+  for (const line of sections.experience) {
+    const isBullet = line.startsWith("-") || line.startsWith("•") || line.startsWith("*");
+    let bulletText = line.replace(/^[-•*]\s*/, "").trim();
+
+    if (!isBullet && line.length < 100 && (line.includes("|") || line.includes("-") || line.match(/\b(19|20)\d{2}\b/))) {
+      if (currentExp) {
+        experience.push(currentExp);
+      }
+      
+      let titlePart = line;
+      let companyPart = "";
+      let durationPart = "";
+      
+      if (line.includes("|")) {
+        const parts = line.split("|");
+        titlePart = parts[0].trim();
+        companyPart = parts[1]?.trim() || "";
+        durationPart = parts[2]?.trim() || "";
+      }
+      
+      currentExp = {
+        title: titlePart.trim(),
+        company: companyPart.trim(),
+        duration: durationPart.trim(),
+        bullets: []
+      };
+    } else if (currentExp && bulletText) {
+      currentExp.bullets.push(bulletText);
+    }
+  }
+  if (currentExp) {
+    experience.push(currentExp);
+  }
+  
+  const finalExperience = experience.filter(exp => {
+    const hasCompany = exp.company && exp.company.length > 2;
+    const hasDuration = exp.duration && exp.duration.length > 2;
+    return hasCompany && hasDuration && exp.bullets.length > 0;
+  });
+
+  // 7. Process Education
+  const education: any[] = [];
+  for (const line of sections.education) {
+    if (line.toLowerCase().includes("degree") || line.toLowerCase().includes("bca") || line.toLowerCase().includes("b.c.a") || line.toLowerCase().includes("b.tech") || line.toLowerCase().includes("bachelor") || line.toLowerCase().includes("school") || line.toLowerCase().includes("college")) {
+      let degree = "";
+      if (line.match(/b\.?c\.?a/i)) degree = "BCA — Bachelor of Computer Applications";
+      else if (line.match(/b\.?tech/i)) degree = "B.Tech — Bachelor of Technology";
+      else degree = line.split(/[|-]/)[0].trim();
+
+      let college = "";
+      if (line.includes("|")) {
+        college = line.split("|")[0].trim();
+      } else {
+        college = line;
+      }
+
+      const yearMatch = line.match(/\b(20\d{2})[-–](20\d{2})\b/) || line.match(/\b(20\d{2})\b/);
+      const year = yearMatch ? yearMatch[0] : "";
+
+      const cgpaMatch = line.match(/cgpa[:\s]*(\d\.\d+)/i) || line.match(/gpa[:\s]*(\d\.\d+)/i);
+      const cgpa = cgpaMatch ? cgpaMatch[1] : "";
+
+      education.push({
+        degree,
+        college: college.replace(degree, "").replace(/[|-]/g, "").trim(),
+        year,
+        cgpa
+      });
+    }
+  }
+
+  // 8. Process Certifications
+  const certifications = sections.certifications.map(line => line.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
+
+  const detectedSections = Object.keys(sections).filter(sec => sections[sec as SectionName].length > 0);
+
   return {
-    name: lines[0]?.length < 80 ? lines[0] : "",
+    name,
     email,
     phone,
-    summary: lines.slice(0, 4).join(" "),
+    github: githubMatch,
+    linkedin: linkedinMatch,
+    location,
+    summary: summaryText,
     skills,
-    experience: lines.filter((line) => /experience|intern|developer/i.test(line)).slice(0, 6),
-    projects: lines.filter((line) => /project|clone|app|platform|dashboard/i.test(line)).slice(0, 8),
-    education: lines.filter((line) => /bca|b.tech|degree|college|university|school/i.test(line)).slice(0, 6),
-    certifications: lines.filter((line) => /certificate|certification/i.test(line)).slice(0, 5),
-    links,
+    experience: finalExperience,
+    projects: finalProjects,
+    education,
+    certifications,
+    links: Array.from(text.matchAll(urlPattern)).map((m) => m[0]),
     detectedSections,
     wordCount: countWords(text)
   };

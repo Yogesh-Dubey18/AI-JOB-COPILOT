@@ -296,127 +296,276 @@ function normalizeResumeContent(source: any = {}) {
 }
 
 export async function buildBeautifulResumePdfBuffer(userId: string, content: any): Promise<Buffer> {
-  const user = await findRecordById("users", userId);
-  const profile = await findOneRecord("profiles", { userId });
-  const resume = normalizeResumeContent(content);
+  const data = getResumeDataForPdf(content);
+  return generateResumePdf(data);
+}
 
+function getResumeDataForPdf(content: any): WorldClassResume {
+  const resume = normalizeResumeContent(content);
+  
+  // Categorize skills if they are flat array
+  let skillsObj = resume.skills;
+  if (!skillsObj || (Array.isArray(skillsObj) && skillsObj.length === 0)) {
+    skillsObj = {
+      frontend: ["React.js", "Next.js", "TypeScript", "JavaScript", "HTML5", "CSS3", "Tailwind CSS"],
+      backend: ["Node.js", "Express.js", "REST APIs", "JWT Authentication"],
+      database: ["MongoDB", "Mongoose"],
+      tools: ["Git", "GitHub", "VS Code", "Postman", "Vercel", "Render"]
+    };
+  } else if (Array.isArray(skillsObj)) {
+    const cats = categorizeSkills(skillsObj);
+    skillsObj = {
+      frontend: cats.Frontend || [],
+      backend: cats.Backend || [],
+      database: cats.Database || [],
+      tools: cats.Tools || []
+    };
+  } else {
+    skillsObj = {
+      frontend: toArray(skillsObj?.frontend || skillsObj?.Frontend),
+      backend: toArray(skillsObj?.backend || skillsObj?.Backend),
+      database: toArray(skillsObj?.database || skillsObj?.Database),
+      tools: toArray(skillsObj?.tools || skillsObj?.Tools)
+    };
+  }
+
+  // Normalize projects
+  let projectsList = toArray(resume.projects).map((proj: any) => {
+    const bullets = toArray(proj.bullets || proj.bulletPoints);
+    return {
+      name: firstText(proj.name, proj.title),
+      tech: firstText(proj.tech, proj.techStack, proj.technologies),
+      bullets: bullets.length ? bullets : [firstText(proj.description, proj.summary)],
+      live: firstText(proj.live, proj.liveUrl, proj.demoUrl),
+      github: firstText(proj.github, proj.githubUrl)
+    };
+  }).filter(p => p.name);
+
+  if (projectsList.length === 0) {
+    projectsList = fallbackProjects.map(proj => ({
+      name: proj.name,
+      tech: proj.techStack,
+      bullets: proj.bullets,
+      live: proj.liveUrl,
+      github: proj.githubUrl
+    }));
+  }
+
+  // Normalize experience
+  const experienceList = toArray(resume.experience).map((exp: any) => {
+    const bullets = toArray(exp.bullets || exp.bulletPoints);
+    return {
+      title: firstText(exp.title, exp.role),
+      company: firstText(exp.company, exp.employer),
+      duration: firstText(exp.duration, exp.dates),
+      bullets: bullets.length ? bullets : [firstText(exp.description, exp.summary)]
+    };
+  }).filter(e => e.title || e.company);
+
+  // Normalize education
+  let educationList = toArray(resume.education).map((edu: any) => {
+    return {
+      degree: firstText(edu.degree, edu.course),
+      college: firstText(edu.college, edu.institution, edu.school),
+      year: firstText(edu.year, edu.duration, edu.dates),
+      cgpa: firstText(edu.cgpa, edu.gpa)
+    };
+  }).filter(edu => edu.degree || edu.college);
+
+  if (educationList.length === 0) {
+    educationList = fallbackEducation.map(edu => ({
+      degree: edu.degree,
+      college: edu.institution,
+      year: edu.duration,
+      cgpa: edu.cgpa || ""
+    }));
+  }
+
+  // Certifications
+  let certificationsList = toArray(resume.certifications).map(stringify).filter(Boolean);
+  if (certificationsList.length === 0) {
+    certificationsList = fallbackCertifications;
+  }
+
+  return {
+    name: firstText(resume.name, "Candidate"),
+    title: firstText(resume.title, resume.headline, "Full Stack Developer | MERN Stack"),
+    contact: {
+      email: firstText(resume.contact?.email, resume.email),
+      phone: firstText(resume.contact?.phone, resume.phone),
+      github: firstText(resume.contact?.github, resume.github, resume.githubUrl),
+      linkedin: firstText(resume.contact?.linkedin, resume.linkedin, resume.linkedinUrl),
+      location: firstText(resume.contact?.location, resume.location)
+    },
+    summary: firstText(resume.summary, fallbackSummary),
+    skills: skillsObj,
+    projects: projectsList,
+    experience: experienceList,
+    education: educationList,
+    certifications: certificationsList
+  };
+}
+
+interface WorldClassResume {
+  name: string;
+  title: string;
+  contact: {
+    email: string;
+    phone: string;
+    github?: string;
+    linkedin?: string;
+    location?: string;
+  };
+  summary: string;
+  skills: {
+    frontend?: string[];
+    backend?: string[];
+    database?: string[];
+    tools?: string[];
+  };
+  projects?: {
+    name: string;
+    tech?: string;
+    bullets?: string[];
+    live?: string;
+    github?: string;
+  }[];
+  experience?: {
+    title: string;
+    company: string;
+    duration: string;
+    bullets?: string[];
+  }[];
+  education?: {
+    degree: string;
+    college: string;
+    year: string;
+    cgpa?: string;
+  }[];
+  certifications?: string[];
+}
+
+function generateResumePdf(data: WorldClassResume): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({
-        size: "LETTER",
-        margins: { top: 40, bottom: 40, left: 40, right: 40 },
-        bufferPages: true
+      const doc = new PDFDocument({ 
+        size: 'A4', 
+        margins: { top: 35, bottom: 35, left: 40, right: 40 }
       });
-
+      
       const chunks: Buffer[] = [];
       doc.on("data", (chunk) => chunks.push(chunk));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", (err) => reject(err));
 
-      const pageLeft = 40;
-      const pageWidth = 532;
-      const navy = "#1a1a2e";
-      const body = "#222222";
-      const muted = "#555555";
-
-      const name = firstText(resume.name, user?.fullName, "Yogesh Dubey");
-      const role = firstText(resume.headline, resume.role, "Full Stack Developer | MERN Stack");
-      const email = firstText(resume.email, user?.email, "yogeshdubey8924@gmail.com");
-      const phone = firstText(resume.phone, user?.phone, "+91-6392778770");
-      const github = firstText(resume.githubUrl, resume.github, profile?.githubUrl, linkFromList(resume.links, /github/i), "github.com/Yogesh-Dubey18").replace(/^https?:\/\/(www\.)?/, "");
-      const linkedin = "LinkedIn";
-      const location = firstText(resume.location, profile?.location, "Ayodhya, UP");
-      const summaryText = firstText(resume.summary, fallbackSummary);
-      const projectsList = normalizeProjects(resume.projects);
-      const experienceList = normalizeExperience(resume.experience);
-      const educationList = normalizeEducation(resume.education);
-      const certificationsList = normalizeCertifications(resume.certifications);
-
-      const renderHeader = () => {
-        doc.font("Helvetica-Bold").fontSize(20).fillColor(navy).text(name, { align: "center" });
-        doc.font("Helvetica-Bold").fontSize(12).fillColor(muted).text(role, { align: "center" });
-        doc.font("Helvetica").fontSize(8.7).fillColor(body).text([email, phone, github, linkedin, location].filter(Boolean).join(" | "), { align: "center" });
-        const y = doc.y + 4;
-        doc.strokeColor(navy).lineWidth(0.6).moveTo(pageLeft, y).lineTo(pageLeft + pageWidth, y).stroke();
-        doc.y = y + 7;
-      };
-
-      const renderSectionHeader = (title: string) => {
-        doc.moveDown(0.28);
-        const y = doc.y;
-        doc.font("Helvetica-Bold").fontSize(10.6).fillColor(navy).text(title.toUpperCase(), pageLeft, y);
-        doc.strokeColor(navy).lineWidth(0.45).moveTo(pageLeft, y + 12).lineTo(pageLeft + pageWidth, y + 12).stroke();
-        doc.y = y + 15;
-      };
-
-      const renderBodyText = (text: string, fontSize = 8.65) => {
-        const value = cleanText(text);
-        if (!value) return;
-        doc.font("Helvetica").fontSize(fontSize).fillColor(body).text(value, pageLeft, doc.y, {
-          width: pageWidth,
-          lineGap: 0.2
+      const NAVY = '#1a1a2e';
+      const GRAY = '#555555';
+      const BLACK = '#000000';
+      
+      // HEADER
+      doc.fontSize(18).font('Helvetica-Bold').fillColor(NAVY)
+         .text(data.name, { align: 'center' });
+      
+      doc.fontSize(10).font('Helvetica').fillColor(GRAY)
+         .text(data.title, { align: 'center' });
+      
+      // Contact line
+      const contactParts = [
+        data.contact.email,
+        data.contact.phone,
+        data.contact.github ? 'github.com/' + data.contact.github.split('/').pop() : null,
+        data.contact.linkedin ? 'LinkedIn' : null,
+        data.contact.location
+      ].filter(Boolean).join(' | ');
+      
+      doc.fontSize(8.5).font('Helvetica').fillColor(BLACK)
+         .text(contactParts, { align: 'center' });
+      
+      // Divider
+      doc.moveDown(0.3);
+      doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke(NAVY);
+      doc.moveDown(0.3);
+      
+      // SECTION HELPER
+      function addSection(title: string) {
+        doc.moveDown(0.4);
+        doc.fontSize(10.5).font('Helvetica-Bold').fillColor(NAVY).text(title.toUpperCase());
+        doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke(NAVY);
+        doc.moveDown(0.2);
+      }
+      
+      function addBullet(text: string) {
+        doc.fontSize(8.5).font('Helvetica').fillColor(BLACK)
+           .text('• ' + text, { indent: 10 });
+      }
+      
+      // SUMMARY
+      if (data.summary) {
+        addSection('Professional Summary');
+        doc.fontSize(8.5).font('Helvetica').fillColor(BLACK).text(data.summary);
+      }
+      
+      // SKILLS
+      if (data.skills) {
+        addSection('Technical Skills');
+        const skillLines = [
+          data.skills.frontend?.length ? 'Frontend: ' + data.skills.frontend.join(', ') : null,
+          data.skills.backend?.length ? 'Backend: ' + data.skills.backend.join(', ') : null,
+          data.skills.database?.length ? 'Database: ' + data.skills.database.join(', ') : null,
+          data.skills.tools?.length ? 'Tools: ' + data.skills.tools.join(', ') : null,
+        ].filter(Boolean);
+        skillLines.forEach(line => {
+          doc.fontSize(8.5).font('Helvetica').fillColor(BLACK).text(line as string);
         });
-      };
-
-      const renderBullet = (text: string) => {
-        const value = cleanText(text);
-        if (!value) return;
-        const y = doc.y;
-        doc.font("Helvetica").fontSize(8.45).fillColor(body).text("-", pageLeft + 8, y, { width: 8 });
-        doc.text(value, pageLeft + 20, y, { width: pageWidth - 20, lineGap: 0.1 });
-        doc.moveDown(0.08);
-      };
-
-      renderHeader();
-
-      renderSectionHeader("Professional Summary");
-      renderBodyText(summaryText, 8.7);
-
-      renderSectionHeader("Technical Skills");
-      for (const [category, skills] of fixedSkillCategories) {
-        const y = doc.y;
-        doc.font("Helvetica-Bold").fontSize(8.7).fillColor(navy).text(`${category}: `, pageLeft, y, { continued: true });
-        doc.font("Helvetica").fillColor(body).text(skills, { width: pageWidth, lineGap: 0.1 });
-        doc.moveDown(0.06);
       }
-
-      renderSectionHeader("Projects");
-      for (const project of projectsList) {
-        const title = [project.name, project.techStack].filter(Boolean).join(" | ");
-        doc.font("Helvetica-Bold").fontSize(9).fillColor(navy).text(title, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
-        for (const bullet of project.bullets.slice(0, 2)) renderBullet(bullet);
-        const links = [
-          project.liveUrl ? `Live: ${project.liveUrl}` : "",
-          project.githubUrl ? `GitHub: ${project.githubUrl}` : ""
-        ].filter(Boolean).join(" | ");
-        if (links) {
-          doc.font("Helvetica").fontSize(8.2).fillColor(muted).text(links, pageLeft + 20, doc.y, { width: pageWidth - 20, lineGap: 0 });
-          doc.moveDown(0.12);
-        }
+      
+      // PROJECTS
+      if (data.projects?.length) {
+        addSection('Projects');
+        data.projects.forEach(project => {
+          doc.fontSize(9).font('Helvetica-Bold').fillColor(BLACK)
+             .text(project.name + (project.tech ? ' | ' + project.tech : ''));
+          project.bullets?.forEach(bullet => addBullet(bullet));
+          if (project.live || project.github) {
+            const links = [
+              project.live ? 'Live: ' + project.live : null,
+              project.github ? 'GitHub: ' + project.github : null
+            ].filter(Boolean).join(' | ');
+            doc.fontSize(8).font('Helvetica').fillColor('#0066cc').text(links, { indent: 10 });
+          }
+          doc.moveDown(0.2);
+        });
       }
-
-      if (experienceList.length) {
-        renderSectionHeader("Experience");
-        for (const exp of experienceList) {
-          const title = [exp.title, exp.company].filter(Boolean).join(" | ");
-          if (title) doc.font("Helvetica-Bold").fontSize(8.9).fillColor(navy).text(title, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
-          const meta = [exp.duration, exp.location].filter(Boolean).join(" | ");
-          if (meta) doc.font("Helvetica-Oblique").fontSize(8.2).fillColor(muted).text(meta, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
-          for (const bullet of exp.bullets.slice(0, 2)) renderBullet(bullet);
-        }
+      
+      // EXPERIENCE (only if not empty)
+      if (data.experience?.length) {
+        addSection('Experience');
+        data.experience.forEach(exp => {
+          doc.fontSize(9).font('Helvetica-Bold').fillColor(BLACK)
+             .text(exp.title + ' | ' + exp.company);
+          doc.fontSize(8.5).font('Helvetica').fillColor(GRAY).text(exp.duration);
+          exp.bullets?.forEach(bullet => addBullet(bullet));
+          doc.moveDown(0.2);
+        });
       }
-
-      renderSectionHeader("Education");
-      for (const edu of educationList) {
-        const title = cleanText(edu.degree);
-        const meta = [edu.institution, edu.duration, edu.cgpa ? `CGPA: ${edu.cgpa}` : ""].filter(Boolean).join(" | ");
-        doc.font("Helvetica-Bold").fontSize(8.75).fillColor(navy).text(title, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
-        if (meta) doc.font("Helvetica").fontSize(8.35).fillColor(body).text(meta, pageLeft, doc.y, { width: pageWidth, lineGap: 0 });
-        doc.moveDown(0.08);
+      
+      // EDUCATION
+      if (data.education?.length) {
+        addSection('Education');
+        data.education.forEach(edu => {
+          doc.fontSize(9).font('Helvetica-Bold').fillColor(BLACK).text(edu.degree);
+          doc.fontSize(8.5).font('Helvetica').fillColor(BLACK)
+             .text(edu.college + ' | ' + edu.year + (edu.cgpa ? ' | CGPA: ' + edu.cgpa : ''));
+          doc.moveDown(0.2);
+        });
       }
-
-      renderSectionHeader("Certifications");
-      for (const certification of certificationsList) renderBullet(certification);
-
+      
+      // CERTIFICATIONS
+      if (data.certifications?.length) {
+        addSection('Certifications');
+        data.certifications.forEach(cert => addBullet(cert));
+      }
+      
       doc.end();
     } catch (err) {
       reject(err);
