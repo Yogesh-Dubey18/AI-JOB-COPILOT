@@ -1247,6 +1247,68 @@ describe("frontend pages", () => {
     expect(window.sessionStorage.getItem("ajc_access_token")).toBe("new-access-token");
   });
 
+  it("logged-in session survives a page reload", async () => {
+    window.sessionStorage.setItem("ajc_access_token", "test-reload-token");
+    const { getStoredAccessToken } = await import("@/lib/auth-session");
+    expect(getStoredAccessToken()).toBe("test-reload-token");
+  });
+
+  it("proactively refreshes access token 3 minutes before expiry", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        success: true,
+        data: { accessToken: "proactive-new-token", user: { id: "user-1" } }
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { persistAuthSession } = await import("@/lib/auth-session");
+    
+    const expTimeSeconds = Math.floor(Date.now() / 1000) + 900;
+    const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+    const payload = btoa(JSON.stringify({ exp: expTimeSeconds, userId: "user-1" }));
+    const mockJwt = `${header}.${payload}.signature`;
+
+    persistAuthSession({ accessToken: mockJwt, user: { id: "user-1" } });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(12 * 60 * 1000);
+
+    expect(fetchMock).toHaveBeenCalled();
+    const refreshCall = fetchMock.mock.calls.find(call => call[0].includes("/auth/refresh"));
+    expect(refreshCall).toBeTruthy();
+
+    vi.useRealTimers();
+  });
+
+  it("clears session storage and throws when both tokens are expired", async () => {
+    const { api } = await import("@/lib/api");
+    window.sessionStorage.setItem("ajc_access_token", "expired-access-token");
+    
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        json: async () => ({ message: "Unauthorized" })
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        json: async () => ({ message: "Refresh token expired" })
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(api.get("/resumes")).rejects.toThrow("Session expired");
+    expect(window.sessionStorage.getItem("ajc_access_token")).toBeNull();
+  });
+
   it("google oauth button is disabled when provider is not configured", async () => {
     mockApiResponse({
       success: true,
