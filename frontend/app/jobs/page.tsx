@@ -51,6 +51,25 @@ function JobsContent() {
   const syncStatus = useQuery({ queryKey: ["sync-status"], queryFn: () => api.get<any>("/jobs/sync-status"), retry: false });
 
   const [cooldownTimeLeft, setCooldownTimeLeft] = useState(0);
+  const [timeAgoText, setTimeAgoText] = useState("just now");
+
+  useEffect(() => {
+    if (!syncStatus.data?.lastSyncedAt) return;
+    
+    function updateText() {
+      const diffMs = Date.now() - new Date(syncStatus.data.lastSyncedAt).getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) {
+        setTimeAgoText("just now");
+      } else {
+        setTimeAgoText(`${diffMins} minute${diffMins > 1 ? "s" : ""} ago`);
+      }
+    }
+    
+    updateText();
+    const interval = setInterval(updateText, 10000);
+    return () => clearInterval(interval);
+  }, [syncStatus.data?.lastSyncedAt]);
 
   useEffect(() => {
     if (syncStatus.data?.cooldownRemainingMs) {
@@ -163,6 +182,10 @@ function JobsContent() {
     });
   }, [items, fromResume, resumeSkills, resumeQuery.data]);
 
+  const newJobsCount = useMemo(() => {
+    return processedItems.filter((job: any) => job.isNew).length;
+  }, [processedItems]);
+
   const handleClearResumeFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("fromResume");
@@ -195,8 +218,19 @@ function JobsContent() {
             <Clock className="h-3.5 w-3.5" />
             <span>
               {syncStatus.data?.lastSyncedAt
-                ? `Last updated: ${new Date(syncStatus.data.lastSyncedAt).toLocaleTimeString()}`
+                ? `Last synced: ${timeAgoText}`
                 : "Not synced recently"}
+              {syncStatus.data?.status && (
+                <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                  syncStatus.data.status === "success"
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+                    : syncStatus.data.status === "failed"
+                    ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200"
+                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                }`}>
+                  {syncStatus.data.status}
+                </span>
+              )}
               {syncStatus.data?.cooldownRemainingMs > 0 && cooldownTimeLeft > 0 && (
                 <span className="ml-2 rounded bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
                   Cooldown active ({cooldownTimeLeft}s remaining)
@@ -286,6 +320,11 @@ function JobsContent() {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4" />
           <span aria-live="polite">{jobs.isLoading ? "Loading jobs..." : `${processedItems.length} of ${jobs.data?.total || 0} normalized jobs shown`}</span>
+          {newJobsCount > 0 && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+              {newJobsCount} new job{newJobsCount > 1 ? "s" : ""} since last visit
+            </span>
+          )}
         </div>
         <label className="flex items-center gap-2 cursor-pointer font-medium select-none text-xs">
           <input 

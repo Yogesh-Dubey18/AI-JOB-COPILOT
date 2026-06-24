@@ -10,13 +10,13 @@ import mongoose from "mongoose";
 import { isDbReady } from "../config/db.js";
 import { updateApplicationStatus } from "./application.service.js";
 
-async function saveSyncStatusToDb(lastSyncedAt: Date, newJobsCount: number) {
-  if (isDbReady()) {
+async function saveSyncStatusToDb(lastSyncedAt: Date, newJobsCount: number, status: "success" | "failed" | "partial") {
+  if (isDbReady() && mongoose.connection.db) {
     try {
       const col = mongoose.connection.db.collection("sys_sync_status");
       await col.updateOne(
         { key: "jobs" },
-        { $set: { lastSyncedAt, newJobsCount, updatedAt: new Date() } },
+        { $set: { lastSyncedAt, newJobsCount, status, updatedAt: new Date() } },
         { upsert: true }
       );
     } catch (e) {
@@ -26,14 +26,15 @@ async function saveSyncStatusToDb(lastSyncedAt: Date, newJobsCount: number) {
 }
 
 async function loadSyncStatusFromDb() {
-  if (isDbReady()) {
+  if (isDbReady() && mongoose.connection.db) {
     try {
       const col = mongoose.connection.db.collection("sys_sync_status");
       const doc = await col.findOne({ key: "jobs" });
       if (doc) {
         return {
           lastSyncedAt: doc.lastSyncedAt ? new Date(doc.lastSyncedAt) : null,
-          newJobsCount: doc.newJobsCount || 0
+          newJobsCount: doc.newJobsCount || 0,
+          status: doc.status || "success"
         };
       }
     } catch (e) {
@@ -45,6 +46,7 @@ async function loadSyncStatusFromDb() {
 
 let lastSyncTime: Date | null = null;
 let lastNewJobsCount = 0;
+let lastSyncStatus = "success";
 
 async function getOrLoadSyncStatus() {
   if (lastSyncTime === null) {
@@ -52,9 +54,10 @@ async function getOrLoadSyncStatus() {
     if (dbStatus) {
       lastSyncTime = dbStatus.lastSyncedAt;
       lastNewJobsCount = dbStatus.newJobsCount;
+      lastSyncStatus = dbStatus.status;
     }
   }
-  return { lastSyncTime, lastNewJobsCount };
+  return { lastSyncTime, lastNewJobsCount, lastSyncStatus };
 }
 
 export const sampleJobs = [
@@ -139,7 +142,7 @@ export async function refreshJobs(userId: string) {
   const COOLDOWN_MS = 60 * 1000; // 60 seconds
   const now = new Date();
   
-  const { lastSyncTime: syncTime, lastNewJobsCount: newJobs } = await getOrLoadSyncStatus();
+  const { lastSyncTime: syncTime, lastNewJobsCount: newJobs, lastSyncStatus: syncStatus } = await getOrLoadSyncStatus();
   
   if (process.env.NODE_ENV !== "test" && syncTime && (now.getTime() - syncTime.getTime() < COOLDOWN_MS)) {
     const cooldownRemainingMs = COOLDOWN_MS - (now.getTime() - syncTime.getTime());
@@ -148,7 +151,8 @@ export async function refreshJobs(userId: string) {
       message: "Refresh cooldown active. Feed is already up-to-date.",
       cooldownRemainingMs,
       newJobsCount: newJobs,
-      lastSyncedAt: syncTime.toISOString()
+      lastSyncedAt: syncTime.toISOString(),
+      status: syncStatus
     };
   }
   
@@ -169,17 +173,23 @@ export async function refreshJobs(userId: string) {
     
     lastSyncTime = now;
     lastNewJobsCount = count;
-    await saveSyncStatusToDb(now, count);
+    lastSyncStatus = "success";
+    await saveSyncStatusToDb(now, count, "success");
     
     return {
       success: true,
       message: count > 0 ? `${count} new jobs found!` : "No new jobs found. Feed is up-to-date.",
       newJobsCount: count,
       lastSyncedAt: now.toISOString(),
-      cooldownRemainingMs: COOLDOWN_MS
+      cooldownRemainingMs: COOLDOWN_MS,
+      status: "success"
     };
   } catch (error: any) {
     console.error("Manual job refresh failed:", error);
+    lastSyncTime = now;
+    lastNewJobsCount = 0;
+    lastSyncStatus = "failed";
+    await saveSyncStatusToDb(now, 0, "failed");
     throw new ApiError(500, `Job refresh failed: ${error.message}`);
   }
 }
@@ -187,7 +197,7 @@ export async function refreshJobs(userId: string) {
 export async function getSyncStatus() {
   const COOLDOWN_MS = 60 * 1000;
   const now = new Date();
-  const { lastSyncTime: syncTime, lastNewJobsCount: newJobs } = await getOrLoadSyncStatus();
+  const { lastSyncTime: syncTime, lastNewJobsCount: newJobs, lastSyncStatus: syncStatus } = await getOrLoadSyncStatus();
   const cooldownRemainingMs = syncTime
     ? Math.max(0, COOLDOWN_MS - (now.getTime() - syncTime.getTime()))
     : 0;
@@ -195,7 +205,8 @@ export async function getSyncStatus() {
   return {
     lastSyncedAt: syncTime ? syncTime.toISOString() : null,
     cooldownRemainingMs,
-    newJobsCount: newJobs
+    newJobsCount: newJobs,
+    status: syncStatus
   };
 }
 
@@ -228,7 +239,7 @@ export async function listJobs(query: any = {}) {
     }
 
     const baseResume = await findOneRecord("resumes", { userId: query.userId, isBaseResume: true })
-      || await findOneRecord("resumes", { userId: query.userId }, { sort: { createdAt: -1 } });
+      || (await findRecords("resumes", { userId: query.userId }, { sort: { createdAt: -1 }, limit: 1 }))[0] || null;
     if (baseResume && baseResume.parsedData) {
       const resumeSkills = (baseResume.parsedData.skills || []).map((s: string) => s.toLowerCase());
       userSkills = Array.from(new Set([...userSkills, ...resumeSkills]));
@@ -302,12 +313,12 @@ export async function listJobs(query: any = {}) {
     let missingSkills: string[] = [];
 
     const jobSkills = (job.skillsRequired || []).map((s: string) => s.trim());
-    const jobSkillsLower = jobSkills.map(s => s.toLowerCase());
+    const jobSkillsLower = jobSkills.map((s: string) => s.toLowerCase());
 
     if (query.userId && (userSkills.length > 0 || targetRoles.length > 0)) {
       if (jobSkillsLower.length > 0) {
-        matchedSkills = jobSkills.filter(s => userSkills.includes(s.toLowerCase()));
-        missingSkills = jobSkills.filter(s => !userSkills.includes(s.toLowerCase()));
+        matchedSkills = jobSkills.filter((s: string) => userSkills.includes(s.toLowerCase()));
+        missingSkills = jobSkills.filter((s: string) => !userSkills.includes(s.toLowerCase()));
         const skillPct = matchedSkills.length / jobSkillsLower.length;
         matchScore += Math.round(skillPct * 50);
       } else {
