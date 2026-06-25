@@ -53,6 +53,14 @@ router.get("/source-grouping", asyncHandler(async (_req, res) => {
   }
   res.json({ success: true, data: grouping });
 }));
+router.get("/ai-errors", asyncHandler(async (_req, res) => {
+  const db = mongoose.connection.db;
+  if (!db) {
+    return res.json({ success: false, message: "Database not connected" });
+  }
+  const result = await db.collection("airequests").find().sort({ createdAt: -1 }).limit(10).toArray();
+  res.json({ success: true, data: result });
+}));
 router.get("/", optionalAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await listJobs({ ...req.query, userId: req.user?.id }) })));
 router.get("/:id", asyncHandler(async (req, res) => res.json({ success: true, data: await getJob(param(req.params.id)) })));
 router.post("/:id/save", requireAuth, asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await saveJob(req.user!.id, param(req.params.id)) })));
