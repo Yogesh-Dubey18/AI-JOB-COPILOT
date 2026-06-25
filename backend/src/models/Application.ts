@@ -36,7 +36,7 @@ const ApplicationSchema = new Schema(
     ],
     timeline: [
       {
-        type: String,
+        type: { type: String },
         title: String,
         message: String,
         metadata: Schema.Types.Mixed,
