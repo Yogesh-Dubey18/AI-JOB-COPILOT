@@ -250,6 +250,28 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
         body: JSON.stringify({ success: true, data: { lastSyncedAt: new Date().toISOString(), status: "success" } })
       });
     });
+    await page.route("**/api/jobs/viewed", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, message: "Marked viewed" })
+      });
+    });
+    await page.route("**/api/auth/refresh", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            accessToken: "test-real-reload-token-refreshed",
+            refreshToken: "test-real-refresh-token-refreshed",
+            user: { id: "user-1", fullName: "Asha Dev", email: "asha@example.com", role: "job_seeker" }
+          }
+        })
+      });
+    });
+
 
     // 2. Perform actual login as a test user
     await page.goto("/login");
