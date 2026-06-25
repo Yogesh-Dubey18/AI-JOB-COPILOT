@@ -56,7 +56,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use(rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false, skip: () => isTest }));
 app.use("/api/ai", rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false, skip: () => isTest }));
 app.use("/api", (req, res, next) => {
-  res.setHeader("Cache-Control", req.method === "GET" && req.path.startsWith("/jobs") ? "private, max-age=30" : "no-store");
+  res.setHeader("Cache-Control", "no-store");
   next();
 });
 app.use(requestLoggingMiddleware);
