@@ -30,6 +30,16 @@ router.get("/expired-diagnostics", optionalAuth, asyncHandler(async (req, res) =
   });
 }));
 
+router.get("/test-adzuna", optionalAuth, asyncHandler(async (req, res) => {
+  try {
+    const { syncAdzunaJobs } = await import("../services/job-providers/adzuna.provider.js");
+    const result = await syncAdzunaJobs("developer", "in", 5, 1);
+    res.json({ success: true, result });
+  } catch (err: any) {
+    res.json({ success: false, error: err.message });
+  }
+}));
+
 router.get("/recommended", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await listJobs({ ...req.query, userId: req.user!.id, recommendedFor: req.user!.id }) })));
 router.get("/daily-feed", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await dailyFeed({ ...req.query, userId: req.user!.id }) })));
 router.post("/refresh", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await refreshJobs(req.user!.id) })));
