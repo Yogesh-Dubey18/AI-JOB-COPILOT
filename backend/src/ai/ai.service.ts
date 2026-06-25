@@ -493,12 +493,181 @@ async function track(userId: string | undefined, feature: string, meta: AiCallMe
   });
 }
 
+function getSchemaTemplate(feature: string): string {
+  switch (feature) {
+    case "resume-analysis":
+      return `{
+  "atsScore": number (0 to 100),
+  "resumeLevel": "string, e.g. Entry, Mid, Senior",
+  "sectionScores": { "summary": number, "skills": number, "projects": number, "experience": number, "education": number, "formatting": number },
+  "strengths": ["string"],
+  "weaknesses": ["string"],
+  "missingKeywords": ["string"],
+  "improvementSuggestions": ["string"],
+  "recruiterView": "string"
+}`;
+    case "job-match":
+      return `{
+  "matchScore": number (0 to 100),
+  "selectionChance": "string, e.g. High, Medium, Low",
+  "matchedSkills": ["string"],
+  "missingSkills": ["string"],
+  "experienceFit": "string",
+  "salaryFit": "string",
+  "locationFit": "string",
+  "recommendationReason": "string",
+  "applyRecommendation": "string",
+  "riskFlags": ["string"]
+}`;
+    case "tailor-resume":
+      return `{
+  "beforeAtsScore": number (0 to 100),
+  "afterAtsScore": number (0 to 100),
+  "addedKeywords": ["string"],
+  "updatedSummary": "string",
+  "updatedSkills": ["string"],
+  "improvedProjects": ["string"],
+  "changedSections": ["string"],
+  "pdfUrl": ""
+}`;
+    case "world-class-resume":
+      return `{
+  "name": "string",
+  "title": "string",
+  "contact": {
+    "email": "string",
+    "phone": "string",
+    "github": "string",
+    "linkedin": "string",
+    "location": "string"
+  },
+  "summary": "string",
+  "skills": {
+    "frontend": ["string"],
+    "backend": ["string"],
+    "database": ["string"],
+    "tools": ["string"]
+  },
+  "projects": [
+    {
+      "name": "string",
+      "tech": "string",
+      "bullets": ["string"],
+      "live": "string",
+      "github": "string"
+    }
+  ],
+  "experience": [
+    {
+      "title": "string",
+      "company": "string",
+      "duration": "string",
+      "bullets": ["string"]
+    }
+  ],
+  "education": [
+    {
+      "degree": "string",
+      "college": "string",
+      "year": "string",
+      "cgpa": "string"
+    }
+  ],
+  "certifications": ["string"],
+  "atsKeywords": ["string"]
+}`;
+    case "application-kit":
+      return `{
+  "coverLetter": "string",
+  "hrEmail": "string",
+  "linkedinMessage": "string",
+  "whatsappMessage": "string",
+  "referralMessage": "string",
+  "salaryAnswer": "string",
+  "whyHireYouAnswer": "string",
+  "tellMeAboutYourselfAnswer": "string",
+  "whyCompanyAnswer": "string",
+  "noticePeriodAnswer": "string",
+  "workAuthorizationAnswer": "string",
+  "assignmentSubmissionAnswer": "string",
+  "followUpMessageAnswer": "string",
+  "rejectionResponseAnswer": "string",
+  "interviewConfirmationAnswer": "string",
+  "interviewPrepPlan": ["string"]
+}`;
+    case "interview-prep":
+      return `{
+  "technicalTopics": ["string"],
+  "technicalQuestions": ["string"],
+  "hrQuestions": ["string"],
+  "projectQuestions": ["string"],
+  "codingQuestions": ["string"],
+  "systemDesignQuestions": ["string"],
+  "companyResearch": ["string"],
+  "finalPreparationPlan": ["string"]
+}`;
+    case "mock-interview":
+      return `{
+  "score": {
+    "confidence": number,
+    "technicalAccuracy": number,
+    "communication": number,
+    "completeness": number,
+    "projectClarity": number (optional)
+  },
+  "feedback": "string",
+  "improvedAnswer": "string",
+  "nextQuestion": "string"
+}`;
+    case "interview-coach":
+      return `{
+  "readinessScore": number,
+  "focusAreas": ["string"],
+  "practicePlan": ["string"],
+  "projectQuestions": ["string"],
+  "hrQuestions": ["string"],
+  "dsaQuestions": ["string"]
+}`;
+    case "skill-gap":
+      return `{
+  "targetRole": "string",
+  "missingSkills": ["string"],
+  "prioritySkills": ["string"],
+  "sevenDayPlan": ["string"],
+  "thirtyDayPlan": ["string"],
+  "projectSuggestions": ["string"]
+}`;
+    case "scam-check":
+      return `{
+  "trustScore": number,
+  "riskLevel": "string",
+  "redFlags": ["string"],
+  "recommendation": "string"
+}`;
+    case "rejection-analysis":
+      return `{
+  "likelyReason": "string",
+  "improvementPlan": ["string"],
+  "resumeChanges": ["string"],
+  "interviewTopics": ["string"],
+  "nextActions": ["string"]
+}`;
+    default:
+      return "";
+  }
+}
+
 async function run<T>(userId: string | undefined, feature: string, prompt: string, fallback: T, schema?: ZodSchema<T>) {
   if (userId) {
     const limit = await checkAiCreditLimit(userId, feature);
     if (!limit.allowed) throw new ApiError(402, "AI credit limit reached", limit);
   }
-  const guardedPrompt = buildGuardedPrompt(feature, prompt);
+  let finalPrompt = prompt;
+  const template = getSchemaTemplate(feature);
+  if (template) {
+    finalPrompt += `\n\nCRITICAL: You MUST return a valid JSON object matching the following structure:\n${template}\nDo not include any wrapping keys, explanations, markdown formatting (like \`\`\`json), or code blocks. Just return the raw JSON object.`;
+  }
+  const guardedPrompt = buildGuardedPrompt(feature, finalPrompt);
   const result = await callJsonModelWithMeta(guardedPrompt.prompt, fallback, schema);
   await track(userId, feature, result.meta, guardedPrompt);
   await recordUsageEvent(userId, feature, Math.max(1, Math.ceil((result.meta.inputTokens + result.meta.outputTokens) / 1000)), "ai", {
