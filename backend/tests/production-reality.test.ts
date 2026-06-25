@@ -1,5 +1,24 @@
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import axios from "axios";
+
+vi.mock("axios", async () => {
+  const actual = await vi.importActual<any>("axios");
+  return {
+    default: {
+      ...actual.default,
+      get: vi.fn().mockImplementation((url: string) => {
+        if (url.includes("remotive")) {
+          return Promise.resolve({ data: { jobs: [] } });
+        }
+        if (url.includes("arbeitnow")) {
+          return Promise.resolve({ data: { data: [] } });
+        }
+        return actual.default.get(url);
+      })
+    }
+  };
+});
 import { app } from "../src/app.js";
 import { resetMemoryStore } from "../src/utils/memoryStore.js";
 import { createRecord, findRecords } from "../src/utils/repository.js";

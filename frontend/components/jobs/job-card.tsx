@@ -9,7 +9,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api";
 
-function SourceBadge({ sourceType }: { sourceType?: string }) {
+function SourceBadge({ sourceType, source }: { sourceType?: string; source?: string }) {
+  const sourceLower = (source || "").toLowerCase();
+  
+  if (sourceLower.includes("adzuna")) {
+    return (
+      <span className="inline-flex items-center rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+        <CheckCircle2 className="mr-1 h-3 w-3" /> via Adzuna
+      </span>
+    );
+  }
+  
+  if (sourceLower.includes("remotive")) {
+    return (
+      <span className="inline-flex items-center rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+        <CheckCircle2 className="mr-1 h-3 w-3" /> via Remotive
+      </span>
+    );
+  }
+
+  if (sourceLower.includes("arbeitnow")) {
+    return (
+      <span className="inline-flex items-center rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+        <CheckCircle2 className="mr-1 h-3 w-3" /> via Arbeitnow
+      </span>
+    );
+  }
+
   const label = sourceType ? sourceType : "curated";
   const isLive = ["linkedin", "indeed", "naukri", "ziprecruiter", "dice"].includes((sourceType || "").toLowerCase());
   return (
@@ -84,7 +110,7 @@ export function JobCard({ job, isSaved = false, isApplied = false }: JobCardProp
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {job.matchScore ? <Badge className="bg-primary/10 text-primary">AI match {job.matchScore}%</Badge> : null}
-            <SourceBadge sourceType={job.sourceType} />
+            <SourceBadge sourceType={job.sourceType} source={job.source} />
           </div>
         </div>
 

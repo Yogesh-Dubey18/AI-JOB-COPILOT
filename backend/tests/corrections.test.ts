@@ -9,6 +9,24 @@ import { normalizeJobSourceJob } from "../src/services/job-source.service.js";
 import { env } from "../src/config/env.js";
 import axios from "axios";
 
+vi.mock("axios", async () => {
+  const actual = await vi.importActual<any>("axios");
+  return {
+    default: {
+      ...actual.default,
+      get: vi.fn().mockImplementation((url: string) => {
+        if (url.includes("remotive")) {
+          return Promise.resolve({ data: { jobs: [] } });
+        }
+        if (url.includes("arbeitnow")) {
+          return Promise.resolve({ data: { data: [] } });
+        }
+        return actual.default.get(url);
+      })
+    }
+  };
+});
+
 async function authAgent() {
   const agent = request.agent(app);
   await agent.post("/api/auth/register").send({ fullName: "Corrections User", email: "corrections@example.com", password: "Password123!" }).expect(201);
@@ -224,6 +242,95 @@ describe("AI Job Copilot - Corrections & Upgrade Verification", () => {
     } finally {
       adzunaMock.mockRestore();
       process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it("g. Remotive and Arbeitnow sync functions fetch, parse, and save jobs correctly", async () => {
+    const { syncRemotiveJobs } = await import("../src/services/job-providers/remotive.provider.js");
+    const { syncArbeitnowJobs } = await import("../src/services/job-providers/arbeitnow.provider.js");
+
+    const fakeRemotiveResponse = {
+      data: {
+        jobs: [
+          {
+            id: 2091000,
+            url: "https://remotive.com/remote-jobs/product/staff-product-engineer-2091000",
+            title: "Staff Product Engineer",
+            company_name: "LawnStarter",
+            category: "Product Management",
+            tags: ["React", "PHP"],
+            job_type: "full_time",
+            publication_date: "2026-06-23T08:31:36",
+            candidate_required_location: "Brazil",
+            salary: "$80k - $100k",
+            description: "Looking for a React developer."
+          }
+        ]
+      }
+    };
+
+    const fakeArbeitnowResponse = {
+      data: {
+        data: [
+          {
+            slug: "testmanager-munich-360351",
+            company_name: "MY Humancapital GmbH",
+            title: "Testmanager",
+            description: "Testmanager Software und Systemtests",
+            remote: true,
+            url: "https://www.arbeitnow.com/jobs/testmanager-munich-360351",
+            tags: ["Software Development"],
+            job_types: ["Full-time"],
+            location: "Munich",
+            created_at: 1782372650
+          }
+        ]
+      }
+    };
+
+    const axiosSpy = vi.spyOn(axios, "get").mockImplementation((url: string) => {
+      if (url.includes("remotive")) {
+        return Promise.resolve(fakeRemotiveResponse);
+      }
+      if (url.includes("arbeitnow")) {
+        return Promise.resolve(fakeArbeitnowResponse);
+      }
+      return Promise.reject(new Error("Unexpected request"));
+    });
+
+    try {
+      const initialCount = await countRecords("jobs");
+
+      // Sync Remotive
+      const remRes = await syncRemotiveJobs(50);
+      expect(remRes.syncedCount).toBe(1);
+
+      // Sync Arbeitnow
+      const arbRes = await syncArbeitnowJobs();
+      expect(arbRes.syncedCount).toBe(1);
+
+      const finalCount = await countRecords("jobs");
+      expect(finalCount).toBe(initialCount + 2);
+
+      // Find synced jobs in DB
+      const remJob = await findOneRecord("jobs", { source: "Remotive" });
+      expect(remJob).toBeDefined();
+      expect(remJob.title).toBe("Staff Product Engineer");
+      expect(remJob.company).toBe("LawnStarter");
+      expect(remJob.currency).toBe("USD");
+      expect(remJob.salaryMin).toBe(80000);
+      expect(remJob.salaryMax).toBe(100000);
+      expect(remJob.sourceType).toBe("api-provider");
+
+      const arbJob = await findOneRecord("jobs", { source: "Arbeitnow" });
+      expect(arbJob).toBeDefined();
+      expect(arbJob.title).toBe("Testmanager");
+      expect(arbJob.company).toBe("MY Humancapital GmbH");
+      expect(arbJob.currency).toBe("EUR");
+      expect(arbJob.remoteType).toBe("Remote");
+      expect(arbJob.sourceType).toBe("api-provider");
+    } finally {
+      axiosSpy.mockRestore();
     }
   });
 });

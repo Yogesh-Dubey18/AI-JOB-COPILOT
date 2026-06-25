@@ -188,6 +188,28 @@ export const externalJobProviders: ExternalJobProviderConfig[] = [
     capabilities: { search: true, easyApply: false, statusTracking: false, oauthImport: false },
     policy: "Synchronize approved, developer listings located in India using your Adzuna application credentials. Local dev fallback feed remains operational offline.",
     notes: "Provides developer job listings synchronized from Adzuna APIs."
+  },
+  {
+    id: "remotive",
+    name: "Remotive Jobs API",
+    type: "api-provider",
+    trustBaseline: 85,
+    requiresReview: false,
+    envVars: [],
+    capabilities: { search: true, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Synchronize remote software and tech listings globally using Remotive free tier APIs without credentials.",
+    notes: "Remote tech jobs aggregator."
+  },
+  {
+    id: "arbeitnow",
+    name: "Arbeitnow Jobs API",
+    type: "api-provider",
+    trustBaseline: 85,
+    requiresReview: false,
+    envVars: [],
+    capabilities: { search: true, easyApply: false, statusTracking: false, oauthImport: false },
+    policy: "Synchronize global software development and tech listings using Arbeitnow free tier APIs without credentials.",
+    notes: "Global developer jobs aggregator."
   }
 ];
 
@@ -280,7 +302,7 @@ function list(value: unknown) {
 function sourceType(source: string): JobSourceConfig["type"] {
   const lower = source.toLowerCase();
   if (lower.includes("csv")) return "csv";
-  if (lower.includes("api")) return "api-provider";
+  if (lower.includes("api") || lower.includes("remotive") || lower.includes("arbeitnow") || lower.includes("adzuna")) return "api-provider";
   if (lower.includes("partner")) return "partner-feed";
   if (lower.includes("career")) return "company-careers";
   if (lower.includes("manual")) return "manual";

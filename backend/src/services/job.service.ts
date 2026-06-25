@@ -159,10 +159,34 @@ export async function refreshJobs(userId: string) {
   console.info(`Triggering manual job refresh for user ${userId}...`);
   try {
     const { syncAdzunaJobs } = await import("./job-providers/adzuna.provider.js");
+    const { syncRemotiveJobs } = await import("./job-providers/remotive.provider.js");
+    const { syncArbeitnowJobs } = await import("./job-providers/arbeitnow.provider.js");
     
-    // Quick sync: Page 1, 50 jobs
-    const syncResult = await syncAdzunaJobs("developer", "in", 50, 1);
-    const count = syncResult.syncedCount || 0;
+    let count = 0;
+
+    // Quick sync: Adzuna Page 1, 50 jobs
+    try {
+      const adzunaResult = await syncAdzunaJobs("developer", "in", 50, 1);
+      count += adzunaResult.syncedCount || 0;
+    } catch (err: any) {
+      console.error("Manual refresh Adzuna sync failed:", err.message);
+    }
+
+    // Quick sync: Remotive, 20 jobs
+    try {
+      const remotiveResult = await syncRemotiveJobs(20);
+      count += remotiveResult.syncedCount || 0;
+    } catch (err: any) {
+      console.error("Manual refresh Remotive sync failed:", err.message);
+    }
+
+    // Quick sync: Arbeitnow
+    try {
+      const arbeitnowResult = await syncArbeitnowJobs();
+      count += arbeitnowResult.syncedCount || 0;
+    } catch (err: any) {
+      console.error("Manual refresh Arbeitnow sync failed:", err.message);
+    }
     
     await cleanupDuplicates();
     await cleanupExpiredJobs();
