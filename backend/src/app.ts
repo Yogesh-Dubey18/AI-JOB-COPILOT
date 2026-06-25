@@ -75,45 +75,7 @@ app.get("/status", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API", providers: getProviderStatus(), uptimeSeconds: Math.round(process.uptime()) } });
 });
-app.get("/api/triage-run", asyncHandler(async (req, res) => {
-  const { createApplication } = await import("./services/application.service.js");
-  const { UserModel } = await import("./models/User.js");
-  const { JobModel } = await import("./models/Job.js");
-  const mongoose = (await import("mongoose")).default;
-  let indexes: any[] = [];
-  try {
-    const db = mongoose.connection.db;
-    if (db) {
-      indexes = await db.collection("applications").listIndexes().toArray();
-    }
-  } catch (indexErr: any) {
-    console.error("Failed to list indexes", indexErr);
-  }
-  try {
-    let user = await UserModel.findOne();
-    if (!user) {
-      user = await UserModel.create({
-        fullName: "Triage Production User",
-        email: `prod-triage-${Date.now()}@example.com`,
-        passwordHash: "dummy",
-        role: "job_seeker"
-      });
-    }
-    let job = await JobModel.findOne();
-    if (!job) {
-      return res.json({ success: false, error: "No jobs in DB to use for triage", indexes });
-    }
-    const app = await createApplication(String(user._id), {
-      jobId: String(job._id),
-      company: job.company,
-      role: job.title,
-      status: "Saved"
-    });
-    return res.json({ success: true, app, indexes });
-  } catch (err: any) {
-    return res.json({ success: false, error: err.message, stack: err.stack, indexes });
-  }
-}));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/exports", exportRoutes);
