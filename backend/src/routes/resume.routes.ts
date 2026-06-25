@@ -51,13 +51,13 @@ router.post("/score-draft", asyncHandler(async (req, res) => {
   });
 }));
 router.post("/generate-world-class", asyncHandler(async (req, res) => {
-  const { resumeId, targetRole } = req.body;
+  const { resumeId, targetRole, jobId } = req.body;
   if (!resumeId) {
     throw new ApiError(400, "resumeId is required");
   }
   res.status(201).json({
     success: true,
-    data: await generateWorldClassResume(req.user!.id, resumeId, targetRole || "Full Stack Developer")
+    data: await generateWorldClassResume(req.user!.id, resumeId, targetRole || "Full Stack Developer", jobId)
   });
 }));
 router.post("/upload", resumeUpload.single("resume"), asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await uploadResume(req.user!.id, req.file!, req.body.isBaseResume !== "false", { anonymizePreview: req.body.anonymizePreview === "true" }) })));

@@ -186,6 +186,40 @@ describe("AI Job Copilot API", () => {
     await otherAgent.post("/api/resumes/generate-world-class").send({ resumeId: upload.body.data._id }).expect(404);
   });
 
+  it("tailors a world-class resume for a specific job, calculates before/after ATS scores, and saves version tagged with jobId", async () => {
+    const agent = await authAgent();
+    const upload = await agent.post("/api/resumes/upload")
+      .attach("resume", Buffer.from([
+        "Yogesh Dubey",
+        "yogeshdubey8924@gmail.com",
+        "+91-6392778770",
+        "github.com/Yogesh-Dubey18",
+        "Skills React.js Node.js Express.js MongoDB",
+        "Projects AI Job Copilot platform",
+        "Education BCA Jhunjhunwala PG College Ayodhya"
+      ].join("\n")), "resume.txt")
+      .expect(201);
+
+    await ensureSampleJobs();
+    const jobs = await agent.get("/api/jobs").expect(200);
+    const job = jobs.body.data.items[0];
+
+    const generated = await agent.post("/api/resumes/generate-world-class").send({
+      resumeId: upload.body.data._id,
+      jobId: job._id
+    }).expect(201);
+
+    expect(generated.body.data.atsScore).toBeGreaterThanOrEqual(generated.body.data.beforeAtsScore);
+    expect(generated.body.data.resumeVersionId).toBeTruthy();
+    expect(generated.body.data.generatedResume.atsKeywords).toBeDefined();
+
+    const versions = await agent.get("/api/resumes/versions").expect(200);
+    const matchedVersion = versions.body.data.find((v: any) => v._id === generated.body.data.resumeVersionId);
+    expect(matchedVersion).toBeDefined();
+    expect(matchedVersion.targetJobId).toBe(job._id);
+    expect(matchedVersion.title).toContain("Tailored for:");
+  });
+
   it("rejects fake PDF resume uploads with bad magic numbers", async () => {
     const agent = await authAgent();
     await agent.post("/api/resumes/upload")

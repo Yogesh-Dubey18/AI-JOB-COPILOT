@@ -14,6 +14,9 @@ STRICT RULES - VIOLATION = FAILURE:
 YOUR JOB:
 Take the raw parsed resume data and IMPROVE the language only.
 Keep all facts 100% accurate. Just make it sound more powerful.
+If job context (context.job) is provided:
+- Prioritize and naturally integrate matching technical keywords and skills from the job's description and skillsRequired into the summary, categorized skills, and project bullet points.
+- Ensure the tailored summary explicitly aligns with the target role and company.
 
 FOR SUMMARY (3-4 lines only):
 Format: "[Degree] graduate specializing in [top skills] with [X] production 

@@ -4,6 +4,7 @@ import { createRecord, findRecordById } from "../utils/repository.js";
 import { scoreResumeAgainstJobDescription, scoreResumeForRole } from "./ats-scoring.service.js";
 import { anonymizeResumeRecord } from "./resume-parser.service.js";
 import { createNotification } from "./notification.service.js";
+import { getJob } from "./job.service.js";
 
 type AnalyzeResumeOptions = string | {
   targetRole?: string;
@@ -166,10 +167,29 @@ function calculateAtsScore(resume: any): number {
   return score;
 }
 
-export async function generateWorldClassResume(userId: string, resumeId: string, targetRole = "Full Stack Developer") {
+export async function generateWorldClassResume(userId: string, resumeId: string, targetRole = "Full Stack Developer", jobId?: string) {
   if (!resumeId) throw new ApiError(400, "resumeId is required");
   const resume = await findRecordById("resumes", resumeId);
   if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
+
+  let beforeAtsScore = resume.atsScore || 70;
+  let jobContext = undefined;
+  let computedTitle = `${targetRole} world-class resume`;
+  if (jobId) {
+    const job = await getJob(jobId);
+    if (job) {
+      targetRole = job.title;
+      computedTitle = `Tailored for: ${job.title} at ${job.company}`;
+      jobContext = {
+        title: job.title,
+        company: job.company,
+        description: job.description,
+        skillsRequired: job.skillsRequired
+      };
+      const localAnalysis = await scoreResumeForRole(resume, job.title);
+      beforeAtsScore = localAnalysis.atsScore;
+    }
+  }
 
   const generatedResume = await aiService.generateWorldClassResume(userId, {
     resume: {
@@ -178,7 +198,8 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
       rawText: resume.rawText,
       parsedData: resume.parsedData
     },
-    targetRole
+    targetRole,
+    job: jobContext
   });
   const content = buildWorldClassVersionContent(generatedResume);
   const changeSummary = computeChangeSummary(resume, content);
@@ -188,8 +209,9 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
   const version = await createRecord("resumeVersions", {
     userId,
     baseResumeId: resumeId,
-    title: `${generatedResume.title || targetRole} world-class resume`,
+    title: computedTitle,
     targetRole: generatedResume.title || targetRole,
+    targetJobId: jobId || undefined,
     sourceType: "generated",
     template: "compact",
     content,
@@ -215,6 +237,7 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     resumeVersionId: version._id,
     baseResumeId: resumeId,
     atsScore: score,
+    beforeAtsScore,
     provider: aiService.status(),
     safety: {
       noFakeExperience: true,

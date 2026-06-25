@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bookmark, CheckCircle2, ShieldCheck, Sparkles, XCircle, PlusCircle } from "lucide-react";
+import { Bookmark, CheckCircle2, ShieldCheck, Sparkles, XCircle, PlusCircle, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -143,6 +143,7 @@ export function JobCard({ job, isSaved = false, isApplied = false }: JobCardProp
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
           <Link href={"/jobs/" + job._id}><Button>Analyze</Button></Link>
+          <Link href={`/jobs/${job._id}/tailor-resume`}><Button variant="outline"><FileText className="h-4 w-4" /> Tailor Resume</Button></Link>
           <Link href={`/application-kit/${job._id}`}><Button variant="outline"><Sparkles className="h-4 w-4" /> Generate Application Kit</Button></Link>
           
           <Button
