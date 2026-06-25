@@ -39,6 +39,20 @@ router.post("/manual-import", requireAuth, asyncHandler(async (req, res) => res.
 router.post("/parse-text", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await parseJobText(req.body.text || "", req.user?.id) })));
 router.post("/import/csv-preview", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await previewCsvJobs(req.body.csv || "") })));
 router.get("/sources", asyncHandler(async (_req, res) => res.json({ success: true, data: getJobSources() })));
+router.get("/source-grouping", asyncHandler(async (_req, res) => {
+  const db = mongoose.connection.db;
+  if (!db) {
+    return res.json({ success: false, message: "Database not connected" });
+  }
+  const result = await db.collection("jobs").aggregate([
+    { $group: { _id: "$source", count: { $sum: 1 } } }
+  ]).toArray();
+  const grouping: Record<string, number> = {};
+  for (const item of result) {
+    grouping[item._id || "Unknown"] = item.count;
+  }
+  res.json({ success: true, data: grouping });
+}));
 router.get("/", optionalAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await listJobs({ ...req.query, userId: req.user?.id }) })));
 router.get("/:id", asyncHandler(async (req, res) => res.json({ success: true, data: await getJob(param(req.params.id)) })));
 router.post("/:id/save", requireAuth, asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await saveJob(req.user!.id, param(req.params.id)) })));
