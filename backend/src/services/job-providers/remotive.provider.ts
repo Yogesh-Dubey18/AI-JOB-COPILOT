@@ -24,7 +24,7 @@ export async function syncRemotiveJobs(limit = 50) {
         const cleaned = salaryStr.toLowerCase().replace(/[^0-9k\-–]/g, "");
         const matches = cleaned.match(/(\d+)(k)?/g);
         if (matches) {
-          const vals = matches.map(m => {
+          const vals = matches.map((m: string) => {
             let num = parseFloat(m);
             if (m.includes("k")) num *= 1000;
             return num;

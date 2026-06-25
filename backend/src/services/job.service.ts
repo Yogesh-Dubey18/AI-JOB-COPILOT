@@ -236,8 +236,8 @@ export async function getSyncStatus() {
 
 export async function listJobs(query: any = {}) {
   await ensureSampleJobs();
-  const page = Math.max(Number(query.page || 1), 1);
-  const limit = Math.min(Number(query.limit || 20), 50);
+  const page = Math.max(parseInt(query.page, 10) || 1, 1);
+  const limit = Math.max(1, Math.min(parseInt(query.limit, 10) || 20, 50));
   const search = query.search || query.role || "";
   
   let userSkills: string[] = [];
