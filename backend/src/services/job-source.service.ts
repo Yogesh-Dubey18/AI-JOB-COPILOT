@@ -339,7 +339,8 @@ export function normalizeJobSourceJob(input: Record<string, any>) {
     normalizedCompany: normalizeKey(company),
     reviewStatus: input.reviewStatus || (riskFlags.length ? "needs_review" : "approved"),
     importedAt: input.importedAt || new Date(),
-    lastSeenAt: new Date()
+    lastSeenAt: new Date(),
+    lastSeenInSyncAt: input.lastSeenInSyncAt || new Date()
   };
 }
 

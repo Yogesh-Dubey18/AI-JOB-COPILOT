@@ -269,9 +269,14 @@ export async function listJobs(query: any = {}) {
 
   let jobs = await findRecords("jobs", {}, { sort: { postedAt: -1 } });
   
-  // Exclude expired jobs
+  // Exclude expired jobs (keep synced jobs even if expiresAt is in the past)
   const nowTime = Date.now();
-  jobs = jobs.filter((job: any) => !job.expiresAt || new Date(job.expiresAt).getTime() > nowTime);
+  jobs = jobs.filter((job: any) => {
+    if (!job.expiresAt) return true;
+    const isSyncedJob = job.source === "Adzuna Jobs" || job.sourceType === "api-provider" || job.sourceType === "partner-feed";
+    if (isSyncedJob) return true;
+    return new Date(job.expiresAt).getTime() > nowTime;
+  });
 
   // Exclude applied/saved jobs if user is authenticated and hideApplied toggle is active (defaulting to true)
   if (query.userId) {
@@ -469,6 +474,7 @@ export async function createManualJob(input: any) {
     const updatedJob = await updateRecord("jobs", String(duplicate._id), {
       ...duplicate,
       ...normalized,
+      lastSeenInSyncAt: new Date(),
       updatedAt: new Date()
     });
     return { job: updatedJob, duplicate: true, duplicateKey: normalized.duplicateKey };
@@ -698,18 +704,21 @@ export function getJobSources() {
 
 export async function cleanupExpiredJobs() {
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const jobs = await findRecords("jobs", {});
   
   let deletedCount = 0;
   for (const job of jobs) {
-    const isExpired = job.expiresAt && new Date(job.expiresAt).getTime() < now.getTime();
-    const isStale = (job.postedAt && new Date(job.postedAt).getTime() < thirtyDaysAgo.getTime()) ||
-                    (job.createdAt && new Date(job.createdAt).getTime() < thirtyDaysAgo.getTime());
-                    
-    if (isExpired || isStale) {
-      await deleteRecord("jobs", String(job._id));
-      deletedCount++;
+    const isSyncedJob = job.source === "Adzuna Jobs" || job.sourceType === "api-provider" || job.sourceType === "partner-feed";
+    
+    if (isSyncedJob) {
+      const lastSeen = job.lastSeenInSyncAt || job.lastSeenAt || job.importedAt || job.createdAt || now;
+      const isStaleInSync = new Date(lastSeen).getTime() < fourteenDaysAgo.getTime();
+      
+      if (isStaleInSync) {
+        await deleteRecord("jobs", String(job._id));
+        deletedCount++;
+      }
     }
   }
   

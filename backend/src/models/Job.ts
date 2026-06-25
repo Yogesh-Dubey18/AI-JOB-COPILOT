@@ -33,7 +33,8 @@ const JobSchema = new Schema(
     postedAt: Date,
     expiresAt: Date,
     importedAt: Date,
-    lastSeenAt: Date
+    lastSeenAt: Date,
+    lastSeenInSyncAt: Date
   },
   { timestamps: true }
 );
