@@ -27,6 +27,7 @@ function JobsContent() {
   const [experience, setExperience] = useState("");
   const [sort, setSort] = useState(fromResume ? "match" : "postedAt");
   const [hideApplied, setHideApplied] = useState(true);
+  const [page, setPage] = useState(1);
   const debounced = useDebounce(search);
 
   const [refreshMessage, setRefreshMessage] = useState("");
@@ -43,8 +44,9 @@ function JobsContent() {
     if (sort) params.set("sort", sort);
     params.set("hideApplied", hideApplied ? "true" : "false");
     if (fromResume) params.set("fromResume", fromResume);
+    params.set("page", String(page));
     return params.toString();
-  }, [debounced, experience, jobType, remoteType, salaryMin, sort, trustMin, hideApplied, fromResume]);
+  }, [debounced, experience, jobType, remoteType, salaryMin, sort, trustMin, hideApplied, fromResume, page]);
 
   const jobs = useQuery({ queryKey: ["jobs", query], queryFn: () => api.get<any>("/jobs" + (query ? "?" + query : "")), retry: false });
   const sources = useQuery({ queryKey: ["job-sources"], queryFn: () => api.get<any>("/jobs/sources"), retry: false });
@@ -92,6 +94,10 @@ function JobsContent() {
       api.post("/jobs/viewed").catch(() => {});
     }
   }, [jobs.isSuccess]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debounced, remoteType, jobType, experience, trustMin, salaryMin, sort, hideApplied, fromResume]);
 
   const refreshMutation = useMutation({
     mutationFn: () => api.post<any>("/jobs/refresh"),
@@ -186,6 +192,12 @@ function JobsContent() {
   const newJobsCount = useMemo(() => {
     return processedItems.filter((job: any) => job.isNew).length;
   }, [processedItems]);
+
+  const total = jobs.data?.total || 0;
+  const limit = jobs.data?.limit || 20;
+  const totalPages = Math.ceil(total / limit);
+  const startIdx = (page - 1) * limit + 1;
+  const endIdx = Math.min(page * limit, total);
 
   const handleClearResumeFilter = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -320,7 +332,13 @@ function JobsContent() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4" />
-          <span aria-live="polite">{jobs.isLoading ? "Loading jobs..." : `${processedItems.length} of ${jobs.data?.total || 0} normalized jobs shown`}</span>
+          <span aria-live="polite">
+            {jobs.isLoading 
+              ? "Loading jobs..." 
+              : total > 0 
+              ? `Showing ${startIdx}–${endIdx} of ${total} jobs` 
+              : "0 jobs found"}
+          </span>
           {newJobsCount > 0 && (
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
               {newJobsCount} new job{newJobsCount > 1 ? "s" : ""} since last visit
@@ -357,6 +375,36 @@ function JobsContent() {
           />
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-center gap-2 border-t pt-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setPage((p) => Math.max(p - 1, 1));
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm font-medium">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setPage((p) => Math.min(p + 1, totalPages));
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            disabled={page === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </>
   );
 }
