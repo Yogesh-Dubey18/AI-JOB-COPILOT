@@ -2,7 +2,7 @@ import "./services/monitoring.service.js";
 import { app } from "./app.js";
 import { connectDB } from "./config/db.js";
 import { env, validateRuntimeEnv } from "./config/env.js";
-import { ensureSampleJobs } from "./services/job.service.js";
+import { ensureSampleJobs, runJobExpirationBackfill } from "./services/job.service.js";
 import { initJobSyncCron } from "./jobs/job-sync.cron.js";
 
 const envCheck = validateRuntimeEnv();
@@ -13,6 +13,7 @@ if (!envCheck.ok) {
 
 await connectDB();
 await ensureSampleJobs();
+await runJobExpirationBackfill();
 initJobSyncCron();
 
 app.listen(env.PORT, () => {

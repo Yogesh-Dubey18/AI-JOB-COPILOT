@@ -1889,4 +1889,35 @@ describe("AI Job Copilot API", () => {
     const publicProfile = await request(app).get("/api/portfolios/public/cleanup-proof-archive").expect(200);
     expect(JSON.stringify(publicProfile.body.data)).not.toMatch(/binary_export|exportId|archiveStorageKey|portfolio-proof-exports|audit|eventId|expiresAt/i);
   });
+
+  it("creates an application via apply endpoint and does not throw Mongoose schema error", async () => {
+    const agent = await authAgent();
+    const jobs = await agent.get("/api/jobs").expect(200);
+    const jobId = jobs.body.data.items[0]._id;
+    
+    const res = await agent.post(`/api/jobs/${jobId}/apply`).expect(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.status).toBe("Applied");
+    expect(res.body.data.timeline[0].type).toBe("created");
+  });
+
+  it("excludes expired jobs from listJobs feed", async () => {
+    const agent = await authAgent();
+    await createRecord("jobs", {
+      title: "Expired Test Developer",
+      company: "Expired Co",
+      location: "Remote",
+      remoteType: "Remote",
+      jobType: "Full-time",
+      postedAt: new Date(Date.now() - 40 * 86400000),
+      expiresAt: new Date(Date.now() - 10 * 86400000),
+      trustScore: 80,
+      scamRiskScore: 10,
+      source: "Manual"
+    });
+    
+    const res = await agent.get("/api/jobs").expect(200);
+    const titles = res.body.data.items.map((j: any) => j.title);
+    expect(titles).not.toContain("Expired Test Developer");
+  });
 });

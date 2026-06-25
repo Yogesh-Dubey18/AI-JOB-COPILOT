@@ -743,3 +743,25 @@ export async function applyJob(userId: string, jobId: string) {
   });
 }
 
+export async function runJobExpirationBackfill() {
+  if (isDbReady() && mongoose.connection.db) {
+    try {
+      const col = mongoose.connection.db.collection("jobs");
+      const jobs = await col.find({ postedAt: { $exists: true } }).toArray();
+      let updatedCount = 0;
+      for (const job of jobs) {
+        const postedAt = new Date(job.postedAt);
+        const correctExpiresAt = new Date(postedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+        if (!job.expiresAt || Math.abs(new Date(job.expiresAt).getTime() - correctExpiresAt.getTime()) > 60000) {
+          await col.updateOne({ _id: job._id }, { $set: { expiresAt: correctExpiresAt } });
+          updatedCount++;
+        }
+      }
+      console.info(`[Migration] Recalculated expiresAt relative to postedAt for ${updatedCount} jobs.`);
+    } catch (e) {
+      console.error("[Migration] Job expiration backfill failed:", e);
+    }
+  }
+}
+
+

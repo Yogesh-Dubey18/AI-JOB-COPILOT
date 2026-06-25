@@ -286,4 +286,110 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
     await expect(page).toHaveURL(/.*settings\/integrations/);
     await expect(page.getByRole("heading", { name: "Integrations & provider status" })).toBeVisible();
   });
+
+  test("the Find Matching Jobs CTA results include match-score data while direct /jobs visit does not", async ({ page }) => {
+    // Log requests for debugging
+    page.on("request", (req) => {
+      const url = req.url();
+      if (url.includes("/api/")) {
+        console.log(`[E2E Request] ${req.method()} ${url}`);
+      }
+    });
+
+    await page.route("**/api/auth/me", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { fullName: "Asha Dev", email: "asha@example.com" } })
+      });
+    });
+    await page.route("**/api/profile", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { fullName: "Asha Dev", email: "asha@example.com" } })
+      });
+    });
+    await page.route("**/api/resumes", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [{ _id: "mock-resume-id", fileName: "resume.pdf", parsedData: { skills: ["React"] } }] })
+      });
+    });
+    await page.route("**/api/resumes/mock-resume-id/analyze", async (route) => {
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            atsScore: 85,
+            resumeLevel: "Mid-level",
+            recruiterView: "Good fit",
+            atsBreakdown: { contactInformation: 10, skillsMatch: 20 },
+            categoryScores: { content: { score: 18, max: 20, why: "Good summary" } }
+          }
+        })
+      });
+    });
+    await page.route("**/api/jobs/sources", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: { externalProviders: [] } }) });
+    });
+    await page.route("**/api/applications", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: [] }) });
+    });
+    await page.route("**/api/jobs/sync-status", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: { lastSyncedAt: new Date().toISOString(), status: "success" } }) });
+    });
+
+    // Programmatic route handler to avoid parameter order mismatch
+    await page.route("**/api/jobs*", async (route) => {
+      const url = new URL(route.request().url());
+      const fromResume = url.searchParams.get("fromResume");
+      
+      if (fromResume === "mock-resume-id") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              items: [{ _id: "job-1", title: "React Developer", company: "Scitara", location: "Remote", matchScore: 88, sourceType: "curated" }],
+              total: 1
+            }
+          })
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              items: [{ _id: "job-1", title: "React Developer", company: "Scitara", location: "Remote", sourceType: "curated" }],
+              total: 1
+            }
+          })
+        });
+      }
+    });
+
+    await page.context().addCookies([{ name: "ajc_session", value: "1", domain: "localhost", path: "/" }]);
+
+    await page.goto("/resume/analyzer");
+    await page.selectOption('select', "mock-resume-id");
+    await page.getByLabel(/^Target role$/i).fill("Developer");
+    await page.getByRole("button", { name: /^Analyze resume$/i }).click();
+
+    const matchBtn = page.getByRole("button", { name: /^Find Matching Jobs$/i });
+    await matchBtn.waitFor({ state: "visible", timeout: 5000 });
+    await matchBtn.click();
+
+    await page.waitForURL("**/jobs?fromResume=mock-resume-id&role=Developer");
+    await expect(page.getByText("AI match 88%")).toBeVisible();
+
+    await page.goto("/jobs?role=Developer");
+    await expect(page.getByText("AI match 88%")).not.toBeVisible();
+  });
 });
