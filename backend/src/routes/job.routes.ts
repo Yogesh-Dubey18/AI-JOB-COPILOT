@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { createManualJob, dailyFeed, getJob, getJobSources, listJobs, parseJobText, previewCsvJobs, saveJob, refreshJobs, getSyncStatus, updateLastJobsViewedAt, applyJob } from "../services/job.service.js";
@@ -7,6 +8,27 @@ import { tailorResumeForJob } from "../services/resume-tailor.service.js";
 
 const router = Router();
 const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : value);
+
+router.get("/expired-diagnostics", optionalAuth, asyncHandler(async (req, res) => {
+  const now = new Date();
+  const db = mongoose.connection.db;
+  let dbExpiredCount = 0;
+  if (db) {
+    dbExpiredCount = await db.collection("jobs").countDocuments({ expiresAt: { $lt: now } });
+  }
+  const feedJobsResult = await listJobs({ ...req.query, userId: req.user?.id, limit: 100 });
+  const feedJobs = feedJobsResult.items || feedJobsResult || [];
+  const feedExpiredCount = feedJobs.filter((job: any) => job.expiresAt && new Date(job.expiresAt).getTime() < now.getTime()).length;
+  
+  res.json({
+    success: true,
+    data: {
+      dbExpiredCount,
+      feedExpiredCount,
+      now: now.toISOString()
+    }
+  });
+}));
 
 router.get("/recommended", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await listJobs({ ...req.query, userId: req.user!.id, recommendedFor: req.user!.id }) })));
 router.get("/daily-feed", requireAuth, asyncHandler(async (req, res) => res.json({ success: true, data: await dailyFeed({ ...req.query, userId: req.user!.id }) })));
