@@ -19,7 +19,7 @@ function JobsContent() {
   const qc = useQueryClient();
   const fromResume = searchParams.get("fromResume");
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("role") || searchParams.get("search") || "");
   const [remoteType, setRemoteType] = useState("");
   const [jobType, setJobType] = useState("");
   const [trustMin, setTrustMin] = useState("");
@@ -42,8 +42,9 @@ function JobsContent() {
     if (experience) params.set("experience", experience);
     if (sort) params.set("sort", sort);
     params.set("hideApplied", hideApplied ? "true" : "false");
+    if (fromResume) params.set("fromResume", fromResume);
     return params.toString();
-  }, [debounced, experience, jobType, remoteType, salaryMin, sort, trustMin, hideApplied]);
+  }, [debounced, experience, jobType, remoteType, salaryMin, sort, trustMin, hideApplied, fromResume]);
 
   const jobs = useQuery({ queryKey: ["jobs", query], queryFn: () => api.get<any>("/jobs" + (query ? "?" + query : "")), retry: false });
   const sources = useQuery({ queryKey: ["job-sources"], queryFn: () => api.get<any>("/jobs/sources"), retry: false });

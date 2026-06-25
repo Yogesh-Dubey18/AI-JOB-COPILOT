@@ -347,7 +347,7 @@ export default function ResumeAnalyzerPage() {
                       <Button>Export world-class PDF</Button>
                     </Link>
                   ) : null}
-                  <Link href={`/jobs?role=${encodeURIComponent(targetRole)}`}>
+                  <Link href={`/jobs?fromResume=${resumeId}&role=${encodeURIComponent(targetRole)}`}>
                     <Button variant="secondary">Find Matching Jobs</Button>
                   </Link>
                   <Link href="/resume/builder">

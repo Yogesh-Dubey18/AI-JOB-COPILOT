@@ -238,10 +238,20 @@ export async function listJobs(query: any = {}) {
       userLastJobsViewedAt = profile.lastJobsViewedAt || null;
     }
 
-    const baseResume = await findOneRecord("resumes", { userId: query.userId, isBaseResume: true })
-      || (await findRecords("resumes", { userId: query.userId }, { sort: { createdAt: -1 }, limit: 1 }))[0] || null;
-    if (baseResume && baseResume.parsedData) {
-      const resumeSkills = (baseResume.parsedData.skills || []).map((s: string) => s.toLowerCase());
+    let resumeForSkills = null;
+    if (query.fromResume) {
+      try {
+        resumeForSkills = await findRecordById("resumes", String(query.fromResume));
+      } catch (err) {
+        // ignore
+      }
+    }
+    if (!resumeForSkills) {
+      resumeForSkills = await findOneRecord("resumes", { userId: query.userId, isBaseResume: true })
+        || (await findRecords("resumes", { userId: query.userId }, { sort: { createdAt: -1 }, limit: 1 }))[0] || null;
+    }
+    if (resumeForSkills && resumeForSkills.parsedData) {
+      const resumeSkills = (resumeForSkills.parsedData.skills || []).map((s: string) => s.toLowerCase());
       userSkills = Array.from(new Set([...userSkills, ...resumeSkills]));
     }
 
