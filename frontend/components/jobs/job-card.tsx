@@ -45,7 +45,8 @@ export function JobCard({ job, isSaved = false, isApplied = false }: JobCardProp
     onSuccess: (res: any) => {
       void qc.invalidateQueries({ queryKey: ["applications"] });
       void qc.invalidateQueries({ queryKey: ["jobs"] });
-      if (res?.data?.status === "Applied") {
+      const status = res?.status || res?.data?.status;
+      if (status === "Applied") {
         router.push("/applications");
       }
     }
