@@ -57,6 +57,9 @@ export async function syncAdzunaJobs(
         }
       }
 
+      const postedAt = rawJob.created ? new Date(rawJob.created) : new Date();
+      const expiresAt = new Date(postedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
       const jobData = {
         title: cleanTitle || "Software Engineer",
         company: companyName,
@@ -82,8 +85,8 @@ export async function syncAdzunaJobs(
         externalId: String(rawJob.id || ""),
         source: "Adzuna Jobs",
         sourceType: "api-provider",
-        postedAt: rawJob.created ? new Date(rawJob.created) : new Date(),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        postedAt,
+        expiresAt
       };
 
       const syncResult = await createManualJob(jobData);
