@@ -30,9 +30,8 @@ export async function syncAdzunaJobs(
         what,
         where: where || undefined,
         category: options.category || undefined,
-        what_or: (options.what_or || ["react", "node", "mern", "javascript", "python", "fullstack"]).join(" "),
         sort_by: options.sort_by || "date",
-        days_old: options.days_old !== undefined ? options.days_old : 3
+        max_days_old: options.days_old !== undefined ? options.days_old : 3
       }
     });
 
