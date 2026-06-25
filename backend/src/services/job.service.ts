@@ -101,7 +101,7 @@ export async function ensureSampleJobs() {
   }
 }
 
-async function cleanupDuplicates() {
+export async function cleanupDuplicates() {
   const jobs = await findRecords("jobs", {}, { sort: { createdAt: -1 } });
   const seenKeys = new Set<string>();
   const duplicateIds: string[] = [];
