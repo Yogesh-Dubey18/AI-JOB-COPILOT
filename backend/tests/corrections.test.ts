@@ -333,4 +333,58 @@ describe("AI Job Copilot - Corrections & Upgrade Verification", () => {
       axiosSpy.mockRestore();
     }
   });
+
+  it("h. Tailor resume does NOT invent metrics not in the original resume", async () => {
+    const { tailorResumeForJob } = await import("../src/services/resume-tailor.service.js");
+    
+    // 1. Create a job
+    const job = await createRecord("jobs", {
+      title: "React Developer",
+      company: "Company Cool",
+      location: "Remote",
+      description: "Must know React and TailwindCSS.",
+      skillsRequired: ["React", "TailwindCSS"]
+    });
+
+    // 2. Create a base resume with NO specific metrics/numbers
+    const resume = await createRecord("resumes", {
+      userId: "corrections-user-id",
+      fileName: "simple.pdf",
+      rawText: "Yogesh Dubey. Frontend Engineer. Experience with React and CSS.",
+      parsedData: {
+        name: "Yogesh Dubey",
+        email: "yogesh@example.com",
+        skills: ["React", "CSS"],
+        projects: [
+          {
+            name: "Portfolio Site",
+            techStack: "React, CSS",
+            description: "Built personal portfolio website to display projects."
+          }
+        ]
+      }
+    });
+
+    // 3. Run tailoring
+    const tailored = await tailorResumeForJob("corrections-user-id", job._id, resume._id);
+
+    // 4. Assertions on generated content
+    expect(tailored).toBeDefined();
+    expect(tailored.improvedProjects).toBeDefined();
+
+    // Verify no numbers/percentages exist in improvedProjects bullets
+    const originalText = resume.rawText || "";
+    const originalNumbers = originalText.match(/\b\d+(\.\d+)?%?\b/g) || [];
+    const originalNumbersSet = new Set(originalNumbers.map(n => n.replace(/%/g, "")));
+
+    for (const bullet of tailored.improvedProjects) {
+      const bulletNumbers = bullet.match(/\b\d+(\.\d+)?%?\b/g) || [];
+      for (const num of bulletNumbers) {
+        const cleanNum = num.replace(/%/g, "");
+        if (!originalNumbersSet.has(cleanNum)) {
+          throw new Error(`Metric fabrication detected: tailored bullet "${bullet}" contains number "${num}" which is not present in original resume.`);
+        }
+      }
+    }
+  });
 });

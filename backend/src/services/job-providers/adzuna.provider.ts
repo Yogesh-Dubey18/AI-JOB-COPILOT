@@ -70,15 +70,8 @@ export async function syncAdzunaJobs(
         salaryMax: parsedSalaryMax,
         currency: country.toLowerCase() === "in" ? "INR" : "GBP",
         description: description,
-        responsibilities: [
-          "Participate in the software design and development life cycle",
-          "Ensure application code is modular and clean",
-          "Collaborate with multi-functional product squads"
-        ],
-        requirements: [
-          "Hands-on project development expertise",
-          "Good debugging and structural reasoning skills"
-        ],
+        responsibilities: [],
+        requirements: [],
         skillsRequired: Array.from(new Set(skillsRequired)),
         applyUrl,
         externalId: String(rawJob.id || ""),
