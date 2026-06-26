@@ -5,7 +5,7 @@ import { createRecord, findRecordById, findRecords, updateRecord } from "../util
 import { getJob } from "./job.service.js";
 import { exportResumePdf } from "./pdf-export.service.js";
 
-export async function tailorResumeForJob(userId: string, jobId: string, baseResumeId?: string) {
+export async function tailorResumeForJob(userId: string, jobId: string, baseResumeId?: string, hostUrl?: string) {
   const job = await getJob(jobId);
   const resume = baseResumeId ? await findRecordById("resumes", baseResumeId) : (await findRecords("resumes", { userId }, { limit: 1, sort: { createdAt: -1 } }))[0];
   if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Base resume not found");
@@ -34,7 +34,7 @@ export async function tailorResumeForJob(userId: string, jobId: string, baseResu
     if (pdfExport && pdfExport.fileUrl) {
       let fileUrl = pdfExport.fileUrl;
       if (fileUrl.startsWith("/uploads")) {
-        const baseUrl = process.env.BACKEND_URL || `http://localhost:${env.PORT || 5000}`;
+        const baseUrl = hostUrl || process.env.BACKEND_URL || `http://localhost:${env.PORT || 5000}`;
         fileUrl = `${baseUrl}${fileUrl}`;
       }
       realPdfUrl = fileUrl;

@@ -66,6 +66,10 @@ router.get("/:id", asyncHandler(async (req, res) => res.json({ success: true, da
 router.post("/:id/save", requireAuth, asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await saveJob(req.user!.id, param(req.params.id)) })));
 router.post("/:id/apply", requireAuth, asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await applyJob(req.user!.id, param(req.params.id)) })));
 router.post("/:id/match", requireAuth, asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await matchJob(req.user!.id, param(req.params.id), req.body.resumeId) })));
-router.post("/:id/tailor-resume", requireAuth, asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await tailorResumeForJob(req.user!.id, param(req.params.id), req.body.baseResumeId) })));
+router.post("/:id/tailor-resume", requireAuth, asyncHandler(async (req, res) => {
+  const hostUrl = req.protocol + "://" + req.get("host");
+  const data = await tailorResumeForJob(req.user!.id, param(req.params.id), req.body.baseResumeId, hostUrl);
+  res.status(201).json({ success: true, data });
+}));
 
 export default router;
