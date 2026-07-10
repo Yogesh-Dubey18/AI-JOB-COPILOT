@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { ApiError } from "../utils/ApiError.js";
-import { createRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
+import { createRecord, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { anonymizeParsedResume, extractResumeTextDetailed, parseResumeText } from "./resume-parser.service.js";
 import { validateResumeBuffer } from "./file-validation.service.js";
 import { uploadFile, getSignedUrl } from "./storage.service.js";
@@ -52,8 +52,12 @@ export async function uploadResume(userId: string, file: Express.Multer.File, is
     throw err;
   }
 
+  const user = await findOneRecord("users", { _id: userId });
+  const userFullName = user?.fullName;
+  const userProfile = user ? { email: user.email, phone: user.phone } : undefined;
+
   const parsed = await extractResumeTextDetailed(file.path, file.mimetype);
-  const parsedData = parseResumeText(parsed.text);
+  const parsedData = parseResumeText(parsed.text, userFullName, userProfile);
   const anonymizedPreview = options.anonymizePreview ? anonymizeParsedResume(parsedData, parsed.text) : null;
 
   // Generate unique user-specific key for S3/R2 storage partition

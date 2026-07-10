@@ -3,10 +3,17 @@ import mongoose, { InferSchemaType, Schema, model } from "mongoose";
 export const applicationStatuses = [
   "Saved",
   "Applied",
+  "Resume Viewed",
   "Interview Scheduled",
+  "HR Call",
+  "Assignment",
   "Technical Round",
+  "Technical Round 1",
+  "Technical Round 2",
+  "Managerial Round",
   "HR Round",
   "Offer",
+  "Selected",
   "Rejected",
   "Withdrawn"
 ] as const;

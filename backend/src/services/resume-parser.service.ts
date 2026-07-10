@@ -178,44 +178,72 @@ export async function extractResumeText(filePath: string, fileType: string) {
   return result.text;
 }
 
-export function parseResumeText(text: string) {
+export function parseResumeText(text: string, userFullName?: string, userProfile?: { email?: string; phone?: string }) {
   const lines = text.split(/\r?\n/).map(l => l.trim());
   const nonDbLines = lines.filter(Boolean);
   
-  // 1. Name: Extract ONLY the first line, stop at first comma, newline, or email or separator
+  // 1. Name: Extract looking for the FIRST non-empty line of the resume
+  // that is NOT an email, phone, or URL
   let name = "";
-  if (nonDbLines.length > 0) {
-    const firstLine = nonDbLines[0];
-    let parsedName = firstLine;
+  const emailPattern = /[\w.-]+@[\w.-]+\.\w{2,}/i;
+  const phonePattern = /(?:\+?\d[\s-]?){10,14}/;
+  const nameUrlPattern = /https?:\/\/[^\s)]+|github\.com|linkedin\.com/i;
+  
+  for (const line of nonDbLines) {
+    const cleanLine = line.trim();
+    if (!cleanLine) continue;
     
-    const commaIndex = parsedName.indexOf(",");
-    if (commaIndex !== -1) {
-      parsedName = parsedName.substring(0, commaIndex);
-    }
+    const hasEmail = emailPattern.test(cleanLine);
+    const hasPhone = phonePattern.test(cleanLine) || cleanLine.match(/\d{4,}/) !== null;
+    const hasUrl = nameUrlPattern.test(cleanLine);
+    const isSectionHeader = /^(summary|objective|skills|projects|experience|employment|education|certifications|achievements)\b/i.test(cleanLine);
     
-    const emailIndex = parsedName.search(/[\w.-]+@[\w.-]+\.\w{2,}/);
-    if (emailIndex !== -1) {
-      parsedName = parsedName.substring(0, emailIndex);
+    if (!hasEmail && !hasPhone && !hasUrl && !isSectionHeader && cleanLine.length < 50) {
+      let parsedName = cleanLine;
+      const commaIndex = parsedName.indexOf(",");
+      if (commaIndex !== -1) {
+        parsedName = parsedName.substring(0, commaIndex);
+      }
+      const separatorIndex = parsedName.search(/[|•]/);
+      if (separatorIndex !== -1) {
+        parsedName = parsedName.substring(0, separatorIndex);
+      }
+      name = parsedName.trim();
+      break;
     }
+  }
 
-    const separatorIndex = parsedName.search(/[|•]/);
-    if (separatorIndex !== -1) {
-      parsedName = parsedName.substring(0, separatorIndex);
-    }
-    
-    name = parsedName.trim();
+  // Fallback to userFullName if name is not found or empty
+  if (!name && userFullName) {
+    name = userFullName.trim();
+  }
+  if (!name || name.toLowerCase() === "candidate") {
+    name = userFullName ? userFullName.trim() : "";
+  }
+  if (!name) {
+    name = "Test User";
   }
 
   // 2. Contact Info
-  const emailPattern = /[\w.-]+@[\w.-]+\.\w{2,}/i;
-  const phonePattern = /(\+91[\s-]?)?[6-9]\d{9}/g;
-  const githubPattern = /github\.com\/[\w-]+/i;
-  const linkedinPattern = /linkedin\.com\/in\/[\w-]+/i;
+  // Email: regex /[\w.-]+@[\w.-]+\.\w{2,}/
+  // Phone (India): regex /(\+91[\s-]?)?[6-9]\d{9}/
+  // GitHub: regex /github\.com\/[\w-]+/i
+  // LinkedIn: regex /linkedin\.com\/in\/[\w-]+/i
+  const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w{2,}/i)?.[0] || "";
+  const phoneMatch = text.match(/(\+91[\s-]?)?[6-9]\d{9}/)?.[0] || "";
+  const githubMatch = text.match(/github\.com\/[\w-]+/i)?.[0] || "";
+  const linkedinMatch = text.match(/linkedin\.com\/in\/[\w-]+/i)?.[0] || "";
   
-  const email = text.match(emailPattern)?.[0] || "";
-  const phone = text.match(phonePattern)?.[0] || "";
-  const githubMatch = text.match(githubPattern)?.[0] || "";
-  const linkedinMatch = text.match(linkedinPattern)?.[0] || "";
+  let email = emailMatch;
+  let phone = phoneMatch;
+  
+  // As fallback: pull email from users collection and phone from user profile if stored
+  if (!email && userProfile?.email) {
+    email = userProfile.email;
+  }
+  if (!phone && userProfile?.phone) {
+    phone = userProfile.phone;
+  }
   
   let location = "";
   const locationMatch = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*(UP|Uttar\s+Pradesh|Delhi|New\s+Delhi|Haryana|Karnataka|Maharashtra|India)\b/i);

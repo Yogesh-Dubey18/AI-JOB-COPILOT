@@ -58,3 +58,36 @@ export async function activateMockSubscription(userId: string, planIdInput: stri
   });
   return { ...updated, plan: PLAN_CATALOG[planId] };
 }
+
+export async function activateSubscription(
+  userId: string,
+  planIdInput: string,
+  details: { providerCustomerId: string; providerSubscriptionId: string; provider: string }
+) {
+  const planId = normalizePlanId(planIdInput);
+  const existing = await findOneRecord("subscriptions", { userId });
+  let subscription;
+  if (existing) {
+    subscription = await updateRecord("subscriptions", String(existing._id), {
+      planId,
+      status: "active",
+      provider: details.provider,
+      providerCustomerId: details.providerCustomerId,
+      providerSubscriptionId: details.providerSubscriptionId,
+      cancelAtPeriodEnd: false,
+      ...monthlyPeriod()
+    });
+  } else {
+    subscription = await createRecord("subscriptions", {
+      userId,
+      planId,
+      status: "active",
+      provider: details.provider,
+      providerCustomerId: details.providerCustomerId,
+      providerSubscriptionId: details.providerSubscriptionId,
+      cancelAtPeriodEnd: false,
+      ...monthlyPeriod()
+    });
+  }
+  return { ...subscription, plan: PLAN_CATALOG[planId] };
+}

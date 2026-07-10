@@ -387,7 +387,7 @@ export default function ResumeBuilderPage() {
   };
 
   // Score outputs
-  const liveResult = scoreMutation.data?.data;
+  const liveResult = scoreMutation.data;
   const liveScore = liveResult?.atsScore ?? selectedResume?.parsedData?.atsScore ?? 0;
   const liveBreakdown = liveResult?.categoryScores || {};
   const weaknesses = liveResult?.weaknesses || [];

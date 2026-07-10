@@ -13,6 +13,7 @@ import { checkJobScam } from "../services/scam-detector.service.js";
 import { chatWithMentor } from "../services/career-chat.service.js";
 import { generatePortfolio } from "../services/portfolio.service.js";
 import { generateFollowUpMessage } from "../services/followup.service.js";
+import { checkGitHubProof } from "../services/github-proof.service.js";
 import { aiContextSchema } from "../validators/ai.validator.js";
 
 const router = Router();
@@ -35,5 +36,6 @@ router.post("/rejection-analysis", enforceAiCreditLimit("rejection-analysis"), v
 router.post("/linkedin-optimizer", enforceAiCreditLimit("linkedin-optimizer"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await aiService.linkedinOptimizer(req.user!.id, req.body) })));
 router.post("/portfolio-generator", enforceAiCreditLimit("portfolio-generator"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await generatePortfolio(req.user!.id, req.body) })));
 router.post("/follow-up-message", enforceAiCreditLimit("follow-up-message"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await generateFollowUpMessage(req.user!.id, req.body) })));
+router.post("/github-analyzer", enforceAiCreditLimit("github-analyzer"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await checkGitHubProof(req.body) })));
 export default router;
 

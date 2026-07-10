@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/lib/api";
+import { getStoredAccessToken } from "@/lib/auth-session";
 
 // v2 category colors
 const categoryColors: Record<string, string> = {
@@ -46,6 +47,40 @@ export default function ResumeAnalyzerPage() {
   const [anonymizeForAnalysis, setAnonymizeForAnalysis] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
   const [showWhyScores, setShowWhyScores] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+
+  const downloadDirectPdf = async (versionId: string) => {
+    setDownloadingPdf(true);
+    setDownloadError("");
+    try {
+      const token = getStoredAccessToken();
+      const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, "");
+      const response = await fetch(`${backendOrigin}/api/pdf-export/resume`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ id: versionId })
+      });
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Resume_YogeshDubey.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err: any) {
+      setDownloadError(err.message || "Failed to download PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const resumes = useQuery({ queryKey: ["resumes"], queryFn: () => api.get<any[]>("/resumes"), retry: false });
   const analyze = useMutation({
@@ -341,11 +376,22 @@ export default function ResumeAnalyzerPage() {
                     </ul>
                   </div>
                 ) : null}
+                {downloadError && (
+                  <p className="text-xs text-destructive" role="alert">{downloadError}</p>
+                )}
                 <div className="flex flex-wrap gap-2 border-t pt-3">
                   {worldClass.data?.resumeVersionId ? (
-                    <Link href={`/pdf-export?versionId=${worldClass.data.resumeVersionId}`}>
-                      <Button>Export world-class PDF</Button>
-                    </Link>
+                    <>
+                      <Button
+                        disabled={downloadingPdf}
+                        onClick={() => downloadDirectPdf(worldClass.data.resumeVersionId)}
+                      >
+                        {downloadingPdf ? "Downloading..." : "Download PDF"}
+                      </Button>
+                      <Link href={`/pdf-export?versionId=${worldClass.data.resumeVersionId}`}>
+                        <Button variant="outline">Export options</Button>
+                      </Link>
+                    </>
                   ) : null}
                   <Link href={`/jobs?fromResume=${resumeId}&role=${encodeURIComponent(targetRole)}`}>
                     <Button variant="secondary">Find Matching Jobs</Button>

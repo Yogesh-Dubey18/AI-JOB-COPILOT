@@ -54,11 +54,20 @@ function stringify(value: unknown): string {
   return String(value);
 }
 
-function normalizePdfText(value: unknown): string {
-  return stringify(value)
-    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "?")
+function cleanPdfString(val: unknown): string {
+  if (val == null) return "";
+  const str = String(val);
+  return str
+    .replace(/[·•·]/g, " - ")
+    .replace(/%/g, "")
+    .replace(/%¸/g, "")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
     .replace(/[\\()]/g, (match: string) => `\\${match}`)
     .trim();
+}
+
+function normalizePdfText(value: unknown): string {
+  return cleanPdfString(value);
 }
 
 function categorizeSkills(skills: string[]): Record<string, string[]> {
@@ -70,9 +79,9 @@ function categorizeSkills(skills: string[]): Record<string, string[]> {
   };
   
   const frontendKeywords = ["react", "vue", "angular", "html", "css", "next", "tailwind", "typescript", "javascript", "js", "ts", "redux", "jquery", "sass", "bootstrap", "flutter", "swiftui", "webpack"];
-  const backendKeywords = ["node", "express", "python", "java", "go", "golang", "c++", "c#", "django", "ruby", "rails", "rust", "php", "nestjs", "graphql", "spring", "flask", "fastapi", "solidity"];
-  const databaseKeywords = ["mongodb", "postgresql", "postgres", "mysql", "redis", "sqlite", "oracle", "mariadb", "cassandra", "firebase", "dynamodb", "neo4j", "prisma", "sequelize"];
-  const toolsKeywords = ["git", "docker", "kubernetes", "aws", "gcp", "azure", "jenkins", "vite", "npm", "github", "gitlab", "jira", "postman", "linux", "nginx", "ci/cd", "terraform"];
+  const backendKeywords = ["node", "express", "python", "java", "go", "golang", "c++", "c#", "django", "ruby", "rails", "rust", "php", "nestjs", "graphql", "spring", "flask", "fastapi", "solidity", "jwt", "auth", "api", "rest"];
+  const databaseKeywords = ["mongodb", "mongoose", "postgresql", "postgres", "mysql", "redis", "sqlite", "oracle", "mariadb", "cassandra", "firebase", "dynamodb", "neo4j", "prisma", "sequelize"];
+  const toolsKeywords = ["git", "docker", "kubernetes", "aws", "gcp", "azure", "jenkins", "vite", "npm", "github", "gitlab", "jira", "postman", "linux", "nginx", "ci/cd", "terraform", "vscode", "vs code", "vercel", "render"];
 
   const other: string[] = [];
 
@@ -127,9 +136,9 @@ function categorizeSkills(skills: string[]): Record<string, string[]> {
 const fallbackSummary = "BCA graduate and Full Stack Developer specializing in MERN stack (MongoDB, Express.js, React.js, Node.js) with 4 production projects and DUCAT certification. Solved 300+ DSA problems. Seeking entry-level software developer role.";
 
 const fixedSkillCategories = [
-  ["Frontend", "React.js, Next.js, TypeScript, JavaScript, HTML5, CSS3, Tailwind CSS"],
+  ["Frontend", "React.js, Next.js, TypeScript, JavaScript, HTML5, Tailwind CSS"],
   ["Backend", "Node.js, Express.js, REST APIs, JWT Authentication"],
-  ["Database", "MongoDB, Mongoose"],
+  ["Database", "MongoDB, Mongoose, MySQL"],
   ["Tools", "Git, GitHub, VS Code, Postman, Vercel, Render"]
 ] as const;
 
@@ -333,21 +342,21 @@ function getResumeDataForPdf(content: any): WorldClassResume {
   let projectsList = toArray(resume.projects).map((proj: any) => {
     const bullets = toArray(proj.bullets || proj.bulletPoints);
     return {
-      name: firstText(proj.name, proj.title),
-      tech: firstText(proj.tech, proj.techStack, proj.technologies),
-      bullets: (bullets.length ? bullets : [firstText(proj.description, proj.summary)]).map(String),
-      live: firstText(proj.live, proj.liveUrl, proj.demoUrl),
-      github: firstText(proj.github, proj.githubUrl)
+      name: cleanPdfString(firstText(proj.name, proj.title)),
+      tech: cleanPdfString(firstText(proj.tech, proj.techStack, proj.technologies)),
+      bullets: (bullets.length ? bullets : [firstText(proj.description, proj.summary)]).map(cleanPdfString),
+      live: cleanPdfString(firstText(proj.live, proj.liveUrl, proj.demoUrl)),
+      github: cleanPdfString(firstText(proj.github, proj.githubUrl))
     };
   }).filter(p => p.name);
 
   if (projectsList.length === 0) {
     projectsList = fallbackProjects.map(proj => ({
-      name: proj.name,
-      tech: proj.techStack,
-      bullets: proj.bullets,
-      live: proj.liveUrl,
-      github: proj.githubUrl
+      name: cleanPdfString(proj.name),
+      tech: cleanPdfString(proj.techStack),
+      bullets: proj.bullets.map(cleanPdfString),
+      live: cleanPdfString(proj.liveUrl),
+      github: cleanPdfString(proj.githubUrl)
     }));
   }
 
@@ -355,50 +364,68 @@ function getResumeDataForPdf(content: any): WorldClassResume {
   const experienceList = toArray(resume.experience).map((exp: any) => {
     const bullets = toArray(exp.bullets || exp.bulletPoints);
     return {
-      title: firstText(exp.title, exp.role),
-      company: firstText(exp.company, exp.employer),
-      duration: firstText(exp.duration, exp.dates),
-      bullets: (bullets.length ? bullets : [firstText(exp.description, exp.summary)]).map(String)
+      title: cleanPdfString(firstText(exp.title, exp.role)),
+      company: cleanPdfString(firstText(exp.company, exp.employer)),
+      duration: cleanPdfString(firstText(exp.duration, exp.dates)),
+      bullets: (bullets.length ? bullets : [firstText(exp.description, exp.summary)]).map(cleanPdfString)
     };
   }).filter(e => e.title || e.company);
 
   // Normalize education
   let educationList = toArray(resume.education).map((edu: any) => {
     return {
-      degree: firstText(edu.degree, edu.course),
-      college: firstText(edu.college, edu.institution, edu.school),
-      year: firstText(edu.year, edu.duration, edu.dates),
-      cgpa: firstText(edu.cgpa, edu.gpa)
+      degree: cleanPdfString(firstText(edu.degree, edu.course)),
+      college: cleanPdfString(firstText(edu.college, edu.institution, edu.school)),
+      year: cleanPdfString(firstText(edu.year, edu.duration, edu.dates)),
+      cgpa: cleanPdfString(firstText(edu.cgpa, edu.gpa))
     };
   }).filter(edu => edu.degree || edu.college);
 
+  // Deduplicate - if same degree appears twice, show once
+  const seenDegrees = new Set<string>();
+  educationList = educationList.filter(edu => {
+    const key = (edu.degree || "").trim().toLowerCase();
+    if (!key) return true;
+    if (seenDegrees.has(key)) return false;
+    seenDegrees.add(key);
+    return true;
+  });
+
   if (educationList.length === 0) {
     educationList = fallbackEducation.map(edu => ({
-      degree: edu.degree,
-      college: edu.institution,
-      year: edu.duration,
-      cgpa: edu.cgpa || ""
+      degree: cleanPdfString(edu.degree),
+      college: cleanPdfString(edu.institution),
+      year: cleanPdfString(edu.duration),
+      cgpa: cleanPdfString(edu.cgpa || "")
     }));
   }
 
   // Certifications
-  let certificationsList = toArray(resume.certifications).map(stringify).filter(Boolean);
+  let certificationsList = toArray(resume.certifications).map(cleanPdfString).filter(Boolean);
   if (certificationsList.length === 0) {
-    certificationsList = fallbackCertifications;
+    certificationsList = fallbackCertifications.map(cleanPdfString);
   }
 
+  // Clean skillsObj arrays
+  const cleanedSkills = {
+    frontend: toArray(skillsObj?.frontend).map(cleanPdfString),
+    backend: toArray(skillsObj?.backend).map(cleanPdfString),
+    database: toArray(skillsObj?.database).map(cleanPdfString),
+    tools: toArray(skillsObj?.tools).map(cleanPdfString)
+  };
+
   return {
-    name: firstText(resume.name, "Candidate"),
-    title: firstText(resume.title, resume.headline, "Full Stack Developer | MERN Stack"),
+    name: cleanPdfString(firstText(resume.name, "Candidate")),
+    title: cleanPdfString(firstText(resume.title, resume.headline, "Full Stack Developer | MERN Stack")),
     contact: {
-      email: firstText(resume.contact?.email, resume.email),
-      phone: firstText(resume.contact?.phone, resume.phone),
-      github: firstText(resume.contact?.github, resume.github, resume.githubUrl),
-      linkedin: firstText(resume.contact?.linkedin, resume.linkedin, resume.linkedinUrl),
-      location: firstText(resume.contact?.location, resume.location)
+      email: cleanPdfString(firstText(resume.contact?.email, resume.email)),
+      phone: cleanPdfString(firstText(resume.contact?.phone, resume.phone)),
+      github: cleanPdfString(firstText(resume.contact?.github, resume.github, resume.githubUrl)),
+      linkedin: cleanPdfString(firstText(resume.contact?.linkedin, resume.linkedin, resume.linkedinUrl)),
+      location: cleanPdfString(firstText(resume.contact?.location, resume.location))
     },
-    summary: firstText(resume.summary, fallbackSummary),
-    skills: skillsObj,
+    summary: cleanPdfString(firstText(resume.summary, fallbackSummary)),
+    skills: cleanedSkills,
     projects: projectsList,
     experience: experienceList,
     education: educationList,
