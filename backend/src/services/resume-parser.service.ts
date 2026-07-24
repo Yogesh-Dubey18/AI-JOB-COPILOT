@@ -4,10 +4,19 @@ import fs from "fs";
 import path from "node:path";
 import { technicalKeywordBank } from "./ats-scoring.service.js";
 
-async function pdfParse(dataBuffer: Buffer) {
-  const uint8 = new Uint8Array(dataBuffer);
-  const parser = new PDFParse(uint8);
-  return parser.getText();
+async function pdfParse(dataBuffer: Buffer): Promise<{ text: string }> {
+  try {
+    const parser = new PDFParse({ data: new Uint8Array(dataBuffer) });
+    const textResult = await parser.getText();
+    await parser.destroy().catch(() => {});
+    return { text: textResult?.text || "" };
+  } catch (err: any) {
+    if (typeof (PDFParse as any) === "function" && (PDFParse as any).name !== "PDFParse") {
+      const legacyRes = await (PDFParse as any)(dataBuffer);
+      return { text: legacyRes?.text || "" };
+    }
+    throw err;
+  }
 }
 
 const knownSkills = technicalKeywordBank;
@@ -15,6 +24,8 @@ const knownSkills = technicalKeywordBank;
 type ParserResult = {
   text: string;
   parser: "plain-text" | "pdf-fallback" | "docx-fallback" | "binary-fallback";
+  parserUsed: "pdf-parse" | "mammoth" | "utf8" | "local-fallback";
+  usedFallback: boolean;
   quality: "high" | "fallback";
   warnings: string[];
   wordCount: number;
@@ -27,7 +38,15 @@ const urlPattern = /https?:\/\/[^\s)]+/g;
 async function parsePlainText(filePath: string): Promise<ParserResult> {
   const buffer = await fs.promises.readFile(filePath);
   const text = cleanText(buffer.toString("utf8"));
-  return { text, parser: "plain-text", quality: "high", warnings: [], wordCount: countWords(text) };
+  return {
+    text,
+    parser: "plain-text",
+    parserUsed: "utf8",
+    usedFallback: false,
+    quality: "high",
+    warnings: [],
+    wordCount: countWords(text)
+  };
 }
 
 async function parseBinaryFallback(filePath: string, parser: ParserResult["parser"], warning: string): Promise<ParserResult> {
@@ -38,6 +57,8 @@ async function parseBinaryFallback(filePath: string, parser: ParserResult["parse
   return {
     text,
     parser,
+    parserUsed: "local-fallback",
+    usedFallback: true,
     quality: "fallback",
     warnings: [warning],
     wordCount: countWords(text)
@@ -98,7 +119,8 @@ export function anonymizeParsedResume(parsedData: any = {}, rawText = "") {
     phone: parsedData.phone ? "[redacted-phone]" : "",
     links: Array.isArray(parsedData.links) ? parsedData.links.map(() => "[redacted-link]") : [],
     summary: redactText(parsedData.summary || "", parsedData).text,
-    redactedFields: Array.from(redactedFields)
+    education: Array.isArray(parsedData.education) ? parsedData.education.map((e: any) => ({ ...e, college: redactText(e.college || "", parsedData).text })) : [],
+    projects: Array.isArray(parsedData.projects) ? parsedData.projects.map((p: any) => ({ ...p, description: redactText(p.description || "", parsedData).text })) : []
   };
   if (parsedData.name) redactedFields.add("name");
   if (parsedData.email) redactedFields.add("email");
@@ -121,14 +143,22 @@ async function parsePdfText(filePath: string): Promise<ParserResult> {
   try {
     const buffer = fs.readFileSync(filePath);
     const pdfData = await pdfParse(buffer);
-    const extractedText = pdfData.text;
-    const text = cleanText(extractedText);
+    const extractedText = cleanText(pdfData?.text || "");
+    if (!extractedText || countWords(extractedText) < 5) {
+      return parseBinaryFallback(
+        filePath,
+        "pdf-fallback",
+        "PDF file is scanned or image-based. Safe local fallback extraction was used."
+      );
+    }
     return {
-      text,
+      text: extractedText,
       parser: "plain-text",
+      parserUsed: "pdf-parse",
+      usedFallback: false,
       quality: "high",
       warnings: [],
-      wordCount: countWords(text)
+      wordCount: countWords(extractedText)
     };
   } catch (err) {
     return parseBinaryFallback(
@@ -141,16 +171,25 @@ async function parsePdfText(filePath: string): Promise<ParserResult> {
 
 async function parseDocxText(filePath: string): Promise<ParserResult> {
   try {
-    const result = await mammoth.extractRawText({ path: filePath });
-    const extractedText = result.value;
-    const text = cleanText(extractedText);
-    const warnings = result.messages.map((m) => m.message);
+    const buffer = fs.readFileSync(filePath);
+    const result = await mammoth.extractRawText({ buffer });
+    const extractedText = cleanText(result?.value || "");
+    if (!extractedText || countWords(extractedText) < 5) {
+      return parseBinaryFallback(
+        filePath,
+        "docx-fallback",
+        "DOCX file content is empty or unreadable. Safe local fallback extraction was used."
+      );
+    }
+    const warnings = result.messages ? result.messages.map((m) => m.message) : [];
     return {
-      text,
+      text: extractedText,
       parser: "docx-fallback",
+      parserUsed: "mammoth",
+      usedFallback: false,
       quality: "high",
       warnings,
-      wordCount: countWords(text)
+      wordCount: countWords(extractedText)
     };
   } catch (err: any) {
     return parseBinaryFallback(

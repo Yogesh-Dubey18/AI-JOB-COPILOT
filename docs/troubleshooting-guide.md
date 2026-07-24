@@ -18,7 +18,7 @@ Confirm `NEXT_PUBLIC_API_URL=http://localhost:5000/api` in `frontend/.env.local`
 
 ## Resume Upload Fails
 
-Only PDF, DOCX, and TXT files under 5 MB are accepted. TXT has the best local text extraction. PDF and DOCX use a rough local fallback unless a richer parser is added.
+Only PDF, DOCX, and TXT files under 5 MB are accepted. PDF/DOCX parsing now uses dedicated parser packages with safe fallback. Scanned/image-based PDFs may still need OCR in future.
 
 ## Tests Warn About Chart Dimensions
 
