@@ -90,6 +90,7 @@ app.use("/api/pdf-export", pdfExportRouter);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/resumes", resumeRoutes);
+app.use("/api/resume-examples", resumeRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/interviews", interviewRoutes);

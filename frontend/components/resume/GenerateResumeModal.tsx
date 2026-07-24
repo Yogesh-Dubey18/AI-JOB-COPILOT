@@ -152,7 +152,7 @@ export function GenerateResumeModal({ open, onOpenChange, job }: GenerateResumeM
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Injected ATS Keywords</h3>
                 <div className="flex flex-wrap gap-1.5">
                   {successData.addedKeywords.map((kw: string) => (
-                    <Badge key={kw} variant="secondary" className="bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-900">
+                    <Badge key={kw} className="bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-900">
                       {kw}
                     </Badge>
                   ))}

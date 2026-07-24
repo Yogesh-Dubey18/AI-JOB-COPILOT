@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { resumeUpload } from "../middlewares/upload.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { analyzeResume, generateWorldClassResume, improveResume, generateImprovements, applySingleImprovement, tailorResumeToJD } from "../services/resume-analysis.service.js";
+import { analyzeResume, generateWorldClassResume, improveResume, generateImprovements, applySingleImprovement, tailorResumeToJD, compareResumes, compareResumesVsJob, getResumeExamples } from "../services/resume-analysis.service.js";
 import { getResume, getResumeVersion, listResumeVersions, listResumes, updateResumeParsedData, uploadResume } from "../services/resume.service.js";
 import { exportResumePdf } from "../services/pdf-export.service.js";
 import { scoreResumeForRole, scoreResumeAgainstJobDescription } from "../services/ats-scoring.service.js";
@@ -10,7 +10,28 @@ import { ApiError } from "../utils/ApiError.js";
 
 const router = Router();
 const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : value);
+
+// Unauthenticated or authenticated endpoint for resume examples
+router.get("/examples", asyncHandler(async (req, res) => res.json({ success: true, data: await getResumeExamples("all") })));
+router.get("/examples/:role", asyncHandler(async (req, res) => res.json({ success: true, data: await getResumeExamples(param(req.params.role)) })));
+
 router.use(requireAuth);
+
+router.post("/compare", asyncHandler(async (req, res) => {
+  const { resumeId1, resumeId2 } = req.body;
+  if (!resumeId1 || !resumeId2) {
+    throw new ApiError(400, "resumeId1 and resumeId2 are required");
+  }
+  res.json({ success: true, data: await compareResumes(req.user!.id, resumeId1, resumeId2) });
+}));
+
+router.post("/compare-job", asyncHandler(async (req, res) => {
+  const { resumeId1, resumeId2, jobDescription } = req.body;
+  if (!resumeId1 || !resumeId2 || !jobDescription) {
+    throw new ApiError(400, "resumeId1, resumeId2, and jobDescription are required");
+  }
+  res.json({ success: true, data: await compareResumesVsJob(req.user!.id, resumeId1, resumeId2, jobDescription) });
+}));
 
 router.post("/score-draft", asyncHandler(async (req, res) => {
   const { parsedData, targetRole, jobDescription } = req.body;

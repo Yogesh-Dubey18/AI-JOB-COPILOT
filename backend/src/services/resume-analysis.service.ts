@@ -53,6 +53,30 @@ function buildWorldClassVersionContent(generated: any) {
   };
 }
 
+export function calculateGradeAndBreakdown(atsScore: number, customBreakdown?: any) {
+  const score = Math.round(Math.min(100, Math.max(0, atsScore)));
+  let letterGrade = "F";
+  let gradeLabel = "Failing";
+
+  if (score >= 90) { letterGrade = "A+"; gradeLabel = "Outstanding"; }
+  else if (score >= 80) { letterGrade = "A"; gradeLabel = "Excellent"; }
+  else if (score >= 70) { letterGrade = "B+"; gradeLabel = "Good"; }
+  else if (score >= 60) { letterGrade = "B"; gradeLabel = "Above Average"; }
+  else if (score >= 50) { letterGrade = "C"; gradeLabel = "Needs Work"; }
+  else if (score >= 40) { letterGrade = "D"; gradeLabel = "Poor"; }
+
+  const scoreBreakdown = {
+    keywords: customBreakdown?.keywords ?? Math.min(100, Math.round(score * 1.02)),
+    formatting: customBreakdown?.formatting ?? Math.min(100, Math.round(score * 0.98)),
+    sections: customBreakdown?.sections ?? Math.min(100, Math.round(score * 1.05)),
+    actionVerbs: customBreakdown?.actionVerbs ?? Math.max(30, Math.round(score * 0.92)),
+    quantification: customBreakdown?.quantification ?? Math.max(25, Math.round(score * 0.88)),
+    contactInfo: customBreakdown?.contactInfo ?? 95
+  };
+
+  return { letterGrade, gradeLabel, scoreBreakdown };
+}
+
 export async function analyzeResume(userId: string, resumeId: string, options: AnalyzeResumeOptions = "Full Stack Developer") {
   const normalized = normalizeOptions(options);
   const resume = await findRecordById("resumes", resumeId);
@@ -64,12 +88,18 @@ export async function analyzeResume(userId: string, resumeId: string, options: A
   const jdWeightedScore = jobDescriptionCoverage ? Math.round((localScore.atsScore * 0.75) + (jobDescriptionCoverage.coveragePercent * 0.25)) : localScore.atsScore;
   const atsScore = Math.round((Number(analysis.atsScore || jdWeightedScore) * 0.35) + (jdWeightedScore * 0.65));
   const redactedFields = normalized.anonymizeForAnalysis ? (resumeForAi as any).parsedData?.redactedFields || [] : [];
+  
+  const { letterGrade, gradeLabel, scoreBreakdown } = calculateGradeAndBreakdown(atsScore, analysis.scoreBreakdown);
+
   const analysisRecord = await createRecord("resumeAnalyses", {
     userId,
     resumeId,
     targetRole: normalized.targetRole,
     ...analysis,
     atsScore,
+    letterGrade,
+    gradeLabel,
+    scoreBreakdown,
     resumeLevel: localScore.resumeLevel,
     // v2 five-category breakdown
     categoryScores: localScore.categoryScores,
@@ -421,6 +451,278 @@ export async function applySingleImprovement(userId: string, resumeId: string, i
   }
 
   return { updated: true, improvementId, section, newContent, parsedData };
+}
+
+export async function compareResumes(userId: string, resumeId1: string, resumeId2: string) {
+  const resume1 = await findRecordById("resumes", resumeId1);
+  const resume2 = await findRecordById("resumes", resumeId2);
+
+  if (!resume1 || String(resume1.userId) !== userId) throw new ApiError(404, "Resume 1 not found");
+  if (!resume2 || String(resume2.userId) !== userId) throw new ApiError(404, "Resume 2 not found");
+
+  const score1 = await scoreResumeForRole(resume1, resume1.targetRole || "Full Stack Developer");
+  const score2 = await scoreResumeForRole(resume2, resume2.targetRole || "Full Stack Developer");
+
+  const grade1 = calculateGradeAndBreakdown(score1.atsScore);
+  const grade2 = calculateGradeAndBreakdown(score2.atsScore);
+
+  const atsScore1 = score1.atsScore;
+  const atsScore2 = score2.atsScore;
+
+  const winner = atsScore1 >= atsScore2 ? "resume1" : "resume2";
+  const diff = Math.abs(atsScore1 - atsScore2);
+
+  const winnerName = winner === "resume1" ? (resume1.parsedData?.name || "Resume 1") : (resume2.parsedData?.name || "Resume 2");
+  const verdict = diff === 0
+    ? "Both resumes have equal ATS scores."
+    : `${winnerName} scores ${diff} points higher with better keyword coverage and layout structure.`;
+
+  return {
+    resume1: {
+      name: resume1.parsedData?.name || resume1.fileName || "Resume 1",
+      atsScore: atsScore1,
+      letterGrade: grade1.letterGrade,
+      gradeLabel: grade1.gradeLabel,
+      strengths: score1.strengths || ["Strong technical foundation"],
+      weaknesses: score1.weaknesses || ["Add metric details"]
+    },
+    resume2: {
+      name: resume2.parsedData?.name || resume2.fileName || "Resume 2",
+      atsScore: atsScore2,
+      letterGrade: grade2.letterGrade,
+      gradeLabel: grade2.gradeLabel,
+      strengths: score2.strengths || ["Clean structure"],
+      weaknesses: score2.weaknesses || ["Needs more keywords"]
+    },
+    winner,
+    verdict
+  };
+}
+
+export async function compareResumesVsJob(userId: string, resumeId1: string, resumeId2: string, jobDescription: string) {
+  const resume1 = await findRecordById("resumes", resumeId1);
+  const resume2 = await findRecordById("resumes", resumeId2);
+
+  if (!resume1 || String(resume1.userId) !== userId) throw new ApiError(404, "Resume 1 not found");
+  if (!resume2 || String(resume2.userId) !== userId) throw new ApiError(404, "Resume 2 not found");
+
+  const cov1 = await scoreResumeAgainstJobDescription(resume1, jobDescription);
+  const cov2 = await scoreResumeAgainstJobDescription(resume2, jobDescription);
+
+  const match1 = cov1?.coveragePercent || 0;
+  const match2 = cov2?.coveragePercent || 0;
+
+  const winner = match1 >= match2 ? "resume1" : "resume2";
+  const winnerName = winner === "resume1" ? (resume1.parsedData?.name || "Resume 1") : (resume2.parsedData?.name || "Resume 2");
+
+  const recommendation = match1 === match2
+    ? "Both resumes match the job description equally well."
+    : `${winnerName} is significantly better for this role (${match1}% vs ${match2}% keyword match).`;
+
+  return {
+    resume1Match: match1,
+    resume2Match: match2,
+    winner,
+    resume1Matched: cov1?.detectedKeywords || [],
+    resume2Matched: cov2?.detectedKeywords || [],
+    recommendation
+  };
+}
+
+export const RESUME_ROLE_EXAMPLES: Record<string, {
+  role: string;
+  slug: string;
+  category: string;
+  keywords: string[];
+  sampleBullets: string[];
+  summary: string;
+  templateData: any;
+}> = {
+  "full-stack-developer": {
+    slug: "full-stack-developer",
+    role: "Full Stack Developer",
+    category: "Full Stack",
+    keywords: ["React", "Node.js", "TypeScript", "MongoDB", "Express", "REST APIs", "AWS", "Git", "Docker", "Jest"],
+    sampleBullets: [
+      "Architected and deployed a full-stack web application serving 10,000+ monthly active users with 99.9% uptime.",
+      "Engineered responsive React frontend integrated with RESTful Node.js APIs, reducing page load time by 35%.",
+      "Optimized MongoDB database indexing and query schemas, decreasing API latency from 450ms to 120ms."
+    ],
+    summary: "Full Stack Developer with 2+ years of experience building scalable MERN stack web applications.",
+    templateData: {
+      name: "Alex Morgan",
+      title: "Full Stack Developer",
+      skills: { frontend: ["React", "TypeScript", "Tailwind"], backend: ["Node.js", "Express", "REST APIs"], database: ["MongoDB", "Redis"], cloud: ["AWS", "Docker"], tools: ["Git", "Jest"] }
+    }
+  },
+  "frontend-developer": {
+    slug: "frontend-developer",
+    role: "Frontend Developer",
+    category: "Frontend",
+    keywords: ["React", "TypeScript", "HTML5", "CSS3", "Tailwind CSS", "Redux Toolkit", "Next.js", "Accessibility", "Performance Optimization", "Jest"],
+    sampleBullets: [
+      "Developed modular React components with TypeScript and Tailwind CSS, increasing design system reusability across 5 teams.",
+      "Optimized Web Vitals score from 62 to 94 by implementing code splitting, image lazy loading, and dynamic imports.",
+      "Integrated Redux Toolkit for state management, streamlining real-time data sync across complex user dashboards."
+    ],
+    summary: "Frontend Developer specializing in high-performance React and Next.js user interfaces.",
+    templateData: {
+      name: "Sarah Chen",
+      title: "Frontend Developer",
+      skills: { frontend: ["React", "Next.js", "TypeScript", "Tailwind CSS"], backend: ["REST API"], database: [], cloud: ["Vercel"], tools: ["Git", "Figma", "Jest"] }
+    }
+  },
+  "backend-developer": {
+    slug: "backend-developer",
+    role: "Backend Developer",
+    category: "Backend",
+    keywords: ["Node.js", "Express.js", "Python", "PostgreSQL", "MongoDB", "Redis", "Docker", "Microservices", "JWT", "gRPC"],
+    sampleBullets: [
+      "Engineered microservices backend handling 500+ requests/sec using Node.js, Express, and Redis caching.",
+      "Designed relational database schemas in PostgreSQL with automated migration pipelines, ensuring zero-downtime schema updates.",
+      "Implemented OAuth2.0 and JWT authentication pipelines, securing sensitive user endpoints against unauthorized access."
+    ],
+    summary: "Backend Engineer focused on microservices, database architecture, and high-throughput APIs.",
+    templateData: {
+      name: "David Kumar",
+      title: "Backend Engineer",
+      skills: { frontend: [], backend: ["Node.js", "Express", "Python", "Microservices"], database: ["PostgreSQL", "MongoDB", "Redis"], cloud: ["AWS", "Docker"], tools: ["Git", "Postman"] }
+    }
+  },
+  "react-developer": {
+    slug: "react-developer",
+    role: "React Developer",
+    category: "Frontend",
+    keywords: ["React.js", "JSX", "Hooks", "Context API", "Redux", "TypeScript", "Tailwind CSS", "Axios", "React Router", "Vite"],
+    sampleBullets: [
+      "Built single-page applications with React 18 functional components and custom hooks, eliminating code duplication by 40%.",
+      "Integrated client-side state management using React Context API and Redux, ensuring seamless data flow across 20+ screens.",
+      "Created reusable UI component library with storybook documentation and 95%+ unit test coverage using Vitest."
+    ],
+    summary: "React Specialist dedicated to building intuitive, accessible, and fast web user interfaces.",
+    templateData: {
+      name: "Priya Sharma",
+      title: "React Developer",
+      skills: { frontend: ["React", "TypeScript", "Redux", "Tailwind CSS"], backend: ["REST API"], database: [], cloud: ["Netlify"], tools: ["Git", "Vite"] }
+    }
+  },
+  "node-js-developer": {
+    slug: "node-js-developer",
+    role: "Node.js Developer",
+    category: "Backend",
+    keywords: ["Node.js", "Express.js", "Asynchronous JS", "MongoDB", "Mongoose", "WebSockets", "Socket.io", "npm", "Jest", "CI/CD"],
+    sampleBullets: [
+      "Developed real-time chat and notification service using Node.js and Socket.io, scaling to 5,000 concurrent websocket connections.",
+      "Created RESTful APIs with express validation middleware, reducing invalid client payload submissions by 90%.",
+      "Configured automated unit & integration test suites in Jest with 88% code coverage in automated CI/CD pipelines."
+    ],
+    summary: "Node.js Developer expert in event-driven asynchronous architectures and real-time backend services.",
+    templateData: {
+      name: "Rohan Verma",
+      title: "Node.js Developer",
+      skills: { frontend: [], backend: ["Node.js", "Express", "Socket.io", "WebSockets"], database: ["MongoDB", "Mongoose"], cloud: ["Render", "AWS"], tools: ["Git", "Jest"] }
+    }
+  },
+  "mern-stack-developer": {
+    slug: "mern-stack-developer",
+    role: "MERN Stack Developer",
+    category: "Full Stack",
+    keywords: ["MongoDB", "Express.js", "React.js", "Node.js", "JavaScript", "REST APIs", "Mongoose", "JWT Auth", "Tailwind", "Git"],
+    sampleBullets: [
+      "Designed and deployed end-to-end MERN stack web applications with role-based access control (RBAC) and Stripe payment integration.",
+      "Optimized Mongoose aggregation queries and indexing strategies, improving database lookup speed by 4x.",
+      "Built responsive React dashboards connected to Express backend endpoints, delivering smooth data visualizations."
+    ],
+    summary: "MERN Stack Specialist with expertise in building end-to-end JavaScript applications.",
+    templateData: {
+      name: "Yogesh Dubey",
+      title: "MERN Stack Developer",
+      skills: { frontend: ["React", "JavaScript", "Tailwind"], backend: ["Node.js", "Express"], database: ["MongoDB", "Mongoose"], cloud: ["AWS", "Vercel"], tools: ["Git", "Postman"] }
+    }
+  },
+  "python-developer": {
+    slug: "python-developer",
+    role: "Python Developer",
+    category: "Backend / AI",
+    keywords: ["Python", "Django", "Flask", "FastAPI", "SQLAlchemy", "PostgreSQL", "REST APIs", "Pandas", "PyTest", "Docker"],
+    sampleBullets: [
+      "Built high-speed asynchronous REST APIs using Python FastAPI and Pydantic validation, achieving sub-50ms response times.",
+      "Developed automated data scraping and parsing scripts processing 50,000+ records daily into structured PostgreSQL tables.",
+      "Created comprehensive automated test suites using PyTest, catching edge-case bugs prior to production releases."
+    ],
+    summary: "Python Developer skilled in FastAPI, Django, database modeling, and automated backend data workflows.",
+    templateData: {
+      name: "Michael Scott",
+      title: "Python Developer",
+      skills: { frontend: [], backend: ["Python", "Django", "FastAPI", "Flask"], database: ["PostgreSQL", "SQLAlchemy"], cloud: ["Docker", "AWS"], tools: ["Git", "PyTest"] }
+    }
+  },
+  "java-developer": {
+    slug: "java-developer",
+    role: "Java Developer",
+    category: "Enterprise Backend",
+    keywords: ["Java 17", "Spring Boot", "Spring Cloud", "Hibernate", "JPA", "MySQL", "Maven", "JUnit", "Microservices", "Kafka"],
+    sampleBullets: [
+      "Developed enterprise Spring Boot microservices using Java 17 and Spring Data JPA, serving 1M+ transactions daily.",
+      "Implemented distributed messaging pipelines with Apache Kafka, decoupling payment processing from order handling.",
+      "Wrote robust JUnit 5 and Mockito test suites to ensure 90%+ code coverage for mission-critical banking workflows."
+    ],
+    summary: "Java Backend Engineer experienced in Spring Boot, microservices architecture, and enterprise Java ecosystem.",
+    templateData: {
+      name: "Vikram Mehta",
+      title: "Java Developer",
+      skills: { frontend: [], backend: ["Java 17", "Spring Boot", "Spring Cloud", "Hibernate"], database: ["MySQL", "PostgreSQL"], cloud: ["Docker", "Kubernetes"], tools: ["Git", "Maven", "JUnit"] }
+    }
+  },
+  "devops-engineer": {
+    slug: "devops-engineer",
+    role: "DevOps Engineer",
+    category: "Cloud & Infrastructure",
+    keywords: ["Docker", "Kubernetes", "AWS", "Terraform", "GitHub Actions", "CI/CD", "Linux", "Bash", "Prometheus", "Grafana"],
+    sampleBullets: [
+      "Automated CI/CD deployment pipelines using GitHub Actions and Docker, reducing software release cycles from 3 days to 15 minutes.",
+      "Provisioned infrastructure as code (IaC) on AWS using Terraform, managing VPCs, EC2 clusters, and RDS instances.",
+      "Configured Prometheus and Grafana monitoring stacks with automated alert triggers, achieving 99.99% system availability."
+    ],
+    summary: "DevOps Engineer passionate about infrastructure automation, cloud elasticity, and continuous integration.",
+    templateData: {
+      name: "Karan Patel",
+      title: "DevOps Engineer",
+      skills: { frontend: [], backend: ["Bash", "Python"], database: ["RDS", "Redis"], cloud: ["AWS", "Docker", "Kubernetes", "Terraform"], tools: ["Git", "GitHub Actions", "Prometheus"] }
+    }
+  },
+  "data-analyst": {
+    slug: "data-analyst",
+    role: "Data Analyst",
+    category: "Data & Analytics",
+    keywords: ["SQL", "Python", "Pandas", "NumPy", "PowerBI", "Tableau", "Excel", "Data Visualization", "Statistics", "A/B Testing"],
+    sampleBullets: [
+      "Analyzed 500K+ customer interaction rows using Python Pandas and SQL, identifying key bottleneck trends that increased retention by 14%.",
+      "Designed interactive executive dashboards in PowerBI and Tableau, providing real-time tracking of core KPI metrics.",
+      "Conducted A/B testing and statistical regression analyses to evaluate marketing campaign performance and ad ROI."
+    ],
+    summary: "Data Analyst skilled in SQL querying, Python analytics, statistical modeling, and BI dashboard visualization.",
+    templateData: {
+      name: "Ananya Roy",
+      title: "Data Analyst",
+      skills: { frontend: [], backend: ["Python", "Pandas", "NumPy"], database: ["SQL", "PostgreSQL"], cloud: [], tools: ["PowerBI", "Tableau", "Excel", "Git"] }
+    }
+  }
+};
+
+export async function getResumeExamples(roleSlug?: string) {
+  if (!roleSlug || roleSlug === "all") {
+    return Object.values(RESUME_ROLE_EXAMPLES);
+  }
+
+  const normalized = roleSlug.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const example = RESUME_ROLE_EXAMPLES[normalized] || Object.values(RESUME_ROLE_EXAMPLES).find(e => e.role.toLowerCase().includes(roleSlug.toLowerCase()));
+
+  if (!example) {
+    throw new ApiError(404, `No resume template found for role: ${roleSlug}`);
+  }
+
+  return example;
 }
 
 export async function tailorResumeToJD(userId: string, resumeId: string, jobDescription: string, jobTitle: string, company: string) {

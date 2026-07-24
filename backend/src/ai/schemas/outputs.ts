@@ -2,6 +2,9 @@ import { z } from "zod";
 
 export const resumeAnalysisOutputSchema = z.object({
   atsScore: z.number(),
+  letterGrade: z.string().optional(),
+  gradeLabel: z.string().optional(),
+  scoreBreakdown: z.record(z.number()).optional(),
   resumeLevel: z.string(),
   sectionScores: z.record(z.number()),
   strengths: z.array(z.string()),

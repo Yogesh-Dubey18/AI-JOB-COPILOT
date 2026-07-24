@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
-import { Archive, BarChart3, Bell, Bot, BriefcaseBusiness, Building2, Download, FileText, Gauge, Github, Globe2, Home, Layers, Linkedin, MessageSquare, MessageSquarePlus, Route, Settings, ShieldAlert, UserRound, Users2, Wrench } from "lucide-react";
+import { Archive, BarChart3, Bell, Bot, BriefcaseBusiness, Building2, Download, FileText, Gauge, GitCompare, Github, Globe2, Home, Layers, LayoutTemplate, Linkedin, MessageSquare, MessageSquarePlus, Route, Settings, ShieldAlert, UserRound, Users2, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { clearAuthSession } from "@/lib/auth-session";
@@ -12,6 +12,8 @@ const nav = [
   ["/dashboard", Home, "Dashboard"],
   ["/guided-workflow", Route, "Workflow"],
   ["/resume/analyzer", FileText, "Resume"],
+  ["/compare", GitCompare, "Compare"],
+  ["/resume-examples", LayoutTemplate, "Examples"],
   ["/jobs", BriefcaseBusiness, "Jobs"],
   ["/applications", Layers, "Applications"],
   ["/interviews", MessageSquare, "Interviews"],

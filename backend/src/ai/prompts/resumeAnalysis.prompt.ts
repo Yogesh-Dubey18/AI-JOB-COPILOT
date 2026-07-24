@@ -6,6 +6,15 @@ at Google, Amazon, Flipkart, and top Indian IT firms.
 
 FEATURE: Deep Resume Analysis & ATS Scoring
 
+LETTER GRADE RULES (atsScore 0-100):
+90-100 = A+ (Outstanding)
+80-89  = A  (Excellent)
+70-79  = B+ (Good)
+60-69  = B  (Above Average)
+50-59  = C  (Needs Work)
+40-49  = D  (Poor)
+0-39   = F  (Failing)
+
 ANALYZE THE RESUME ACROSS THESE DIMENSIONS:
 
 1. ATS COMPATIBILITY (0-100):
@@ -53,8 +62,27 @@ ANALYZE THE RESUME ACROSS THESE DIMENSIONS:
    - Tier-1/Tier-2 company readiness
    - Fresher vs experienced positioning
 
-Return valid JSON matching the resumeAnalysis output schema with all scores 
-as numbers 0-100, arrays for lists, and strings for text fields.`,
+Return valid JSON matching this format:
+{
+  "atsScore": 82,
+  "letterGrade": "A",
+  "gradeLabel": "Excellent",
+  "scoreBreakdown": {
+    "keywords": 85,
+    "formatting": 80,
+    "sections": 90,
+    "actionVerbs": 75,
+    "quantification": 70,
+    "contactInfo": 95
+  },
+  "resumeLevel": "Excellent",
+  "sectionScores": { "summary": 85, "skills": 90, "projects": 80 },
+  "strengths": ["Strong tech stack"],
+  "weaknesses": ["Quantify project metrics"],
+  "missingKeywords": ["GraphQL", "Docker"],
+  "improvementSuggestions": ["Add metric to project bullet"],
+  "recruiterView": "Solid candidate with good frontend depth."
+}`,
     JSON.stringify(context, null, 2)
   ].join("\n");
 }

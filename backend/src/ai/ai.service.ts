@@ -40,8 +40,11 @@ import { buildGuardedPrompt, getAiSafetyStatus, type GuardrailResult } from "./g
 
 const resumeAnalysisFallback = {
   atsScore: 82,
+  letterGrade: "A",
+  gradeLabel: "Excellent",
+  scoreBreakdown: { keywords: 85, formatting: 80, sections: 90, actionVerbs: 75, quantification: 70, contactInfo: 95 },
   resumeLevel: "Good",
-  sectionScores: { summary: 75, skills: 85, projects: 80, experience: 70, education: 90, formatting: 78 },
+  sectionScores: { summary: 75, skills: 85, projects: 80, experience: 70, education: 90, formatting: 78 } as Record<string, number>,
   strengths: ["Clear technical stack", "Project-led profile", "Readable education section"],
   weaknesses: ["Summary can be sharper", "Some bullets need measurable impact", "Missing deployment keywords"],
   missingKeywords: ["REST APIs", "Authentication", "Testing", "Deployment", "Docker"],

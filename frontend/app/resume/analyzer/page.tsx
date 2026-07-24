@@ -230,10 +230,62 @@ export default function ResumeAnalyzerPage() {
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div className="flex flex-col items-center gap-2">
-                <ScoreGauge score={result?.atsScore || 0} label={result ? `${result.resumeLevel || ""} — ${targetRole}` : "Run analysis to see score"} />
+                {result?.letterGrade ? (
+                  <div className="text-center">
+                    <div className="text-6xl font-extrabold text-purple-600 dark:text-purple-400 tracking-tight">
+                      {result.letterGrade}
+                    </div>
+                    <div className="text-3xl font-bold mt-1">{result.atsScore}/100</div>
+                    <div className="text-sm font-semibold text-muted-foreground mt-0.5">{result.gradeLabel}</div>
+                  </div>
+                ) : (
+                  <ScoreGauge score={result?.atsScore || 0} label={result ? `${result.resumeLevel || ""} — ${targetRole}` : "Run analysis to see score"} />
+                )}
                 <Progress value={result?.atsScore || 0} />
                 <p className="text-xs text-muted-foreground">{result?.recruiterView || "Score out of 100"}</p>
               </div>
+
+              {/* Score Breakdown Visual Bars */}
+              {result?.scoreBreakdown && (
+                <div className="mt-4 pt-3 border-t space-y-2.5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Score Breakdown</p>
+                  {Object.entries(result.scoreBreakdown).map(([key, value]) => {
+                    const valNum = Number(value) || 0;
+                    return (
+                      <div key={key}>
+                        <div className="flex justify-between text-xs font-medium mb-1">
+                          <span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                          <span className="font-semibold">{valNum}/100</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all ${
+                              valNum >= 80 ? 'bg-emerald-500' :
+                              valNum >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+                            }`}
+                            style={{ width: valNum + '%' }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Quick Win Tips Callout */}
+              {result && (
+                <div className="bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/50 rounded-lg p-4 mt-4">
+                  <h3 className="font-bold text-amber-800 dark:text-amber-300 mb-2.5 flex items-center gap-1.5 text-sm">
+                    ⚡ Quick Wins — Do These First
+                  </h3>
+                  {(improvementsData?.quickWins || result.improvementSuggestions?.slice(0, 3) || ["Quantify project metrics with numbers and percentages", "Add GitHub link to your resume header", "Inject missing technical keywords for target role"]).map((win: string, i: number) => (
+                    <div key={i} className="flex items-center gap-2 mb-1.5">
+                      <span className="text-amber-600 dark:text-amber-400 font-bold">→</span>
+                      <span className="text-xs text-amber-900 dark:text-amber-200 font-medium">{win}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* 5-Category Breakdown (v2) */}
               {Object.keys(categoryScores).length > 0 && (
