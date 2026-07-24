@@ -9,7 +9,7 @@ const RESUME_NAV_ITEMS = [
   { href: "/resume/builder", label: "Resume Builder", icon: Edit3 },
   { href: "/pdf-export", label: "PDF Export", icon: FileDown },
   { href: "/compare", label: "Compare Resumes", icon: GitCompare },
-  { href: "/compare-job", label: "Job Match", icon: Target },
+  { href: "/compare-job", label: "Compare vs Job", icon: Target },
   { href: "/resume-examples", label: "Resume Examples", icon: LayoutTemplate },
   { href: "/resume/versions", label: "Analysis History", icon: History }
 ];

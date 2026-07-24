@@ -10,25 +10,14 @@ import { api } from "@/lib/api";
 
 const nav = [
   ["/dashboard", Home, "Dashboard"],
-  ["/guided-workflow", Route, "Workflow"],
   ["/resume/analyzer", FileText, "Resume"],
-  ["/compare", GitCompare, "Compare"],
-  ["/resume-examples", LayoutTemplate, "Examples"],
   ["/jobs", BriefcaseBusiness, "Jobs"],
   ["/applications", Layers, "Applications"],
   ["/interviews", MessageSquare, "Interviews"],
-  ["/contacts", Users2, "Contacts"],
   ["/company-research", Building2, "Companies"],
-  ["/answer-vault", Archive, "Answers"],
+  ["/contacts", Users2, "Contacts"],
   ["/career-vault", Archive, "Career vault"],
-  ["/portfolio-generator", Globe2, "Portfolio"],
-  ["/linkedin-optimizer", Linkedin, "LinkedIn"],
-  ["/github-analyzer", Github, "GitHub"],
-  ["/pdf-export", Download, "Exports"],
-  ["/skill-roadmap", Wrench, "Skills"],
-  ["/career-mentor-chat", Bot, "Mentor"],
-  ["/analytics", BarChart3, "Analytics"],
-  ["/job-scam-detector", ShieldAlert, "Scam check"],
+  ["/answer-vault", Archive, "Answers"],
   ["/feedback", MessageSquarePlus, "Feedback"],
   ["/settings", Settings, "Settings"]
 ];
