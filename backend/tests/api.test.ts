@@ -172,8 +172,14 @@ describe("AI Job Copilot API", () => {
     expect(generated.body.data.generatedResume.skills.backend).toEqual(expect.arrayContaining(["Node.js", "Express.js"]));
     expect(generated.body.data.generatedResume.skills.database).toEqual(expect.arrayContaining(["MongoDB"]));
     expect(generated.body.data.generatedResume.projects[0].name).toMatch(/AI Job Copilot/i);
+    // Verify bullet point is clean and not garbled with prepended title/tech concatenations
+    const firstBullet = generated.body.data.generatedResume.projects[0].bullets[0];
+    expect(firstBullet).not.toMatch(/delivering Developed/i);
+    expect(firstBullet).not.toMatch(/Live · Private Beta/i);
     expect(Array.isArray(generated.body.data.generatedResume.education)).toBe(true);
-    expect(generated.body.data.generatedResume.education[0].degree).toMatch(/Education BCA|BCA/i);
+    expect(generated.body.data.generatedResume.education[0].degree).toMatch(/BCA/i);
+    // Verify education college does not duplicate degree string
+    expect(generated.body.data.generatedResume.education[0].college).not.toMatch(/BCA — Bachelor of Computer Applications BCA/i);
     expect(generated.body.data.resumeVersionId).toBeTruthy();
     expect(generated.body.data.safety.noFakeExperience).toBe(true);
     expect(JSON.stringify(generated.body.data.generatedResume)).not.toMatch(/Google|Amazon|Microsoft|Flipkart|TCS Digital/i);

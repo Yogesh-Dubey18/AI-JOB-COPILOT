@@ -141,41 +141,62 @@ function categorizeWorldClassSkills(skills: string[]) {
   return categories;
 }
 
-function normalizeWorldClassProject(item: unknown, fallbackSkills: string[]) {
+function cleanBulletText(text: string, projectName: string): string {
+  let cleaned = text.trim();
+  const escapedName = projectName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  cleaned = cleaned.replace(new RegExp(`^Developed\\s+${escapedName}[^,]*?,\\s*delivering\\s*`, "i"), "");
+  cleaned = cleaned.replace(/^Developed\s+[^,]*?,\s*delivering\s*/i, "");
+  cleaned = cleaned.replace(/\s*Live\s*·\s*Private\s*Beta\s*·\s*Live\s*Demo\s*·\s*GitHub/gi, "");
+  cleaned = cleaned.replace(/%¸/g, "").replace(/\s+/g, " ").trim();
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  return cleaned;
+}
+
+function normalizeWorldClassProject(item: unknown, fallbackSkills: string[] = []) {
   if (typeof item === "string") {
     const [namePart, techPart, ...rest] = item.split("|").map((part) => part.trim());
-    const name = cleanText(namePart || item);
-    const techStack = uniqueStrings((techPart ? techPart.split(",") : fallbackSkills.slice(0, 4)));
+    const rawName = cleanText(namePart || item);
+    const cleanName = rawName.replace(/\s*Live\s*·\s*Private\s*Beta\s*·\s*Live\s*Demo\s*·\s*GitHub/gi, "").trim();
+    const explicitTech = techPart ? techPart.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const techStack = explicitTech.length ? explicitTech : [];
     const originalDetail = cleanText(rest.join(" "));
+    const bullet = originalDetail ? cleanBulletText(originalDetail, cleanName) : `Built and deployed ${cleanName} with full-stack implementation and responsive design.`;
     return {
-      name,
+      name: cleanName,
       tech: techStack.join(", "),
-      bullets: [
-        originalDetail
-          ? `Developed ${name} using ${techStack.join(", ") || "the listed technology stack"}, focusing on ${originalDetail}.`
-          : `Engineered ${name} using ${techStack.join(", ") || "MERN stack"} to build a high-performance web application.`
-      ],
+      bullets: [bullet],
       live: "",
       github: ""
     };
   }
 
   const project = (item || {}) as Record<string, unknown>;
-  const name = firstText(project.name, project.projectName, project.title, "Project");
-  const techStack = uniqueStrings([
-    ...toArray(project.techStack || project.technologies || project.tech || project.stack),
-    ...fallbackSkills.slice(0, 4)
-  ]).slice(0, 8);
-  const details = uniqueStrings([
+  const rawName = firstText(project.name, project.projectName, project.title, "Project");
+  const cleanName = rawName
+    .replace(/\s*Live\s*·\s*Private\s*Beta\s*·\s*Live\s*Demo\s*·\s*GitHub/gi, "")
+    .replace(/^(?:Developed|Built)\s+/i, "")
+    .trim();
+
+  const explicitTech = toArray(project.techStack || project.technologies || project.tech || project.stack).map(cleanText).filter(Boolean);
+  const techStack = explicitTech.length ? explicitTech : [];
+
+  const rawBullets = uniqueStrings([
     ...toArray(project.bullets || project.bulletPoints || project.keyFeatures || project.features),
     firstText(project.description, project.summary, project.impact, project.details)
-  ]);
-  const bullets = details.length
-    ? details.map((detail) => `Developed ${name}${techStack.length ? ` with ${techStack.join(", ")}` : ""}, delivering ${detail}.`).slice(0, 3)
-    : [`Engineered ${name}${techStack.length ? ` using ${techStack.join(", ")}` : ""} to deliver a responsive user experience.`];
+  ]).filter(Boolean);
+
+  const cleanBullets = rawBullets
+    .map((b) => cleanBulletText(b, cleanName))
+    .filter((b) => b.length > 5);
+
+  const bullets = cleanBullets.length
+    ? cleanBullets.slice(0, 3)
+    : [`Engineered ${cleanName} to deliver a responsive user experience with clean API integrations.`];
 
   return {
-    name,
+    name: cleanName,
     tech: techStack.join(", "),
     bullets,
     live: firstText(project.live, project.liveUrl, project.demoUrl, project.liveDemoLink, project.url),
@@ -195,11 +216,12 @@ function normalizeWorldClassExperience(item: unknown) {
     ...toArray(exp.bullets || exp.bulletPoints || exp.achievements),
     firstText(exp.description, exp.summary, exp.details)
   ]);
+  const cleanBullets = details.map(cleanText).filter(Boolean);
   return {
     title: role,
     company,
     duration: firstText(exp.duration, exp.dates, exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : exp.startDate),
-    bullets: details.map((detail) => `Delivered ${detail}${role || company ? ` as ${[role, company].filter(Boolean).join(" at ")}` : ""}.`).slice(0, 3)
+    bullets: cleanBullets.length ? cleanBullets.slice(0, 3) : [`Delivered software solutions for ${role || company || "technical role"}.`]
   };
 }
 
@@ -208,11 +230,26 @@ function normalizeWorldClassEducation(item: unknown) {
     return { degree: cleanText(item), college: "", year: "", cgpa: "" };
   }
   const edu = (item || {}) as Record<string, unknown>;
+  const degree = firstText(edu.degree, edu.course, edu.qualification);
+  let college = firstText(edu.college, edu.institution, edu.school, edu.university);
+  const year = firstText(edu.year, edu.duration, edu.years, edu.graduationYear);
+  const cgpa = firstText(edu.cgpa, edu.gpa, edu.marks);
+
+  if (college && degree && college.toLowerCase().includes(degree.toLowerCase())) {
+    college = college.replace(new RegExp(degree.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "").trim();
+  }
+  if (college && year && college.includes(year)) {
+    college = college.replace(new RegExp(year.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "").trim();
+  }
+  if (college) {
+    college = college.replace(/CGPA[:\s]*[\d.]+/gi, "").replace(/GPA[:\s]*[\d.]+/gi, "").replace(/^[|\s-]+|[|\s-]+$/g, "").trim();
+  }
+
   return {
-    degree: firstText(edu.degree, edu.course, edu.qualification),
-    college: firstText(edu.college, edu.institution, edu.school, edu.university),
-    year: firstText(edu.year, edu.duration, edu.years, edu.graduationYear),
-    cgpa: firstText(edu.cgpa, edu.gpa, edu.marks)
+    degree,
+    college,
+    year,
+    cgpa
   };
 }
 

@@ -197,6 +197,72 @@ function calculateAtsScore(resume: any): number {
   return score;
 }
 
+const SKILL_CANONICAL_MAP: Record<string, string> = {
+  "react": "React.js",
+  "reactjs": "React.js",
+  "react.js": "React.js",
+  "next": "Next.js",
+  "nextjs": "Next.js",
+  "next.js": "Next.js",
+  "node": "Node.js",
+  "nodejs": "Node.js",
+  "node.js": "Node.js",
+  "express": "Express.js",
+  "expressjs": "Express.js",
+  "express.js": "Express.js",
+  "mongo": "MongoDB",
+  "mongodb": "MongoDB",
+  "mongoose": "Mongoose",
+  "mysql": "MySQL",
+  "postgres": "PostgreSQL",
+  "postgresql": "PostgreSQL",
+  "rest api": "REST APIs",
+  "rest apis": "REST APIs",
+  "restful api": "REST APIs",
+  "restful apis": "REST APIs",
+  "jwt": "JWT Authentication",
+  "jwt auth": "JWT Authentication",
+  "jwt authentication": "JWT Authentication",
+  "tailwind": "Tailwind CSS",
+  "tailwindcss": "Tailwind CSS",
+  "tailwind css": "Tailwind CSS",
+  "html": "HTML5",
+  "html5": "HTML5",
+  "css": "CSS3",
+  "css3": "CSS3",
+  "js": "JavaScript",
+  "javascript": "JavaScript",
+  "ts": "TypeScript",
+  "typescript": "TypeScript",
+  "vue": "Vue.js",
+  "vuejs": "Vue.js",
+  "vue.js": "Vue.js"
+};
+
+export function canonicalizeSkill(skillName: string): string {
+  const trimmed = String(skillName || "").trim();
+  const lower = trimmed.toLowerCase();
+  if (SKILL_CANONICAL_MAP[lower]) {
+    return SKILL_CANONICAL_MAP[lower];
+  }
+  return trimmed;
+}
+
+export function deduplicateAndCanonicalizeSkills(skills: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const s of skills) {
+    if (!s || typeof s !== "string") continue;
+    const canonical = canonicalizeSkill(s);
+    const key = canonical.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(canonical);
+    }
+  }
+  return result;
+}
+
 function normalizeSkillsObject(skillsObj: any): { frontend: string[]; backend: string[]; database: string[]; cloud: string[]; tools: string[]; programming: string[]; other: string[]; } {
   const allSkills: string[] = [];
   if (skillsObj && typeof skillsObj === "object") {
@@ -208,7 +274,7 @@ function normalizeSkillsObject(skillsObj: any): { frontend: string[]; backend: s
     allSkills.push(...skillsObj);
   }
 
-  const uniqueSkills = Array.from(new Set(allSkills.map(s => String(s).trim()).filter(Boolean)));
+  const uniqueSkills = deduplicateAndCanonicalizeSkills(allSkills);
 
   const frontendKeywords = ["react", "next", "vue", "angular", "html", "css", "tailwind", "javascript", "typescript", "jsx", "sass"];
   const backendKeywords = ["node", "express", "api", "jwt", "auth", "python", "django", "flask", "fastapi", "spring", "laravel"];
@@ -227,22 +293,34 @@ function normalizeSkillsObject(skillsObj: any): { frontend: string[]; backend: s
     other: [] as string[]
   };
 
+  const assigned = new Set<string>();
+
   for (const skill of uniqueSkills) {
     const lower = skill.toLowerCase();
+    const key = lower;
+    if (assigned.has(key)) continue;
+
     if (frontendKeywords.some(kw => lower.includes(kw))) {
       result.frontend.push(skill);
+      assigned.add(key);
     } else if (databaseKeywords.some(kw => lower.includes(kw))) {
       result.database.push(skill);
+      assigned.add(key);
     } else if (backendKeywords.some(kw => lower.includes(kw))) {
       result.backend.push(skill);
+      assigned.add(key);
     } else if (cloudKeywords.some(kw => lower.includes(kw))) {
       result.cloud.push(skill);
+      assigned.add(key);
     } else if (programmingKeywords.some(kw => lower.includes(kw))) {
       result.programming.push(skill);
+      assigned.add(key);
     } else if (toolsKeywords.some(kw => lower.includes(kw))) {
       result.tools.push(skill);
+      assigned.add(key);
     } else {
       result.other.push(skill);
+      assigned.add(key);
     }
   }
 

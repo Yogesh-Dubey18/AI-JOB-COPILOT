@@ -409,33 +409,67 @@ export default function ResumeAnalyzerPage() {
                 {(worldClassResume.projects || []).length ? (
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Projects</p>
-                    <div className="space-y-2">
-                      {(worldClassResume.projects || []).map((project: any, index: number) => (
-                        <div key={`${project.name}-${index}`} className="rounded border p-3 text-sm">
-                          <p className="font-semibold">{project.name}</p>
-                          {project.tech || (project.techStack && project.techStack.length) ? (
-                            <p className="text-xs text-muted-foreground">
-                              {project.tech || (Array.isArray(project.techStack) ? project.techStack.join(", ") : project.techStack)}
-                            </p>
-                          ) : null}
-                          <ul className="mt-2 list-disc pl-5 text-muted-foreground">
-                            {(project.bullets || []).map((bullet: string) => <li key={bullet}>{bullet}</li>)}
-                          </ul>
-                        </div>
-                      ))}
+                    <div className="space-y-3">
+                      {(worldClassResume.projects || []).map((project: any, index: number) => {
+                        const rawTech = project.tech || (Array.isArray(project.techStack) ? project.techStack.join(", ") : project.techStack) || "";
+                        const techList = rawTech.split(",").map((s: string) => s.trim()).filter(Boolean);
+                        return (
+                          <div key={`${project.name}-${index}`} className="rounded border p-3.5 text-sm space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-bold text-foreground">{project.name}</p>
+                              <div className="flex items-center gap-2">
+                                {project.live && (
+                                  <a href={project.live} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                                    Live Demo
+                                  </a>
+                                )}
+                                {project.github && (
+                                  <a href={project.github} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground underline">
+                                    GitHub
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                            {techList.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {techList.map((techItem: string, tIdx: number) => (
+                                  <span key={tIdx} className="rounded bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                                    {techItem}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <ul className="list-disc pl-5 text-muted-foreground space-y-1 text-xs">
+                              {(project.bullets || []).map((bullet: string, bIdx: number) => (
+                                <li key={bIdx}>{bullet}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : null}
                 {(worldClassResume.education || []).length ? (
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Education</p>
-                    <ul className="space-y-1 text-sm text-muted-foreground">
-                      {(worldClassResume.education || []).map((education: any, index: number) => (
-                        <li key={`${education.degree}-${index}`}>
-                          <strong className="text-foreground">{education.degree}</strong>{" — "}
-                          {[education.college || education.institution, education.year || education.duration, education.cgpa ? `CGPA: ${education.cgpa}` : ""].filter(Boolean).join(" | ")}
-                        </li>
-                      ))}
+                    <ul className="space-y-1.5 text-sm text-muted-foreground">
+                      {(worldClassResume.education || []).map((education: any, index: number) => {
+                        let college = education.college || education.institution || "";
+                        const degree = education.degree || "";
+                        if (college && degree && college.toLowerCase().includes(degree.toLowerCase())) {
+                          college = college.replace(new RegExp(degree.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "").trim();
+                        }
+                        const metaParts = [college, education.year || education.duration, education.cgpa ? `CGPA: ${education.cgpa}` : ""].filter(Boolean);
+                        return (
+                          <li key={`${degree}-${index}`} className="text-xs">
+                            <strong className="text-foreground text-sm font-semibold">{degree}</strong>
+                            {metaParts.length > 0 && (
+                              <span className="text-muted-foreground">{" — "}{metaParts.join(" | ")}</span>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ) : null}
