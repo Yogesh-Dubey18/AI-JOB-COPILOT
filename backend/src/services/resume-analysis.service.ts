@@ -167,7 +167,7 @@ function calculateAtsScore(resume: any): number {
   return score;
 }
 
-function normalizeSkillsObject(skillsObj: any): Record<string, string[]> {
+function normalizeSkillsObject(skillsObj: any): { frontend: string[]; backend: string[]; database: string[]; cloud: string[]; tools: string[]; programming: string[]; other: string[]; } {
   const allSkills: string[] = [];
   if (skillsObj && typeof skillsObj === "object") {
     for (const key of Object.keys(skillsObj)) {
@@ -183,13 +183,18 @@ function normalizeSkillsObject(skillsObj: any): Record<string, string[]> {
   const frontendKeywords = ["react", "next", "vue", "angular", "html", "css", "tailwind", "javascript", "typescript", "jsx", "sass"];
   const backendKeywords = ["node", "express", "api", "jwt", "auth", "python", "django", "flask", "fastapi", "spring", "laravel"];
   const databaseKeywords = ["mongodb", "mongoose", "mysql", "postgresql", "redis", "sqlite", "firebase", "supabase"];
-  const toolsKeywords = ["git", "github", "vscode", "postman", "docker", "aws", "vercel", "render", "linux", "figma"];
+  const cloudKeywords = ["aws", "azure", "gcp", "vercel", "render", "docker", "kubernetes", "heroku", "netlify"];
+  const toolsKeywords = ["git", "github", "vscode", "postman", "linux", "figma", "jest", "npm", "webpack", "jira"];
+  const programmingKeywords = ["c++", "c#", "java", "python", "javascript", "typescript", "go", "rust", "php", "ruby", "swift", "kotlin"];
 
-  const result: Record<string, string[]> = {
-    frontend: [],
-    backend: [],
-    database: [],
-    tools: []
+  const result = {
+    frontend: [] as string[],
+    backend: [] as string[],
+    database: [] as string[],
+    cloud: [] as string[],
+    tools: [] as string[],
+    programming: [] as string[],
+    other: [] as string[]
   };
 
   for (const skill of uniqueSkills) {
@@ -200,10 +205,14 @@ function normalizeSkillsObject(skillsObj: any): Record<string, string[]> {
       result.database.push(skill);
     } else if (backendKeywords.some(kw => lower.includes(kw))) {
       result.backend.push(skill);
+    } else if (cloudKeywords.some(kw => lower.includes(kw))) {
+      result.cloud.push(skill);
+    } else if (programmingKeywords.some(kw => lower.includes(kw))) {
+      result.programming.push(skill);
     } else if (toolsKeywords.some(kw => lower.includes(kw))) {
       result.tools.push(skill);
     } else {
-      result.tools.push(skill);
+      result.other.push(skill);
     }
   }
 
@@ -273,15 +282,13 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
 
   // Apply Name Resolution and Fallbacks to generatedResume
   generatedResume.name = resolvedName;
-  if (!generatedResume.contact) {
-    generatedResume.contact = {};
-  }
-  if (!generatedResume.contact.email && user?.email) {
-    generatedResume.contact.email = user.email;
-  }
-  if (!generatedResume.contact.phone && user?.phone) {
-    generatedResume.contact.phone = user.phone;
-  }
+  generatedResume.contact = {
+    email: generatedResume.contact?.email || user?.email || '',
+    phone: generatedResume.contact?.phone || user?.phone || '',
+    github: generatedResume.contact?.github || '',
+    linkedin: generatedResume.contact?.linkedin || '',
+    location: generatedResume.contact?.location || ''
+  };
   
   // Categorize and fix the wrong buckets
   generatedResume.skills = normalizeSkillsObject(generatedResume.skills);

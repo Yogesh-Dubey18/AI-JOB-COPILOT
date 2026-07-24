@@ -659,7 +659,7 @@ function getSchemaTemplate(feature: string): string {
   }
 }
 
-async function run<T>(userId: string | undefined, feature: string, prompt: string, fallback: T, schema?: ZodSchema<T>) {
+async function run<T>(userId: string | undefined, feature: string, prompt: string, fallback: T, schema?: ZodSchema<T, any, any>) {
   if (userId) {
     const limit = await checkAiCreditLimit(userId, feature);
     if (!limit.allowed) throw new ApiError(402, "AI credit limit reached", limit);

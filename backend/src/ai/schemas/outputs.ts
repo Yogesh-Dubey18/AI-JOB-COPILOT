@@ -40,7 +40,9 @@ const worldClassSkillSchema = z.object({
   backend: z.array(z.string()).default([]),
   database: z.array(z.string()).default([]),
   cloud: z.array(z.string()).default([]),
-  tools: z.array(z.string()).default([])
+  tools: z.array(z.string()).default([]),
+  programming: z.array(z.string()).default([]),
+  other: z.array(z.string()).default([])
 });
 
 export const worldClassResumeOutputSchema = z.object({
@@ -60,7 +62,9 @@ export const worldClassResumeOutputSchema = z.object({
     backend: [],
     database: [],
     cloud: [],
-    tools: []
+    tools: [],
+    programming: [],
+    other: []
   }),
   projects: z.array(z.object({
     name: z.string().default(""),
@@ -88,6 +92,7 @@ export const worldClassResumeOutputSchema = z.object({
   achievements: z.array(z.string()).default([]),
   softSkills: z.array(z.string()).default([]),
   languages: z.array(z.string()).default([]),
+  formattingNotes: z.array(z.string()).default([]),
   atsScore: z.number().default(92),
   atsKeywords: z.array(z.string()).default([])
 });
