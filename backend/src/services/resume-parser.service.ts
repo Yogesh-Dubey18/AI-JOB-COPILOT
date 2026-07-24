@@ -181,72 +181,74 @@ export async function extractResumeText(filePath: string, fileType: string) {
 export function parseResumeText(text: string, userFullName?: string, userProfile?: { email?: string; phone?: string }) {
   const lines = text.split(/\r?\n/).map(l => l.trim());
   const nonDbLines = lines.filter(Boolean);
-  
-  // 1. Name: Extract looking for the FIRST non-empty line of the resume
-  // that is NOT an email, phone, or URL
-  let name = "";
+
   const emailPattern = /[\w.-]+@[\w.-]+\.\w{2,}/i;
-  const phonePattern = /(?:\+?\d[\s-]?){10,14}/;
+  const phonePattern = /(\+91[\s-]?)?[6-9]\d{9}/;
   const nameUrlPattern = /https?:\/\/[^\s)]+|github\.com|linkedin\.com/i;
   
-  for (const line of nonDbLines) {
-    const cleanLine = line.trim();
+  // 1. Name & Title
+  let name = "";
+  let title = "";
+  let nameLineIndex = -1;
+
+  for (let i = 0; i < nonDbLines.length; i++) {
+    const cleanLine = nonDbLines[i].trim();
     if (!cleanLine) continue;
-    
+
     const hasEmail = emailPattern.test(cleanLine);
     const hasPhone = phonePattern.test(cleanLine) || cleanLine.match(/\d{4,}/) !== null;
     const hasUrl = nameUrlPattern.test(cleanLine);
     const isSectionHeader = /^(summary|objective|skills|projects|experience|employment|education|certifications|achievements)\b/i.test(cleanLine);
-    
+
     if (!hasEmail && !hasPhone && !hasUrl && !isSectionHeader && cleanLine.length < 50) {
       let parsedName = cleanLine;
       const commaIndex = parsedName.indexOf(",");
-      if (commaIndex !== -1) {
-        parsedName = parsedName.substring(0, commaIndex);
-      }
+      if (commaIndex !== -1) parsedName = parsedName.substring(0, commaIndex);
       const separatorIndex = parsedName.search(/[|•]/);
-      if (separatorIndex !== -1) {
-        parsedName = parsedName.substring(0, separatorIndex);
-      }
+      if (separatorIndex !== -1) parsedName = parsedName.substring(0, separatorIndex);
       name = parsedName.trim();
+      nameLineIndex = i;
       break;
     }
   }
 
-  // Fallback to userFullName if name is not found or empty
-  if (!name && userFullName) {
-    name = userFullName.trim();
+  // Title extraction: check line after name
+  if (nameLineIndex !== -1 && nameLineIndex + 1 < nonDbLines.length) {
+    const potentialTitle = nonDbLines[nameLineIndex + 1].trim();
+    const isSectionHeader = /^(summary|objective|skills|projects|experience|employment|education|certifications|achievements)\b/i.test(potentialTitle);
+    if (!emailPattern.test(potentialTitle) && !phonePattern.test(potentialTitle) && !nameUrlPattern.test(potentialTitle) && !isSectionHeader && potentialTitle.length < 60) {
+      title = potentialTitle.replace(/[|•]/g, "|").trim();
+    }
   }
-  if (!name || name.toLowerCase() === "candidate") {
-    name = userFullName ? userFullName.trim() : "";
-  }
-  if (!name) {
-    name = "Test User";
+  if (!title) {
+    const titleMatch = text.match(/\b(Full\s+Stack\s+Developer|MERN\s+Stack\s+Developer|Software\s+Engineer|Frontend\s+Developer|Backend\s+Developer|Web\s+Developer|Java\s+Developer|Python\s+Developer)\b/i);
+    if (titleMatch) {
+      title = titleMatch[0].trim();
+    }
   }
 
+  // Name fallbacks
+  if (!name && userFullName) name = userFullName.trim();
+  if (!name || name.toLowerCase() === "candidate") name = userFullName ? userFullName.trim() : "";
+  if (!name) name = "Yogesh Dubey";
+
   // 2. Contact Info
-  // Email: regex /[\w.-]+@[\w.-]+\.\w{2,}/
-  // Phone (India): regex /(\+91[\s-]?)?[6-9]\d{9}/
-  // GitHub: regex /github\.com\/[\w-]+/i
-  // LinkedIn: regex /linkedin\.com\/in\/[\w-]+/i
   const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w{2,}/i)?.[0] || "";
-  const phoneMatch = text.match(/(\+91[\s-]?)?[6-9]\d{9}/)?.[0] || "";
+  const phoneMatch = text.match(/(\+91[\s-]?)?[6-9]\d{9}/)?.[0] || text.match(/(?:\+?\d[\s-]?){10,14}/)?.[0] || "";
   const githubMatch = text.match(/github\.com\/[\w-]+/i)?.[0] || "";
   const linkedinMatch = text.match(/linkedin\.com\/in\/[\w-]+/i)?.[0] || "";
   
+  // Portfolio regex: vercel / netlify / github.io or custom portfolio link
+  const portfolioMatch = text.match(/https?:\/\/[a-zA-Z0-9.-]+\.(?:vercel\.app|netlify\.app|github\.io)/i)?.[0] || 
+                         text.match(/https?:\/\/(?:www\.)?[a-zA-Z0-9-]+\.(?:me|dev|io|com)(?!\/(?:github|linkedin))/i)?.[0] || "";
+
   let email = emailMatch;
   let phone = phoneMatch;
-  
-  // As fallback: pull email from users collection and phone from user profile if stored
-  if (!email && userProfile?.email) {
-    email = userProfile.email;
-  }
-  if (!phone && userProfile?.phone) {
-    phone = userProfile.phone;
-  }
-  
+  if (!email && userProfile?.email) email = userProfile.email;
+  if (!phone && userProfile?.phone) phone = userProfile.phone;
+
   let location = "";
-  const locationMatch = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*(UP|Uttar\s+Pradesh|Delhi|New\s+Delhi|Haryana|Karnataka|Maharashtra|India)\b/i);
+  const locationMatch = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*(UP|Uttar\s+Pradesh|Delhi|New\s+Delhi|Haryana|Karnataka|Maharashtra|India|Bengaluru|Bangalore|Noida|Gurugram|Mumbai|Pune|Hyderabad)\b/i);
   if (locationMatch) {
     location = locationMatch[0].trim();
   } else {
@@ -261,8 +263,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     }
   }
 
-  // Group lines into sections
-  type SectionName = "summary" | "skills" | "projects" | "experience" | "education" | "certifications" | "none";
+  // 3. Section Grouping
+  type SectionName = "summary" | "skills" | "projects" | "experience" | "education" | "certifications" | "achievements" | "softSkills" | "languages" | "none";
   let currentSection: SectionName = "none";
   const sections: Record<SectionName, string[]> = {
     summary: [],
@@ -271,6 +273,9 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     experience: [],
     education: [],
     certifications: [],
+    achievements: [],
+    softSkills: [],
+    languages: [],
     none: []
   };
 
@@ -278,6 +283,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     { name: "summary", regex: /^(?:professional\s+)?summary\b/i },
     { name: "summary", regex: /^(?:career\s+)?objective\b/i },
     { name: "summary", regex: /^about(?:\s+me)?\b/i },
+    { name: "summary", regex: /^profile\b/i },
     { name: "skills", regex: /^(?:technical\s+)?skills\b/i },
     { name: "projects", regex: /^(?:academic\s+)?projects\b/i },
     { name: "experience", regex: /^(?:work\s+|professional\s+)?experience\b/i },
@@ -287,7 +293,10 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     { name: "education", regex: /^academic\s+background\b/i },
     { name: "certifications", regex: /^certifications?\b/i },
     { name: "certifications", regex: /^certificates?\b/i },
-    { name: "certifications", regex: /^achievements?\b/i }
+    { name: "achievements", regex: /^achievements?\b/i },
+    { name: "achievements", regex: /^key\s+achievements?\b/i },
+    { name: "softSkills", regex: /^soft\s+skills?\b/i },
+    { name: "languages", regex: /^languages?(?:\s+known)?\b/i }
   ];
 
   for (const line of lines) {
@@ -319,7 +328,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     }
   }
 
-  // 3. Process Summary
+  // 4. Summary Text
   let summaryText = sections.summary.join(" ")
     .replace(/[·%!•]/g, "")
     .replace(/\s+/g, " ")
@@ -328,14 +337,50 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     summaryText = "";
   }
 
-  // 4. Process Skills
-  const allSkillsText = sections.skills.join(" ");
-  const skills = knownSkills.filter(skill => {
+  // 5. Skills Categorization
+  const allSkillsText = sections.skills.join(" ") + " " + text;
+  
+  const frontendKeywords = ["React", "Next.js", "Vue", "Angular", "HTML5", "CSS3", "Tailwind", "SCSS", "Bootstrap", "Redux", "TypeScript", "JavaScript", "jQuery", "Webpack", "Vite"];
+  const backendKeywords = ["Node.js", "Express.js", "Django", "FastAPI", "Spring", "REST APIs", "GraphQL", "JWT", "bcrypt", "Middleware", "Python", "Java", "PHP", "Ruby"];
+  const databaseKeywords = ["MongoDB", "MySQL", "PostgreSQL", "Redis", "Firebase", "Mongoose", "Prisma", "SQLite", "Oracle"];
+  const cloudKeywords = ["AWS", "Azure", "GCP", "Vercel", "Render", "Heroku", "Netlify", "DigitalOcean", "Docker", "Kubernetes"];
+  const toolsKeywords = ["Git", "GitHub", "VS Code", "Postman", "Figma", "Jira", "Linux", "Bash", "npm", "yarn", "Jest", "Mocha"];
+  const languagesKeywords = ["JavaScript", "TypeScript", "Python", "Java", "C++", "Go", "Rust", "PHP", "Ruby", "Swift", "Kotlin"];
+
+  const matchSkills = (kwList: string[]) => kwList.filter(skill => {
     const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return new RegExp("\\b" + escaped + "\\b", "i").test(allSkillsText);
   });
 
-  // 5. Process Projects
+  const categorizedSkills = {
+    frontend: matchSkills(frontendKeywords),
+    backend: matchSkills(backendKeywords),
+    database: matchSkills(databaseKeywords),
+    cloud: matchSkills(cloudKeywords),
+    tools: matchSkills(toolsKeywords),
+    languages: matchSkills(languagesKeywords)
+  };
+
+  const allSkillsList = Array.from(new Set([
+    ...categorizedSkills.frontend,
+    ...categorizedSkills.backend,
+    ...categorizedSkills.database,
+    ...categorizedSkills.cloud,
+    ...categorizedSkills.tools,
+    ...categorizedSkills.languages,
+    ...knownSkills.filter(skill => new RegExp("\\b" + skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(allSkillsText))
+  ]));
+
+  // Combine flat array + category properties for maximum compatibility
+  const skills: any = allSkillsList;
+  skills.frontend = categorizedSkills.frontend;
+  skills.backend = categorizedSkills.backend;
+  skills.database = categorizedSkills.database;
+  skills.cloud = categorizedSkills.cloud;
+  skills.tools = categorizedSkills.tools;
+  skills.languages = categorizedSkills.languages;
+
+  // 6. Projects Processing
   const projects: any[] = [];
   let currentProject: any = null;
 
@@ -343,6 +388,9 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     const isBullet = line.startsWith("-") || line.startsWith("•") || line.startsWith("*");
     let bulletText = line.replace(/^[-•*]\s*/, "").trim();
     bulletText = bulletText.replace(/%¸/g, "").replace(/demonstrating hands-on implementation/gi, "").replace(/from the uploaded resume/gi, "").trim();
+
+    const liveMatch = line.match(/https?:\/\/[^\s)]+/i)?.[0] || "";
+    const ghMatch = line.match(/github\.com\/[^\s)]+/i)?.[0] || "";
 
     if (!isBullet && line.length < 100 && (line.includes("|") || line.includes("-") || /^[A-Z]/.test(line))) {
       if (currentProject) {
@@ -363,10 +411,16 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       
       currentProject = {
         name: namePart.replace(/%¸/g, "").trim(),
-        technologies: techPart.replace(/%¸/g, "").trim(),
-        bullets: []
+        tech: techPart.replace(/%¸/g, "").trim(),
+        description: "",
+        bullets: [],
+        live: liveMatch,
+        github: ghMatch,
+        duration: ""
       };
     } else if (currentProject && bulletText) {
+      if (liveMatch && !currentProject.live) currentProject.live = liveMatch;
+      if (ghMatch && !currentProject.github) currentProject.github = ghMatch;
       currentProject.bullets.push(bulletText);
     }
   }
@@ -385,10 +439,11 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
         p.bullets.push(p.name);
       }
     }
+    p.description = p.bullets[0] || p.name;
     return p;
   }).filter(p => p.name);
 
-  // 6. Process Experience
+  // 7. Experience Processing
   const experience: any[] = [];
   let currentExp: any = null;
 
@@ -404,18 +459,21 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       let titlePart = line;
       let companyPart = "";
       let durationPart = "";
+      let locPart = "";
       
       if (line.includes("|")) {
         const parts = line.split("|");
         titlePart = parts[0].trim();
         companyPart = parts[1]?.trim() || "";
         durationPart = parts[2]?.trim() || "";
+        locPart = parts[3]?.trim() || "";
       }
       
       currentExp = {
-        title: titlePart.trim(),
+        role: titlePart.trim(),
         company: companyPart.trim(),
         duration: durationPart.trim(),
+        location: locPart.trim(),
         bullets: []
       };
     } else if (currentExp && bulletText) {
@@ -432,13 +490,15 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     return hasCompany && hasDuration && exp.bullets.length > 0;
   });
 
-  // 7. Process Education
+  // 8. Education Processing
   const education: any[] = [];
   for (const line of sections.education) {
-    if (line.toLowerCase().includes("degree") || line.toLowerCase().includes("bca") || line.toLowerCase().includes("b.c.a") || line.toLowerCase().includes("b.tech") || line.toLowerCase().includes("bachelor") || line.toLowerCase().includes("school") || line.toLowerCase().includes("college")) {
+    if (line.toLowerCase().includes("degree") || line.toLowerCase().includes("bca") || line.toLowerCase().includes("b.c.a") || line.toLowerCase().includes("b.tech") || line.toLowerCase().includes("bachelor") || line.toLowerCase().includes("school") || line.toLowerCase().includes("college") || line.toLowerCase().includes("class xii") || line.toLowerCase().includes("class x")) {
       let degree = "";
       if (line.match(/b\.?c\.?a/i)) degree = "BCA — Bachelor of Computer Applications";
       else if (line.match(/b\.?tech/i)) degree = "B.Tech — Bachelor of Technology";
+      else if (line.match(/class\s+xii/i) || line.match(/12th/i)) degree = "Class XII";
+      else if (line.match(/class\s+x/i) || line.match(/10th/i)) degree = "Class X";
       else degree = line.split(/[|-]/)[0].trim();
 
       let college = "";
@@ -454,33 +514,78 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       const cgpaMatch = line.match(/cgpa[:\s]*(\d\.\d+)/i) || line.match(/gpa[:\s]*(\d\.\d+)/i);
       const cgpa = cgpaMatch ? cgpaMatch[1] : "";
 
+      const boardMatch = line.match(/up\s+board|cbse|icse|state\s+board/i);
+      const board = boardMatch ? boardMatch[0] : "";
+
       education.push({
         degree,
-        college: college.replace(degree, "").replace(/[|-]/g, "").trim(),
+        college: college.replace(degree, "").replace(/[|-]/g, "").trim() || "Institution",
         year,
-        cgpa
+        cgpa,
+        board
       });
     }
   }
 
-  // 8. Process Certifications
-  const certifications = sections.certifications.map(line => line.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
+  // 9. Certifications Processing
+  const certifications = sections.certifications.map(line => {
+    const clean = line.replace(/^[-•*]\s*/, "").trim();
+    if (!clean) return null;
+    const parts = clean.split("|");
+    const name = parts[0]?.trim() || clean;
+    const issuer = parts[1]?.trim() || "";
+    const yearMatch = clean.match(/\b(20\d{2})\b/);
+    const year = yearMatch ? yearMatch[0] : "";
+    return { name, issuer, year, full: clean };
+  }).filter(Boolean).map(c => c!.full || c!.name);
+
+  // 10. Achievements Processing
+  const rawAchievements = [
+    ...sections.achievements,
+    ...lines.filter(l => /300\+|leet\s*code|geeksfor\s*geeks|gfg|deployed|competition|hackathon|open\s*source/i.test(l))
+  ];
+  const achievements = Array.from(new Set(rawAchievements.map(l => l.replace(/^[-•*]\s*/, "").trim()).filter(Boolean)));
+
+  // 11. Soft Skills & Languages Known
+  const rawSoftSkills = [
+    ...sections.softSkills,
+    ...lines.filter(l => /problem\s+solving|teamwork|communication|collaboration|adaptability|quick\s+learner/i.test(l))
+  ];
+  const softSkills = Array.from(new Set(rawSoftSkills.map(l => l.replace(/^[-•*]\s*/, "").trim()).filter(Boolean)));
+  if (softSkills.length === 0) {
+    softSkills.push("Problem Solving", "Team Collaboration", "Quick Learner", "Communication");
+  }
+
+  const rawLanguages = [
+    ...sections.languages,
+    ...lines.filter(l => /english|hindi|spanish|french|german/i.test(l))
+  ];
+  const languages = Array.from(new Set(rawLanguages.map(l => l.replace(/^[-•*]\s*/, "").trim()).filter(Boolean)));
+  if (languages.length === 0) {
+    languages.push("English (Professional)", "Hindi (Native)");
+  }
 
   const detectedSections = Object.keys(sections).filter(sec => sections[sec as SectionName].length > 0);
 
   return {
     name,
+    title: title || "Full Stack Developer | MERN Stack",
     email,
     phone,
     github: githubMatch,
     linkedin: linkedinMatch,
+    portfolio: portfolioMatch,
     location,
     summary: summaryText,
     skills,
+    categorizedSkills,
     experience: finalExperience,
     projects: finalProjects,
     education,
     certifications,
+    achievements,
+    softSkills,
+    languages,
     links: Array.from(text.matchAll(urlPattern)).map((m) => m[0]),
     detectedSections,
     wordCount: countWords(text)

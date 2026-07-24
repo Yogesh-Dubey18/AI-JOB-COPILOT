@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
-import { exportResumePdfDirect, listPdfExports } from "../services/pdf-export.service.js";
+import { exportResumePdfDirect, listPdfExports, generateCompletePdf } from "../services/pdf-export.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
@@ -15,6 +15,14 @@ router.post("/resume", asyncHandler(async (req, res) => {
 
   const { buffer } = await exportResumePdfDirect(userId, targetId);
 
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", "attachment; filename=\"Resume_YogeshDubey.pdf\"");
+  res.send(buffer);
+}));
+
+router.post("/generate-complete", asyncHandler(async (req, res) => {
+  const { resumeData } = req.body;
+  const buffer = await generateCompletePdf(resumeData || req.body);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", "attachment; filename=\"Resume_YogeshDubey.pdf\"");
   res.send(buffer);

@@ -48,6 +48,7 @@ import CareerVaultPage from "@/app/career-vault/page";
 import SkillRoadmapPage from "@/app/skill-roadmap/page";
 import { t, getStoredLanguage, setStoredLanguage, DEFAULT_LANGUAGE } from "@/lib/i18n";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/status-state";
+import { GenerateResumeModal } from "@/components/resume/GenerateResumeModal";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<Providers>{ui}</Providers>);
@@ -2076,6 +2077,7 @@ describe("portfolio builder empty state and custom builder input toggles", () =>
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     globalThis.fetch = originalFetch;
     vi.restoreAllMocks();
   });
@@ -2189,6 +2191,96 @@ describe("portfolio builder empty state and custom builder input toggles", () =>
     fireEvent.change(slugInput, { target: { value: "abc!" } });
     await waitFor(() => {
       expect(screen.getByText(/Slug can only contain/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe("GenerateResumeModal component", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn()
+      }))
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    globalThis.fetch = originalFetch;
+  });
+
+  it("GenerateResumeModal renders with job title in header", async () => {
+    const job = { _id: "job-1", title: "React Frontend Engineer", company: "SuperTech", description: "React typescript" };
+    renderWithProviders(<GenerateResumeModal open={true} onOpenChange={() => {}} job={job} />);
+    expect(screen.getByText(/Generate resume for React Frontend Engineer/i)).toBeInTheDocument();
+    expect(screen.getByText(/at SuperTech/i)).toBeInTheDocument();
+  });
+
+  it("GenerateResumeModal displays loading state and download button appropriately", async () => {
+    const job = { _id: "job-1", title: "Python Backend Developer", company: "DjangoCorp", description: "Python django dev" };
+    
+    // Mock the fetch call for resumes
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/generate-for-job")) {
+        return Promise.resolve({
+          ok: true, status: 201, headers: new Headers(),
+          json: async () => ({
+            success: true,
+            data: {
+              generatedResume: {
+                name: "Test User",
+                summary: "Experienced python developer...",
+                skills: { frontend: ["React"], backend: ["Python"] }
+              },
+              pdfUrl: "https://ai-job-copilot-backend-l6ut.onrender.com/exports/Resume_YogeshDubey.pdf",
+              atsScore: 92,
+              beforeAtsScore: 75,
+              addedKeywords: ["Python", "Django"],
+              resumeVersionId: "ver-1"
+            }
+          })
+        });
+      }
+      if (url.includes("/resumes") && !url.includes("/generate-for-job")) {
+        return Promise.resolve({
+          ok: true, status: 200, headers: new Headers(),
+          json: async () => [{ _id: "res-1", fileName: "MyBaseResume.pdf", createdAt: new Date().toISOString() }]
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, headers: new Headers(), json: async () => ({}) });
+    }));
+
+    renderWithProviders(<GenerateResumeModal open={true} onOpenChange={() => {}} job={job} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Select your base resume/i)).toBeInTheDocument();
+    });
+
+    const select = screen.getByLabelText(/Select your base resume/i);
+    fireEvent.change(select, { target: { value: "res-1" } });
+
+    const generateBtn = screen.getByRole("button", { name: /Generate World-Class Resume/i });
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Crafting your perfect resume/i)).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Download PDF/i })).toBeInTheDocument();
+      expect(screen.getByText(/Injected ATS Keywords/i)).toBeInTheDocument();
+      expect(screen.getByText(/Tailored Resume Score/i)).toBeInTheDocument();
     });
   });
 });

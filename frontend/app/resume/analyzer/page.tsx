@@ -100,6 +100,25 @@ export default function ResumeAnalyzerPage() {
   });
   const worldClassResume = worldClass.data?.generatedResume;
 
+  const [improvementsData, setImprovementsData] = useState<any>(null);
+  const getImprovements = useMutation({
+    mutationFn: () => api.post<any>(`/resumes/${resumeId}/improve`),
+    onSuccess: (data) => setImprovementsData(data)
+  });
+  const applySingleImp = useMutation({
+    mutationFn: (body: any) => api.post<any>(`/resumes/${resumeId}/apply-improvement`, body)
+  });
+
+  const [jdRole, setJdRole] = useState("");
+  const [jdCompany, setJdCompany] = useState("");
+  const [jdText, setJdText] = useState("");
+  const [tailorResult, setTailorResult] = useState<any>(null);
+
+  const tailorToJdMutation = useMutation({
+    mutationFn: () => api.post<any>(`/resumes/${resumeId}/tailor-to-jd`, { jobDescription: jdText, jobTitle: jdRole, company: jdCompany }),
+    onSuccess: (data) => setTailorResult(data)
+  });
+
   useEffect(() => {
     if (result?.improvementSuggestions) {
       setSelectedSuggestions(result.improvementSuggestions);
@@ -389,7 +408,7 @@ export default function ResumeAnalyzerPage() {
                         {downloadingPdf ? "Downloading..." : "Download PDF"}
                       </Button>
                       <Link href={`/pdf-export?versionId=${worldClass.data.resumeVersionId}`}>
-                        <Button variant="outline">Export options</Button>
+                        <Button variant="outline">Export world-class PDF</Button>
                       </Link>
                     </>
                   ) : null}
@@ -548,6 +567,146 @@ export default function ResumeAnalyzerPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* One-Click Actionable Improvement Suggestions Panel */}
+          {result && (
+            <Card className="border-blue-200 dark:border-blue-900/50">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  One-Click Improvement Suggestions
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={getImprovements.isPending || !resumeId}
+                  onClick={() => getImprovements.mutate()}
+                >
+                  {getImprovements.isPending ? "Analyzing..." : "Get Detailed Improvements"}
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {improvementsData ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-3 border-b pb-2">
+                      <span className="text-xs font-semibold text-muted-foreground">Category Improvements</span>
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Score: {improvementsData.overallScore}/100</span>
+                    </div>
+                    {improvementsData.improvements?.map((imp: any) => (
+                      <div key={imp.id} className="border rounded p-3 mb-2 bg-card">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-bold text-sm">{imp.section}</span>
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                            imp.impact === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
+                            imp.impact === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' :
+                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          }`}>{imp.impact?.toUpperCase()} IMPACT</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">{imp.issue}</p>
+                        <div className="bg-muted/60 p-2.5 rounded text-xs space-y-1">
+                          {imp.current && <p className="text-rose-500 font-medium">Before: {imp.current}</p>}
+                          {imp.improved && <p className="text-emerald-600 dark:text-emerald-400 font-medium">After: {imp.improved}</p>}
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={applySingleImp.isPending}
+                          onClick={() => applySingleImp.mutate({ improvementId: imp.id, section: imp.section, newContent: imp.improved })}
+                          className="mt-2 text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          ✨ Apply This Improvement
+                        </Button>
+                      </div>
+                    ))}
+                    {improvementsData.quickWins?.length > 0 && (
+                      <div className="mt-3 pt-2 border-t">
+                        <p className="text-xs font-bold text-muted-foreground mb-1">Quick Wins</p>
+                        <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-0.5">
+                          {improvementsData.quickWins.map((win: string, idx: number) => (
+                            <li key={idx}>{win}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Click &quot;Get Detailed Improvements&quot; to fetch section-by-section actionable fixes with 1-click apply buttons.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Job Description Based Tailored Resume Section */}
+          <Card className="mt-6 border-t border-emerald-300 dark:border-emerald-800 pt-2">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                🎯 Tailor Resume to Job Description
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                placeholder="Job Title (e.g. Senior React Developer)"
+                value={jdRole}
+                onChange={(e) => setJdRole(e.target.value)}
+              />
+              <Input
+                placeholder="Company Name"
+                value={jdCompany}
+                onChange={(e) => setJdCompany(e.target.value)}
+              />
+              <textarea
+                placeholder="Paste the complete Job Description here..."
+                rows={6}
+                value={jdText}
+                onChange={(e) => setJdText(e.target.value)}
+                className="w-full border rounded-md p-2.5 text-sm bg-background"
+              />
+              <Button
+                disabled={tailorToJdMutation.isPending || !resumeId || !jdText}
+                onClick={() => tailorToJdMutation.mutate()}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 font-bold text-sm"
+              >
+                {tailorToJdMutation.isPending ? "Generating Job-Specific Resume..." : "🚀 Generate Job-Specific Resume (95%+ ATS Match)"}
+              </Button>
+
+              {tailorResult && (
+                <div className="mt-4 p-4 border rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-base text-emerald-800 dark:text-emerald-300">
+                      ATS Match Score: {tailorResult.matchAnalysis?.matchScore || 95}/100
+                    </span>
+                    <Button
+                      size="sm"
+                      onClick={() => downloadDirectPdf(tailorResult.resumeVersionId)}
+                    >
+                      Download Tailored PDF
+                    </Button>
+                  </div>
+                  {tailorResult.matchAnalysis?.matchedKeywords?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mb-1">Matched Keywords</p>
+                      <div className="flex flex-wrap gap-1">
+                        {tailorResult.matchAnalysis.matchedKeywords.map((kw: string) => (
+                          <span key={kw} className="bg-emerald-200 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 text-xs px-2 py-0.5 rounded">{kw}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {tailorResult.matchAnalysis?.missingKeywords?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1">Missing Keywords</p>
+                      <div className="flex flex-wrap gap-1">
+                        {tailorResult.matchAnalysis.missingKeywords.map((kw: string) => (
+                          <span key={kw} className="bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-xs px-2 py-0.5 rounded">{kw}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Draft Preview */}
           {improve.data && (

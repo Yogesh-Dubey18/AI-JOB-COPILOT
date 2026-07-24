@@ -1954,4 +1954,89 @@ describe("AI Job Copilot API", () => {
     const titles = res.body.data.items.map((j: any) => j.title);
     expect(titles).not.toContain("Expired Test Developer");
   });
+
+  it("generateWorldClassResume never returns name='Candidate'", async () => {
+    const agent = await authAgent();
+    const upload = await agent.post("/api/resumes/upload")
+      .field("isBaseResume", "true")
+      .field("anonymizePreview", "false")
+      .attach("resume", Buffer.from("Candidate\nemail@test.com\n9876543210\nSkills React Node.js"), "resume.txt")
+      .expect(201);
+    
+    const generated = await agent.post("/api/resumes/generate-world-class")
+      .send({ resumeId: upload.body.data._id, targetRole: "Software Developer" })
+      .expect(201);
+      
+    expect(generated.body.data.generatedResume.name).not.toBe("Candidate");
+    expect(generated.body.data.generatedResume.name).toBe("Test User");
+  });
+
+  it("Skills categorization: 'MongoDB' always goes to database bucket and 'Git' to tools bucket", async () => {
+    const agent = await authAgent();
+    const upload = await agent.post("/api/resumes/upload")
+      .field("isBaseResume", "true")
+      .field("anonymizePreview", "false")
+      .attach("resume", Buffer.from("Test User\nemail@test.com\n9876543210\nSkills MongoDB Git React Node.js"), "resume.txt")
+      .expect(201);
+      
+    const generated = await agent.post("/api/resumes/generate-world-class")
+      .send({ resumeId: upload.body.data._id, targetRole: "Software Developer" })
+      .expect(201);
+      
+    const skills = generated.body.data.generatedResume.skills;
+    expect(skills.database).toContain("MongoDB");
+    expect(skills.tools).toContain("Git");
+  });
+
+  it("generateForJob with React job returns React-related addedKeywords", async () => {
+    const agent = await authAgent();
+    const upload = await agent.post("/api/resumes/upload")
+      .field("isBaseResume", "true")
+      .field("anonymizePreview", "false")
+      .attach("resume", Buffer.from("Test User\nemail@test.com\n9876543210\nSkills React"), "resume.txt")
+      .expect(201);
+
+    const job = await createRecord("jobs", {
+      title: "React Developer",
+      company: "React Co",
+      description: "Looking for a React developer with Node.js and TypeScript experience",
+      location: "Remote",
+      remoteType: "Remote",
+      jobType: "Full-time",
+      source: "Manual"
+    });
+
+    const res = await agent.post("/api/resumes/generate-for-job")
+      .send({ resumeId: upload.body.data._id, jobId: job._id })
+      .expect(201);
+
+    expect(res.body.data.addedKeywords).toContain("React");
+    expect(res.body.data.addedKeywords).not.toContain("Python");
+  });
+
+  it("generateForJob with Python job returns Python-related addedKeywords", async () => {
+    const agent = await authAgent();
+    const upload = await agent.post("/api/resumes/upload")
+      .field("isBaseResume", "true")
+      .field("anonymizePreview", "false")
+      .attach("resume", Buffer.from("Test User\nemail@test.com\n9876543210\nSkills Python"), "resume.txt")
+      .expect(201);
+
+    const job = await createRecord("jobs", {
+      title: "Python Developer",
+      company: "Python Co",
+      description: "Looking for a Python developer with Django and Flask experience",
+      location: "Remote",
+      remoteType: "Remote",
+      jobType: "Full-time",
+      source: "Manual"
+    });
+
+    const res = await agent.post("/api/resumes/generate-for-job")
+      .send({ resumeId: upload.body.data._id, jobId: job._id })
+      .expect(201);
+
+    expect(res.body.data.addedKeywords).toContain("Python");
+    expect(res.body.data.addedKeywords).not.toContain("React");
+  });
 });

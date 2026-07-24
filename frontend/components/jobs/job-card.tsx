@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { GenerateResumeModal } from "@/components/resume/GenerateResumeModal";
 
 function SourceBadge({ sourceType, source }: { sourceType?: string; source?: string }) {
   const sourceLower = (source || "").toLowerCase();
@@ -55,6 +57,7 @@ interface JobCardProps {
 export function JobCard({ job, isSaved = false, isApplied = false }: JobCardProps) {
   const router = useRouter();
   const qc = useQueryClient();
+  const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   
   const savedState = job.isSaved || isSaved;
   const appliedState = job.isApplied || isApplied;
@@ -169,6 +172,13 @@ export function JobCard({ job, isSaved = false, isApplied = false }: JobCardProp
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
           <Link href={"/jobs/" + job._id}><Button>Analyze</Button></Link>
+          <Button
+            variant="outline"
+            className="border-teal-600 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/20"
+            onClick={() => setIsGenerateOpen(true)}
+          >
+            <FileText className="h-4 w-4 mr-1 text-teal-600" /> Generate Resume
+          </Button>
           <Link href={`/jobs/${job._id}/tailor-resume`}><Button variant="outline"><FileText className="h-4 w-4" /> Tailor Resume</Button></Link>
           <Link href={`/application-kit/${job._id}`}><Button variant="outline"><Sparkles className="h-4 w-4" /> Generate Application Kit</Button></Link>
           
@@ -196,6 +206,12 @@ export function JobCard({ job, isSaved = false, isApplied = false }: JobCardProp
             <Bookmark className={`h-4 w-4 ${savedState || appliedState ? "fill-primary text-primary" : ""}`} />
           </Button>
         </div>
+
+        <GenerateResumeModal
+          open={isGenerateOpen}
+          onOpenChange={setIsGenerateOpen}
+          job={job}
+        />
       </CardContent>
     </Card>
   );

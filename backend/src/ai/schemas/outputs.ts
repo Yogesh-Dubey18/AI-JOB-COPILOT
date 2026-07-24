@@ -39,6 +39,7 @@ const worldClassSkillSchema = z.object({
   frontend: z.array(z.string()).default([]),
   backend: z.array(z.string()).default([]),
   database: z.array(z.string()).default([]),
+  cloud: z.array(z.string()).default([]),
   tools: z.array(z.string()).default([])
 });
 
@@ -50,18 +51,21 @@ export const worldClassResumeOutputSchema = z.object({
     phone: z.string().default(""),
     github: z.string().default(""),
     linkedin: z.string().default(""),
+    portfolio: z.string().default(""),
     location: z.string().default("")
-  }).default({ email: "", phone: "", github: "", linkedin: "", location: "" }),
+  }).default({ email: "", phone: "", github: "", linkedin: "", portfolio: "", location: "" }),
   summary: z.string().default(""),
   skills: worldClassSkillSchema.default({
     frontend: [],
     backend: [],
     database: [],
+    cloud: [],
     tools: []
   }),
   projects: z.array(z.object({
     name: z.string().default(""),
     tech: z.string().default(""),
+    description: z.string().default(""),
     bullets: z.array(z.string()).default([]),
     live: z.string().default(""),
     github: z.string().default("")
@@ -70,15 +74,21 @@ export const worldClassResumeOutputSchema = z.object({
     title: z.string().default(""),
     company: z.string().default(""),
     duration: z.string().default(""),
+    location: z.string().default(""),
     bullets: z.array(z.string()).default([])
   })).default([]),
   education: z.array(z.object({
     degree: z.string().default(""),
     college: z.string().default(""),
     year: z.string().default(""),
-    cgpa: z.string().default("")
+    cgpa: z.string().default(""),
+    board: z.string().default("")
   })).default([]),
   certifications: z.array(z.string()).default([]),
+  achievements: z.array(z.string()).default([]),
+  softSkills: z.array(z.string()).default([]),
+  languages: z.array(z.string()).default([]),
+  atsScore: z.number().default(92),
   atsKeywords: z.array(z.string()).default([])
 });
 

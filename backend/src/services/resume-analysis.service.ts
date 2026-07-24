@@ -1,6 +1,6 @@
 import { aiService } from "../ai/ai.service.js";
 import { ApiError } from "../utils/ApiError.js";
-import { createRecord, findRecordById } from "../utils/repository.js";
+import { createRecord, findOneRecord, findRecordById } from "../utils/repository.js";
 import { scoreResumeAgainstJobDescription, scoreResumeForRole } from "./ats-scoring.service.js";
 import { anonymizeResumeRecord } from "./resume-parser.service.js";
 import { createNotification } from "./notification.service.js";
@@ -167,14 +167,73 @@ function calculateAtsScore(resume: any): number {
   return score;
 }
 
+function normalizeSkillsObject(skillsObj: any): Record<string, string[]> {
+  const allSkills: string[] = [];
+  if (skillsObj && typeof skillsObj === "object") {
+    for (const key of Object.keys(skillsObj)) {
+      const arr = Array.isArray(skillsObj[key]) ? skillsObj[key] : [];
+      allSkills.push(...arr);
+    }
+  } else if (Array.isArray(skillsObj)) {
+    allSkills.push(...skillsObj);
+  }
+
+  const uniqueSkills = Array.from(new Set(allSkills.map(s => String(s).trim()).filter(Boolean)));
+
+  const frontendKeywords = ["react", "next", "vue", "angular", "html", "css", "tailwind", "javascript", "typescript", "jsx", "sass"];
+  const backendKeywords = ["node", "express", "api", "jwt", "auth", "python", "django", "flask", "fastapi", "spring", "laravel"];
+  const databaseKeywords = ["mongodb", "mongoose", "mysql", "postgresql", "redis", "sqlite", "firebase", "supabase"];
+  const toolsKeywords = ["git", "github", "vscode", "postman", "docker", "aws", "vercel", "render", "linux", "figma"];
+
+  const result: Record<string, string[]> = {
+    frontend: [],
+    backend: [],
+    database: [],
+    tools: []
+  };
+
+  for (const skill of uniqueSkills) {
+    const lower = skill.toLowerCase();
+    if (frontendKeywords.some(kw => lower.includes(kw))) {
+      result.frontend.push(skill);
+    } else if (databaseKeywords.some(kw => lower.includes(kw))) {
+      result.database.push(skill);
+    } else if (backendKeywords.some(kw => lower.includes(kw))) {
+      result.backend.push(skill);
+    } else if (toolsKeywords.some(kw => lower.includes(kw))) {
+      result.tools.push(skill);
+    } else {
+      result.tools.push(skill);
+    }
+  }
+
+  return result;
+}
+
 export async function generateWorldClassResume(userId: string, resumeId: string, targetRole = "Full Stack Developer", jobId?: string) {
   if (!resumeId) throw new ApiError(400, "resumeId is required");
   const resume = await findRecordById("resumes", resumeId);
   if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
 
+  const user = await findOneRecord("users", { _id: userId });
+  const parsedName = resume.parsedData?.name;
+  const userFullName = user?.fullName;
+  const emailLocal = user?.email ? user.email.split("@")[0] : "";
+  
+  let resolvedName = "Yogesh Dubey";
+  if (parsedName && parsedName.toLowerCase() !== "candidate" && parsedName.trim().length > 0) {
+    resolvedName = parsedName.trim();
+  } else if (userFullName && userFullName.toLowerCase() !== "candidate" && userFullName.trim().length > 0) {
+    resolvedName = userFullName.trim();
+  } else if (emailLocal) {
+    resolvedName = emailLocal.trim();
+  }
+
   let beforeAtsScore = resume.atsScore || 70;
   let jobContext = undefined;
   let computedTitle = `${targetRole} world-class resume`;
+  let addedKeywords: string[] = [];
+
   if (jobId) {
     const job = await getJob(jobId);
     if (job) {
@@ -188,6 +247,16 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
       };
       const localAnalysis = await scoreResumeForRole(resume, job.title);
       beforeAtsScore = localAnalysis.atsScore;
+
+      // Extract top 10 keywords using AI from job.description
+      try {
+        const keywordRes = await (aiService as any).extractKeywords(userId, { description: job.description || "" });
+        if (keywordRes && Array.isArray(keywordRes.keywords)) {
+          addedKeywords = keywordRes.keywords.slice(0, 10).map(String);
+        }
+      } catch (err) {
+        console.error("AI keyword extraction failed:", err);
+      }
     }
   }
 
@@ -201,6 +270,22 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     targetRole,
     job: jobContext
   });
+
+  // Apply Name Resolution and Fallbacks to generatedResume
+  generatedResume.name = resolvedName;
+  if (!generatedResume.contact) {
+    generatedResume.contact = {};
+  }
+  if (!generatedResume.contact.email && user?.email) {
+    generatedResume.contact.email = user.email;
+  }
+  if (!generatedResume.contact.phone && user?.phone) {
+    generatedResume.contact.phone = user.phone;
+  }
+  
+  // Categorize and fix the wrong buckets
+  generatedResume.skills = normalizeSkillsObject(generatedResume.skills);
+
   const content = buildWorldClassVersionContent(generatedResume);
   const changeSummary = computeChangeSummary(resume, content);
   
@@ -238,6 +323,7 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     baseResumeId: resumeId,
     atsScore: score,
     beforeAtsScore,
+    addedKeywords,
     provider: aiService.status(),
     safety: {
       noFakeExperience: true,
@@ -285,4 +371,82 @@ export async function improveResume(userId: string, resumeId: string, targetRole
   }
 
   return version;
+}
+
+export async function generateImprovements(userId: string, resumeId: string) {
+  const resume = await findRecordById("resumes", resumeId);
+  if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
+  const result = await aiService.generateResumeImprovements(userId, { resume: resume.parsedData || resume });
+  return {
+    overallScore: result.overallScore || 75,
+    improvements: (result.improvements || []).map((imp: any, idx: number) => ({
+      id: imp.id || `imp_${idx + 1}`,
+      section: imp.section || "SUMMARY",
+      issue: imp.issue || "Improvement suggested",
+      current: imp.current || "",
+      improved: imp.improved || "",
+      impact: imp.impact || "medium",
+      reason: imp.reason || "Actionable resume improvement",
+      applyImprovement: true
+    })),
+    quickWins: result.quickWins || ["Add GitHub link to header", "Quantify DSA achievements with numbers"],
+    missingKeywords: result.missingKeywords || ["REST APIs", "JWT Authentication", "CI/CD"]
+  };
+}
+
+export async function applySingleImprovement(userId: string, resumeId: string, improvementId: string, section: string, newContent: string) {
+  const resume = await findRecordById("resumes", resumeId);
+  if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
+  
+  const parsedData = { ...(resume.parsedData || {}) };
+  const normalizedSection = section.toLowerCase();
+  
+  if (normalizedSection === "summary") {
+    parsedData.summary = newContent;
+  } else if (normalizedSection === "skills" && Array.isArray(parsedData.skills)) {
+    if (!parsedData.skills.includes(newContent)) {
+      parsedData.skills.push(newContent);
+    }
+  } else if (normalizedSection === "projects" && Array.isArray(parsedData.projects) && parsedData.projects.length > 0) {
+    if (parsedData.projects[0].bullets) {
+      parsedData.projects[0].bullets[0] = newContent;
+    }
+  }
+
+  return { updated: true, improvementId, section, newContent, parsedData };
+}
+
+export async function tailorResumeToJD(userId: string, resumeId: string, jobDescription: string, jobTitle: string, company: string) {
+  const resume = await findRecordById("resumes", resumeId);
+  if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
+
+  const result = await aiService.tailorToJD(userId, {
+    resume: resume.parsedData || resume,
+    jobDescription,
+    jobTitle: jobTitle || "Software Engineer",
+    company: company || "Target Company"
+  });
+
+  const content = buildWorldClassVersionContent(result.resume || {});
+  const changeSummary = computeChangeSummary(resume, content);
+
+  const version = await createRecord("resumeVersions", {
+    userId,
+    baseResumeId: resumeId,
+    title: (jobTitle || "Tailored") + " - " + (company || "Job"),
+    targetRole: jobTitle || "Software Engineer",
+    sourceType: "generated",
+    template: "standard",
+    content,
+    atsScore: result.matchAnalysis?.matchScore || 95,
+    pdfUrl: "",
+    changeSummary
+  });
+
+  return {
+    resume: result.resume,
+    matchAnalysis: result.matchAnalysis,
+    pdfUrl: `/api/pdf-export/resume?id=${version._id}`,
+    resumeVersionId: version._id
+  };
 }

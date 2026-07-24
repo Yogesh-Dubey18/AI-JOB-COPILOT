@@ -20,6 +20,8 @@ import { buildportfolioGeneratorPrompt } from "./prompts/portfolioGenerator.prom
 import { buildlinkedinOptimizerPrompt } from "./prompts/linkedinOptimizer.prompt.js";
 import { buildfollowUpPrompt } from "./prompts/followUp.prompt.js";
 import { buildWorldClassResumePrompt } from "./prompts/worldClassResume.prompt.js";
+import { buildResumeImprovementPrompt } from "./prompts/resumeImprovement.prompt.js";
+import { buildJDTailoredResumePrompt } from "./prompts/jdTailoredResume.prompt.js";
 import {
   applicationKitOutputSchema,
   interviewCoachOutputSchema,
@@ -708,9 +710,73 @@ export const aiService = {
   scamCheck: (userId: string | undefined, context: any) => run(userId, "scam-check", buildscamDetectorPrompt(context), scamFallback, scamDetectorOutputSchema),
   chat: (userId: string | undefined, context: any) => run(userId, "career-chat", buildcareerChatPrompt(context), { answer: "Based on your profile, focus on tailored applications, one strong resume version per role, and interview practice around your projects.", suggestedActions: ["Analyze resume", "Match jobs", "Practice interview"] }, looseObjectOutputSchema),
   rejectionAnalysis: (userId: string | undefined, context: any) => run(userId, "rejection-analysis", buildrejectionAnalysisPrompt(context), rejectionFallback, rejectionAnalysisOutputSchema),
+  extractKeywords: (userId: string | undefined, context: any) => {
+    const desc = (context?.description || "").toLowerCase();
+    const fallback = (desc.includes("python") || desc.includes("django") || desc.includes("flask"))
+      ? { keywords: ["Python", "Django", "Flask", "PostgreSQL", "REST API"] }
+      : { keywords: ["React", "Node.js", "MongoDB", "Express.js", "TypeScript"] };
+    return run(
+      userId,
+      "extract-keywords",
+      `Analyze this job description and extract the top 10 core technical keywords, frameworks, or tools required. Return a JSON object with a single key "keywords" which is an array of strings.\n\nJob Description:\n${context.description}`,
+      fallback,
+      looseObjectOutputSchema
+    );
+  },
   portfolioGenerator: (userId: string | undefined, context: any) => run(userId, "portfolio-generator", buildportfolioGeneratorPrompt(context), { hero: "Full-stack developer building practical web products", about: "I build responsive, API-driven applications with React, Node.js, Express, and MongoDB.", skills: ["React", "Node.js", "MongoDB"], projects: ["AI Job Copilot", "Airbnb clone", "Spotify clone"] }, looseObjectOutputSchema),
   linkedinOptimizer: (userId: string | undefined, context: any) => run(userId, "linkedin-optimizer", buildlinkedinOptimizerPrompt(context), { headline: "Full-stack Developer | React | Node.js | MongoDB", about: "Project-focused developer seeking entry-level software roles." }, looseObjectOutputSchema),
   followUpMessage: (userId: string | undefined, context: any) => run(userId, "follow-up-message", buildfollowUpPrompt(context), { message: "Hi, I wanted to politely follow up on my application. I remain interested in the role and would be happy to share any additional details." }, looseObjectOutputSchema),
+  generateResumeImprovements: (userId: string | undefined, context: any) => run(userId, "resume-improvement", buildResumeImprovementPrompt(context), {
+    overallScore: 75,
+    improvements: [
+      {
+        id: "imp_1",
+        section: "SUMMARY",
+        issue: "Summary could be sharper and include more target keywords",
+        current: context?.resume?.summary || "Experienced full stack developer",
+        improved: "B.C.A graduate specializing in MERN stack with production projects in Next.js & Node.js.",
+        impact: "high",
+        reason: "Recruiters and ATS scan the summary first for core technical alignment"
+      },
+      {
+        id: "imp_2",
+        section: "PROJECTS",
+        issue: "Project bullet points missing quantitative results",
+        current: "Built full stack application with authentication",
+        improved: "Engineered RESTful APIs using Node.js and JWT auth, supporting 500+ requests with 99.9% uptime",
+        impact: "high",
+        reason: "Quantified bullet points increase interview callback rates significantly"
+      }
+    ],
+    quickWins: ["Add GitHub link to header", "Quantify DSA achievements with numbers"],
+    missingKeywords: ["REST APIs", "JWT Authentication", "CI/CD"]
+  }, looseObjectOutputSchema),
+  tailorToJD: (userId: string | undefined, context: any) => run(userId, "jd-tailored-resume", buildJDTailoredResumePrompt(context), {
+    resume: {
+      name: context?.resume?.name || "Yogesh Dubey",
+      title: context?.jobTitle || "Full Stack Developer | MERN Stack",
+      contact: context?.resume?.contact || { email: "", phone: "", github: "", linkedin: "", location: "" },
+      summary: `B.C.A graduate specializing in React, Node.js, and MongoDB with 4 production projects. Tailored for ${context?.jobTitle || "Full Stack Developer"} at ${context?.company || "Target Company"}.`,
+      skills: context?.resume?.skills || { frontend: ["React.js", "TypeScript"], backend: ["Node.js", "Express.js"], database: ["MongoDB"], cloud: ["AWS", "Vercel"], tools: ["Git", "Postman"] },
+      projects: context?.resume?.projects || [],
+      experience: context?.resume?.experience || [],
+      education: context?.resume?.education || [],
+      certifications: context?.resume?.certifications || [],
+      achievements: context?.resume?.achievements || ["300+ DSA problems solved on LeetCode & GeeksforGeeks"],
+      softSkills: context?.resume?.softSkills || ["Problem Solving", "Team Collaboration", "Communication"],
+      languages: context?.resume?.languages || ["English (Professional)", "Hindi (Native)"],
+      atsScore: 95,
+      atsKeywords: ["React.js", "Node.js", "MongoDB", "Express.js", "TypeScript", "REST APIs"]
+    },
+    matchAnalysis: {
+      matchScore: 95,
+      matchedKeywords: ["React", "Node.js", "MongoDB", "Express.js", "TypeScript"],
+      missingKeywords: ["Docker", "AWS"],
+      suggestions: ["Consider learning Docker basics", "AWS free tier can add cloud experience"],
+      strengthsForThisRole: ["MERN stack matches requirement", "Production projects show practical experience"],
+      recommendedToApply: true
+    }
+  }, looseObjectOutputSchema),
   parseJobText: (userId: string | undefined, context: any) => run(userId, "job-parser", `Extract structured job details from the following raw job description text.
 Format the output as a valid JSON object matching this schema:
 {
