@@ -78,8 +78,8 @@ export function GenerateResumeModal({ open, onOpenChange, job }: GenerateResumeM
     // Trigger download
     const link = document.createElement("a");
     link.href = successData.pdfUrl;
-    link.target = "_blank";
-    link.download = `YogeshDubey_${job.title.replace(/\s+/g, "_")}_Resume.pdf`;
+    const safeTitle = (job.title || "Target_Role").replace(/[^a-zA-Z0-9_-]/g, "_");
+    link.download = `Resume_${safeTitle}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

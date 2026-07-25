@@ -793,7 +793,7 @@ export const aiService = {
   }, looseObjectOutputSchema),
   tailorToJD: (userId: string | undefined, context: any) => run(userId, "jd-tailored-resume", buildJDTailoredResumePrompt(context), {
     resume: {
-      name: context?.resume?.name || "Yogesh Dubey",
+      name: context?.resume?.name || context?.resume?.parsedData?.name || "Candidate",
       title: context?.jobTitle || "Full Stack Developer | MERN Stack",
       contact: context?.resume?.contact || { email: "", phone: "", github: "", linkedin: "", location: "" },
       summary: `B.C.A graduate specializing in React, Node.js, and MongoDB with 4 production projects. Tailored for ${context?.jobTitle || "Full Stack Developer"} at ${context?.company || "Target Company"}.`,

@@ -133,64 +133,10 @@ function categorizeSkills(skills: string[]): Record<string, string[]> {
   return categories;
 }
 
-const fallbackSummary = "BCA graduate and Full Stack Developer specializing in MERN stack (MongoDB, Express.js, React.js, Node.js) with 4 production projects and DUCAT certification. Solved 300+ DSA problems. Seeking entry-level software developer role.";
-
-const fixedSkillCategories = [
-  ["Frontend", "React.js, Next.js, TypeScript, JavaScript, HTML5, Tailwind CSS"],
-  ["Backend", "Node.js, Express.js, REST APIs, JWT Authentication"],
-  ["Database", "MongoDB, Mongoose, MySQL"],
-  ["Tools", "Git, GitHub, VS Code, Postman, Vercel, Render"]
-] as const;
-
-const fallbackProjects = [
-  {
-    name: "AI Job Copilot",
-    techStack: "Next.js, Express.js, MongoDB, Groq AI",
-    bullets: ["Built full-stack AI-powered SaaS career platform with 12 modules including ATS resume scoring, job matching, interview prep, and scam detection. Deployed on Vercel+Render."],
-    liveUrl: "ai-job-copilot-frontend.vercel.app",
-    githubUrl: ""
-  },
-  {
-    name: "Doctor Appointment App",
-    techStack: "React Native, Expo, Node.js",
-    bullets: ["Developed cross-platform mobile app with appointment booking, doctor search, and user authentication."],
-    liveUrl: "",
-    githubUrl: ""
-  },
-  {
-    name: "E-Commerce Platform",
-    techStack: "React.js, Node.js, MongoDB",
-    bullets: ["Full-stack shopping platform with cart, payments, and admin dashboard."],
-    liveUrl: "",
-    githubUrl: ""
-  },
-  {
-    name: "DSA Problem Solver",
-    techStack: "JavaScript, Data Structures",
-    bullets: ["Solved 300+ LeetCode problems covering arrays, trees, graphs, and dynamic programming."],
-    liveUrl: "",
-    githubUrl: ""
-  }
-];
-
-const fallbackEducation = [
-  {
-    degree: "B.C.A - Bachelor of Computer Applications",
-    institution: "Jhunjhunwala PG College, Ayodhya",
-    duration: "2022-2025",
-    cgpa: "7.68"
-  },
-  {
-    degree: "Class XII - UP Board",
-    institution: "UP LPCP School, Basti, UP",
-    duration: "2022"
-  }
-];
-
-const fallbackCertifications = [
-  "Full Stack Development - DUCAT Institute (2024)",
-  "Java DSA & Full Stack - DUCAT Institute (2024)"
-];
+const fallbackSummary = "";
+const fallbackProjects: any[] = [];
+const fallbackEducation: any[] = [];
+const fallbackCertifications: string[] = [];
 
 function cleanText(value: unknown): string {
   const text = stringify(value)
@@ -497,7 +443,7 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
 
       // HEADER
       doc.fontSize(20).font('Helvetica-Bold').fillColor(NAVY)
-         .text(data.name || 'Yogesh Dubey', 40, y, { align: 'center', width: pageWidth });
+         .text(data.name || 'Candidate', 40, y, { align: 'center', width: pageWidth });
       y = doc.y + 2;
 
       doc.fontSize(10).font('Helvetica').fillColor(GRAY)
@@ -672,7 +618,7 @@ async function buildLegacyBeautifulResumePdfBuffer(userId: string, content: any)
       doc.on("data", (chunk) => chunks.push(chunk));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
 
-      const name = user?.fullName || "Yogesh Dubey";
+      const name = user?.fullName || "Candidate";
       const role = profile?.currentRole || (profile?.targetRoles && profile.targetRoles[0]) || "Full-Stack Developer";
       const email = user?.email || "";
       const phone = user?.phone || "";
@@ -1091,7 +1037,8 @@ async function writePdfExport(userId: string, sourceType: PdfExportType, sourceI
 async function writeProfessionalResumePdfExport(userId: string, sourceId: string, title: string, content: any, metadata: Record<string, unknown> = {}) {
   const buffer = await buildBeautifulResumePdfBuffer(userId, content);
   const shortHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
-  const fileName = `Resume_YogeshDubey.pdf`;
+  const safeName = (content?.name || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const fileName = `Resume_${safeName}.pdf`;
   const fileKey = `exports/${userId}/${shortHash}/${fileName}`;
 
   await uploadFile(fileKey, buffer, "application/pdf");
@@ -1213,10 +1160,10 @@ export async function exportResumePdfDirect(userId: string, id: string | null) {
   const user = await findRecordById("users", userId);
   const profile = await findOneRecord("profiles", { userId });
   const role = profile?.currentRole || (profile?.targetRoles && profile.targetRoles[0]) || "FullStackDeveloper";
-  const cleanName = (user?.fullName || "Yogesh Dubey").replace(/\s+/g, "");
+  const cleanName = (user?.fullName || content?.name || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
   const cleanRole = role.replace(/\s+/g, "");
   
-  const fileName = `Resume_YogeshDubey.pdf`;
+  const fileName = `Resume_${cleanName}.pdf`;
   const shortHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
   const fileKey = `exports/${userId}/${shortHash}/${fileName}`;
 

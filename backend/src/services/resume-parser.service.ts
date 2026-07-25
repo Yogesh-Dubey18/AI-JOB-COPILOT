@@ -268,8 +268,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
 
   // Name fallbacks
   if (!name && userFullName) name = userFullName.trim();
-  if (!name || name.toLowerCase() === "candidate") name = userFullName ? userFullName.trim() : "";
-  if (!name) name = "Yogesh Dubey";
+  if (!name || name.toLowerCase() === "candidate") name = userFullName ? userFullName.trim() : "Candidate";
 
   // 2. Contact Info
   const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w{2,}/i)?.[0] || "";
@@ -442,8 +441,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
         const parts = line.split("|");
         namePart = parts[0].trim();
         techPart = parts[1].trim();
-      } else if (line.includes("-") && !line.includes(" - ")) {
-        const parts = line.split("-");
+      } else if (line.includes(" - ")) {
+        const parts = line.split(" - ");
         namePart = parts[0].trim();
         techPart = parts[1].trim();
       }

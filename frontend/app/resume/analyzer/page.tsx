@@ -71,7 +71,8 @@ export default function ResumeAnalyzerPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "Resume_YogeshDubey.pdf";
+      const safeRole = (targetRole || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.download = `Resume_${safeRole}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();

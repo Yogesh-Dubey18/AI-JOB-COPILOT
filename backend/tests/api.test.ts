@@ -192,6 +192,39 @@ describe("AI Job Copilot API", () => {
     await otherAgent.post("/api/resumes/generate-world-class").send({ resumeId: upload.body.data._id }).expect(404);
   });
 
+  it("generates world-class resume based strictly on uploaded candidate resume data without contamination or hardcoded fallbacks", async () => {
+    const agent = await authAgent();
+    const fakeResumeUpload = await agent.post("/api/resumes/upload")
+      .attach("resume", Buffer.from([
+        "Alice Smith",
+        "alice.smith@devmail.org",
+        "+1-555-019-2831",
+        "github.com/alicesmith-dev",
+        "Skills Python Django FastAPI PostgreSQL Docker AWS PyTest Git",
+        "Projects E-Commerce Microservice with async payment handling and inventory management",
+        "Education B.Tech Computer Science Massachusetts Institute of Technology 2023 CGPA 3.9",
+        "Certification AWS Certified Solutions Architect"
+      ].join("\n")), "alice_resume.txt")
+      .expect(201);
+
+    const generated = await agent.post("/api/resumes/generate-world-class").send({
+      resumeId: fakeResumeUpload.body.data._id,
+      targetRole: "Python Backend Engineer"
+    }).expect(201);
+
+    const resumeData = generated.body.data.generatedResume;
+    expect(resumeData.name).toBe("Alice Smith");
+    const allSkills = [...(resumeData.skills.backend || []), ...(resumeData.skills.programming || [])];
+    expect(allSkills).toEqual(expect.arrayContaining(["Python"]));
+    expect(resumeData.skills.database).toEqual(expect.arrayContaining(["PostgreSQL"]));
+    expect(resumeData.projects[0].name).toMatch(/E-Commerce Microservice/i);
+    expect(resumeData.education[0].degree).toMatch(/B\.Tech|Computer Science/i);
+
+    // Verify 100% zero contamination from any default personal or legacy fallback string
+    const stringified = JSON.stringify(resumeData);
+    expect(stringified).not.toMatch(/\bYogesh\b|\bDubey\b|AI Job Copilot|\bJhunjhunwala\b|\bDUCAT\b/i);
+  });
+
   it("tailors a world-class resume for a specific job, calculates before/after ATS scores, and saves version tagged with jobId", async () => {
     const agent = await authAgent();
     const upload = await agent.post("/api/resumes/upload")
@@ -489,17 +522,8 @@ describe("AI Job Copilot API", () => {
     const emptySectionsPdf = await parsePdfText(emptySectionsBuffer);
 
     expect(emptySectionsPdf.total).toBe(1);
-    expect(emptySectionsPdf.text).toContain("Yogesh Dubey");
-    expect(emptySectionsPdf.text).toContain("Full Stack Developer | MERN Stack");
-    expect(emptySectionsPdf.text).toContain("yogeshdubey8924@gmail.com");
-    expect(emptySectionsPdf.text).toContain("AI Job Copilot");
-    expect(emptySectionsPdf.text).toContain("Doctor Appointment App");
-    expect(emptySectionsPdf.text).toContain("E-Commerce Platform");
-    expect(emptySectionsPdf.text).toContain("DSA Problem Solver");
-    expect(emptySectionsPdf.text).toContain("Jhunjhunwala PG College");
-    expect(emptySectionsPdf.text).toContain("UP LPCP School");
-    expect(emptySectionsPdf.text).toContain("DUCAT Institute");
     expect(emptySectionsPdf.text).not.toMatch(/undefined|null|No saved content|No summary saved/i);
+    expect(emptySectionsPdf.text).not.toMatch(/AI Job Copilot|Jhunjhunwala PG College|DUCAT Institute/i);
 
     const mappedSectionsBuffer = await buildBeautifulResumePdfBuffer(me.body.data.id, {
       name: "Yogesh Dubey",

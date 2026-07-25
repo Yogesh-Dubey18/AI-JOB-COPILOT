@@ -337,7 +337,7 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
   const userFullName = user?.fullName;
   const emailLocal = user?.email ? user.email.split("@")[0] : "";
   
-  let resolvedName = "Yogesh Dubey";
+  let resolvedName = "Candidate";
   if (parsedName && parsedName.toLowerCase() !== "candidate" && parsedName.trim().length > 0) {
     resolvedName = parsedName.trim();
   } else if (userFullName && userFullName.toLowerCase() !== "candidate" && userFullName.trim().length > 0) {
@@ -713,7 +713,7 @@ export const RESUME_ROLE_EXAMPLES: Record<string, {
     ],
     summary: "MERN Stack Specialist with expertise in building end-to-end JavaScript applications.",
     templateData: {
-      name: "Yogesh Dubey",
+      name: "Sample Candidate",
       title: "MERN Stack Developer",
       skills: { frontend: ["React", "JavaScript", "Tailwind"], backend: ["Node.js", "Express"], database: ["MongoDB", "Mongoose"], cloud: ["AWS", "Vercel"], tools: ["Git", "Postman"] }
     }

@@ -72,11 +72,13 @@ function PdfExportContent() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "Resume_YogeshDubey.pdf";
+        const safeName = (type || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
+        const downloadName = `Resume_${safeName}.pdf`;
+        a.download = downloadName;
         document.body.appendChild(a);
         a.click();
         a.remove();
-        return { fileName: "Resume_YogeshDubey.pdf", fileUrl: url };
+        return { fileName: downloadName, fileUrl: url };
       } else {
         return api.post<any>(`/exports/${type}/${id}`, {});
       }

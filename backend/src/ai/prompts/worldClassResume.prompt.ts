@@ -72,28 +72,28 @@ RETURN THIS EXACT JSON STRUCTURE:
         "Implemented...",
         "Deployed..."
       ],
-      "live": "https://ai-job-copilot-frontend.vercel.app",
-      "github": "https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT"
+      "live": "https://example.com/demo",
+      "github": "https://github.com/username/project"
     }
   ],
   "experience": [],
   "education": [
     {
       "degree": "B.C.A — Bachelor of Computer Applications",
-      "college": "Jhunjhunwala PG College, Ayodhya",
+      "college": "University / College Name",
       "year": "2022-2025",
       "cgpa": "7.68"
     },
     {
       "degree": "Class XII",
-      "college": "UP LPCP School, Basti, UP",
+      "college": "High School Name",
       "year": "2022",
-      "board": "UP Board"
+      "board": "Board Name"
     }
   ],
   "certifications": [
-    "Full Stack Development — DUCAT Institute (2024)",
-    "Java DSA & Full Stack — DUCAT Institute (2024)"
+    "Full Stack Development Certification (2024)",
+    "Data Structures & Algorithms Certification (2024)"
   ],
   "achievements": [
     "300+ DSA problems solved on LeetCode & GeeksforGeeks",
