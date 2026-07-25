@@ -24,17 +24,21 @@ function parseEmailFrom(fromStr: string) {
 }
 
 export async function sendEmail(message: EmailMessage) {
-  if (env.EMAIL_PROVIDER === "mock") {
+  const effectiveProvider = env.EMAIL_PROVIDER && env.EMAIL_PROVIDER !== "mock"
+    ? env.EMAIL_PROVIDER
+    : (env.RESEND_API_KEY ? "resend" : (env.SENDGRID_API_KEY ? "sendgrid" : (hasSmtpConfig() ? "smtp" : "mock")));
+
+  if (effectiveProvider === "mock") {
     return {
       provider: "mock",
       sent: false,
       to: message.to,
       subject: message.subject,
-      note: "Email provider is not configured. Message was not sent."
+      note: "Email provider is not configured. Message was logged in mock mode."
     };
   }
 
-  if (env.EMAIL_PROVIDER === "resend") {
+  if (effectiveProvider === "resend") {
     if (!env.RESEND_API_KEY || !resend) {
       return {
         provider: "resend",
@@ -77,7 +81,7 @@ export async function sendEmail(message: EmailMessage) {
     }
   }
 
-  if (env.EMAIL_PROVIDER === "sendgrid") {
+  if (effectiveProvider === "sendgrid") {
     if (!env.SENDGRID_API_KEY) {
       return {
         provider: "sendgrid",

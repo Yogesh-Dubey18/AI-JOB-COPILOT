@@ -18,6 +18,7 @@ export const env = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   GROQ_API_KEY: process.env.GROQ_API_KEY || "",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+  CLOUDINARY_URL: process.env.CLOUDINARY_URL || "",
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || "",
@@ -73,6 +74,9 @@ export function validateRuntimeEnv() {
     if (env.JWT_ACCESS_SECRET.length < 32 || env.JWT_ACCESS_SECRET.includes("change-me")) failures.push("JWT_ACCESS_SECRET must be a strong production secret.");
     if (env.JWT_REFRESH_SECRET.length < 32 || env.JWT_REFRESH_SECRET.includes("change-me")) failures.push("JWT_REFRESH_SECRET must be a strong production secret.");
     if (!env.CLIENT_URL.startsWith("https://")) warnings.push("CLIENT_URL should use HTTPS in production.");
+    if (!env.CLOUDINARY_URL && !(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) && !env.STORAGE_BUCKET_NAME) {
+      warnings.push("Durable storage (Cloudinary / S3) is not configured in production. Uploaded files risk data loss on server restart.");
+    }
   } else {
     if (env.JWT_ACCESS_SECRET.includes("change-me")) warnings.push("Using development JWT access secret.");
     if (env.JWT_REFRESH_SECRET.includes("change-me")) warnings.push("Using development JWT refresh secret.");

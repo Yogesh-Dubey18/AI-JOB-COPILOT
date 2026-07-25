@@ -24,18 +24,25 @@ const isS3Configured = Boolean(
 );
 
 const isCloudinaryConfigured = Boolean(
-  provider === "cloudinary" &&
-  env.CLOUDINARY_CLOUD_NAME &&
-  env.CLOUDINARY_API_KEY &&
-  env.CLOUDINARY_API_SECRET
+  Boolean(env.CLOUDINARY_URL) ||
+  Boolean(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) ||
+  (provider === "cloudinary" && Boolean(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET))
 );
 
 if (isCloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: env.CLOUDINARY_CLOUD_NAME,
-    api_key: env.CLOUDINARY_API_KEY,
-    api_secret: env.CLOUDINARY_API_SECRET
-  });
+  if (env.CLOUDINARY_URL) {
+    cloudinary.config({ cloudinary_url: env.CLOUDINARY_URL });
+  } else {
+    cloudinary.config({
+      cloud_name: env.CLOUDINARY_CLOUD_NAME,
+      api_key: env.CLOUDINARY_API_KEY,
+      api_secret: env.CLOUDINARY_API_SECRET
+    });
+  }
+}
+
+if (env.NODE_ENV === "production" && !isCloudinaryConfigured && !isS3Configured) {
+  console.warn("⚠️ [Storage Warning] Cloudinary / S3 is not configured in production. Using local disk fallback - uploaded files will be lost on server restart!");
 }
 
 let s3Client: S3Client | null = null;

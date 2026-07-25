@@ -1,3 +1,4 @@
+import "./services/monitoring.service.js";
 import path from "node:path";
 import cookieParser from "cookie-parser";
 import cors from "cors";

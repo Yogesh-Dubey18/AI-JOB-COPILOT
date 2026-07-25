@@ -3,19 +3,28 @@ import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
-const isSentryEnabled = env.MONITORING_PROVIDER === "sentry" && env.SENTRY_DSN;
+const isSentryEnabled = Boolean(env.SENTRY_DSN);
 
 if (isSentryEnabled) {
-  Sentry.init({
-    dsn: env.SENTRY_DSN,
-    integrations: [
-      nodeProfilingIntegration()
-    ],
-    tracesSampleRate: 0.1,
-    profilesSampleRate: 1.0,
-    environment: env.NODE_ENV
-  });
-  console.info("Sentry monitoring SDK initialized.");
+  try {
+    Sentry.init({
+      dsn: env.SENTRY_DSN,
+      integrations: [
+        nodeProfilingIntegration()
+      ],
+      tracesSampleRate: 0.1,
+      profilesSampleRate: 1.0,
+      environment: env.NODE_ENV
+    });
+    console.info("Sentry monitoring SDK initialized.");
+  } catch (err) {
+    Sentry.init({
+      dsn: env.SENTRY_DSN,
+      tracesSampleRate: 0.1,
+      environment: env.NODE_ENV
+    });
+    console.info("Sentry monitoring SDK initialized (without profiling).");
+  }
 }
 
 export function getMonitoringStatus() {
