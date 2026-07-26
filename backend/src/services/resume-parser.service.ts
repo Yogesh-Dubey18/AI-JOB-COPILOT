@@ -527,6 +527,9 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     .replace(/[·%!•]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+  summaryText = summaryText
+    .replace(/^(?:professional\s+|career\s+)?(?:summary|objective|profile|about(?:\s+me)?)\s*[:\-\s|•]*\s*/i, "")
+    .trim();
   if (summaryText.includes("@") || summaryText.match(/\d{10}/)) {
     summaryText = "";
   }
