@@ -3,7 +3,7 @@ import { requireAuth } from "../middlewares/auth.middleware.js";
 import { resumeUpload } from "../middlewares/upload.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { analyzeResume, generateWorldClassResume, improveResume, generateImprovements, applySingleImprovement, tailorResumeToJD, compareResumes, compareResumesVsJob, getResumeExamples } from "../services/resume-analysis.service.js";
-import { getResume, getResumeVersion, listResumeVersions, listResumes, updateResumeParsedData, uploadResume } from "../services/resume.service.js";
+import { deleteResume, getResume, getResumeVersion, listResumeVersions, listResumes, updateResumeParsedData, uploadResume } from "../services/resume.service.js";
 import { exportResumePdf } from "../services/pdf-export.service.js";
 import { scoreResumeForRole, scoreResumeAgainstJobDescription } from "../services/ats-scoring.service.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -125,4 +125,5 @@ router.post("/:id/improve", asyncHandler(async (req, res) => res.status(201).jso
 router.post("/:id/apply-improvement", asyncHandler(async (req, res) => res.status(200).json({ success: true, data: await applySingleImprovement(req.user!.id, param(req.params.id), req.body.improvementId, req.body.section, req.body.newContent) })));
 router.post("/:id/tailor-to-jd", asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await tailorResumeToJD(req.user!.id, param(req.params.id), req.body.jobDescription, req.body.jobTitle, req.body.company) })));
 router.post("/:id/export-pdf", asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await exportResumePdf(req.user!.id, param(req.params.id)) })));
+router.delete("/:id", asyncHandler(async (req, res) => res.json({ success: true, data: await deleteResume(req.user!.id, param(req.params.id)) })));
 export default router;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Info, Sparkles, XCircle } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, CheckCircle2, Info, Sparkles, Trash2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
@@ -41,6 +41,7 @@ function ScoreGauge({ score, label }: { score: number; label: string }) {
 }
 
 export default function ResumeAnalyzerPage() {
+  const queryClient = useQueryClient();
   const [resumeId, setResumeId] = useState("");
   const [targetRole, setTargetRole] = useState("Full Stack Developer");
   const [jobDescription, setJobDescription] = useState("");
@@ -49,6 +50,38 @@ export default function ResumeAnalyzerPage() {
   const [showWhyScores, setShowWhyScores] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+  const [deletingResumeId, setDeletingResumeId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
+
+  const deleteResumeMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/resumes/${id}`),
+    onSuccess: (_, deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ["resumes"] });
+      const remaining = (resumes.data || []).filter((r: any) => r._id !== deletedId);
+      if (resumeId === deletedId) {
+        setResumeId(remaining[0]?._id || "");
+      }
+      setDeletingResumeId(null);
+      setShowDeleteConfirm(false);
+    }
+  });
+
+  function formatResumeDate(dateString?: string) {
+    if (!dateString) return "";
+    try {
+      const d = new Date(dateString);
+      return d.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch {
+      return "";
+    }
+  }
 
   const downloadDirectPdf = async (versionId: string) => {
     setDownloadingPdf(true);
@@ -147,16 +180,48 @@ export default function ResumeAnalyzerPage() {
         <Card>
           <CardHeader><CardTitle>Analyze resume</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <select
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-              value={resumeId}
-              onChange={(e) => setResumeId(e.target.value)}
-            >
-              <option value="">Select resume</option>
-              {(resumes.data || []).map((resume) => (
-                <option key={resume._id} value={resume._id}>{resume.fileName}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                className="h-10 flex-1 min-w-0 rounded-md border bg-background px-3 text-sm"
+                value={resumeId}
+                onChange={(e) => setResumeId(e.target.value)}
+              >
+                <option value="">Select resume</option>
+                {(resumes.data || []).map((r: any) => {
+                  const dateFormatted = formatResumeDate(r.createdAt);
+                  const label = dateFormatted ? `${r.fileName || "Untitled"} — ${dateFormatted}` : (r.fileName || "Untitled");
+                  return (
+                    <option key={r._id} value={r._id}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+              {resumeId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10"
+                  title="Delete selected resume"
+                  onClick={() => {
+                    setDeletingResumeId(resumeId);
+                    setShowDeleteConfirm(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <div className="flex justify-between items-center px-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setShowManageModal(true)}
+                className="text-primary hover:underline font-medium"
+              >
+                Manage Resumes ({(resumes.data || []).length})
+              </button>
+            </div>
             <Input
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value)}
@@ -849,6 +914,78 @@ export default function ResumeAnalyzerPage() {
           )}
         </div>
       </div>
+
+      {/* --- Delete Confirmation Dialog Modal --- */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-foreground">Delete Resume?</h3>
+            <p className="text-sm text-muted-foreground">
+              Delete this resume? This will also remove any generated versions based on it. This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeletingResumeId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                disabled={deleteResumeMutation.isPending}
+                onClick={() => {
+                  if (deletingResumeId) {
+                    deleteResumeMutation.mutate(deletingResumeId);
+                  }
+                }}
+              >
+                {deleteResumeMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Manage Resumes Modal --- */}
+      {showManageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-lg border bg-card p-6 shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-lg font-bold text-foreground">Manage Uploaded Resumes</h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowManageModal(false)}>Close</Button>
+            </div>
+            <div className="divide-y">
+              {(resumes.data || []).length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No uploaded resumes found.</p>
+              ) : (
+                (resumes.data || []).map((r: any) => (
+                  <div key={r._id} className="flex items-center justify-between py-3 gap-3">
+                    <div>
+                      <p className="font-medium text-sm text-foreground">{r.fileName || "Untitled"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Uploaded: {formatResumeDate(r.createdAt) || "N/A"} • Storage: {r.fileUrl?.includes("cloudinary") ? "Cloudinary" : "Local Disk"}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => {
+                        setDeletingResumeId(r._id);
+                        setShowDeleteConfirm(true);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

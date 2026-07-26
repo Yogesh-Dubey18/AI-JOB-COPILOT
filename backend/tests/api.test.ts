@@ -2384,4 +2384,21 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     // Verifies non-tech role keywords are recognized
     expect(nonTechScore.categoryScores.optimization.score).toBeGreaterThan(0);
   });
+
+  it("deletes uploaded resume and associated versions for authenticated owner", async () => {
+    const agent = await authAgent();
+    const uploadRes = await agent.post("/api/resumes/upload").attach("resume", Buffer.from("Test Resume Content"), "test-delete-resume.txt").expect(201);
+    const resumeId = uploadRes.body.data._id || uploadRes.body.data.id;
+    expect(resumeId).toBeTruthy();
+
+    // Create dependent version
+    await createRecord("resumeVersions", { userId: uploadRes.body.data.userId, resumeId, title: "Test Version" });
+
+    // Call DELETE endpoint
+    const deleteRes = await agent.delete(`/api/resumes/${resumeId}`).expect(200);
+    expect(deleteRes.body.success).toBe(true);
+
+    // Verify 404 on GET
+    await agent.get(`/api/resumes/${resumeId}`).expect(404);
+  });
 });

@@ -48,11 +48,14 @@ export default function TailorResumePage() {
                 onChange={(e) => setBaseResumeId(e.target.value)}
               >
                 <option value="">Select a base resume</option>
-                {(resumes.data || []).map((resume) => (
-                  <option key={resume._id} value={resume._id}>
-                    {resume.fileName}
-                  </option>
-                ))}
+                {(resumes.data || []).map((resume: any) => {
+                  const dateStr = resume.createdAt ? new Date(resume.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+                  return (
+                    <option key={resume._id} value={resume._id}>
+                      {resume.fileName || "Untitled"} {dateStr ? `— ${dateStr}` : ""}
+                    </option>
+                  );
+                })}
               </select>
               <Button
                 onClick={() => tailor.mutate()}

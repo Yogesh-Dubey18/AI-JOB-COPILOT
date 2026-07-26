@@ -1,10 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { ApiError } from "../utils/ApiError.js";
-import { createRecord, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
+import { createRecord, deleteRecord, deleteRecords, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { anonymizeParsedResume, extractResumeTextDetailed, parseResumeText } from "./resume-parser.service.js";
 import { validateResumeBuffer } from "./file-validation.service.js";
-import { uploadFile, getSignedUrl } from "./storage.service.js";
+import { uploadFile, deleteFile, getSignedUrl } from "./storage.service.js";
 
 export async function resolveResumeUrl(resume: any) {
   if (!resume) return resume;
@@ -123,4 +123,30 @@ export async function getResumeVersion(userId: string, id: string) {
   const version = await findRecordById("resumeVersions", id);
   if (!version || String(version.userId) !== userId) throw new ApiError(404, "Resume version not found");
   return resolveResumeVersionUrl(version);
+}
+
+export async function deleteResume(userId: string, id: string) {
+  const resume = await findRecordById("resumes", id);
+  if (!resume || String(resume.userId) !== String(userId)) {
+    throw new ApiError(404, "Resume not found");
+  }
+
+  // 1. Storage file deletion via storage service (Cloudinary / S3 / Local disk)
+  if (resume.fileUrl) {
+    try {
+      await deleteFile(resume.fileUrl);
+    } catch (err) {
+      console.warn(`Non-fatal storage file deletion warning for resume ${id}:`, err);
+    }
+  }
+
+  // 2. Delete dependent records (ResumeVersions, TailoredResumes, ResumeAnalyses)
+  await deleteRecords("resumeVersions", { userId, resumeId: id }).catch(() => {});
+  await deleteRecords("tailoredResumes", { userId, resumeId: id }).catch(() => {});
+  await deleteRecords("resumeAnalyses", { userId, resumeId: id }).catch(() => {});
+
+  // 3. Delete base Resume document
+  await deleteRecord("resumes", id);
+
+  return { success: true, message: "Resume and associated versions deleted successfully" };
 }
