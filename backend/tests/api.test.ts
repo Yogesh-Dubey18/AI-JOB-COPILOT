@@ -8,6 +8,7 @@ import { ensureSampleJobs } from "../src/services/job.service.js";
 import { recordUsageEvent } from "../src/services/usage.service.js";
 import { buildBeautifulResumePdfBuffer } from "../src/services/pdf-export.service.js";
 import { parseResumeText } from "../src/services/resume-parser.service.js";
+import { buildtailorResumePrompt } from "../src/ai/prompts/tailorResume.prompt.js";
 
 async function authAgent() {
   const agent = request.agent(app);
@@ -2233,5 +2234,66 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     expect(parsed.education[1].degree).toBe("XII (Senior Secondary)");
     expect(parsed.education[1].college).toBe("UP LPCP School, Basti");
     expect(parsed.education[1].year).toBe("2022");
+  });
+
+  it("enforces 2026 JD tailoring rules (Rules 1-7) across diverse resume + JD scenarios", () => {
+    // Scenario A: Fresher resume + Mid-Level JD with missing cloud/DevOps experience -> honest genuineGaps
+    const fresherResume = {
+      name: "Sam Fresher",
+      parsedData: {
+        name: "Sam Fresher",
+        skills: ["HTML", "CSS", "JavaScript", "React"],
+        projects: [{ name: "Portfolio App", tech: "React, CSS", bullets: ["Built responsive personal website using React."] }]
+      }
+    };
+    const midLevelJd = {
+      title: "Senior Full Stack Engineer",
+      company: "CloudScale Inc",
+      description: "Looking for a Senior Full Stack Engineer skilled in React, Node.js, AWS, Kubernetes, Terraform, and Microservices."
+    };
+
+    const promptA = buildtailorResumePrompt({ resume: fresherResume, job: midLevelJd });
+    expect(promptA).toContain("RULE 1 - KEYWORD-IN-CONTEXT PLACEMENT");
+    expect(promptA).toContain("RULE 4 - HONESTY GUARDRAIL");
+    expect(promptA).toContain("RULE 6 - LENGTH ENFORCEMENT BY SENIORITY");
+    expect(promptA).toContain("Senior Full Stack Engineer");
+
+    // Scenario B: High overlap resume + JD -> minimal gap additions and high score
+    const seniorResume = {
+      name: "Alex Senior",
+      parsedData: {
+        name: "Alex Senior",
+        skills: ["React", "TypeScript", "Node.js", "Express", "MongoDB", "Docker", "AWS"],
+        projects: [{ name: "E-Commerce SaaS", tech: "React, Node.js, MongoDB", bullets: ["Architected microservices e-commerce platform."] }]
+      }
+    };
+    const matchingJd = {
+      title: "React & Node Developer",
+      company: "TechCorp",
+      description: "Seeking a developer skilled in React, Node.js, Express, MongoDB, and TypeScript."
+    };
+
+    const promptB = buildtailorResumePrompt({ resume: seniorResume, job: matchingJd });
+    expect(promptB).toContain("RULE 2 - JOB TITLE MIRRORING");
+    expect(promptB).toContain("React & Node Developer");
+
+    // Scenario C: Title mismatch (Java Dev applying for Senior React Engineer) -> title mirroring rule
+    const javaDevResume = {
+      name: "Jordan Java",
+      parsedData: {
+        name: "Jordan Java",
+        skills: ["Java", "Spring Boot", "MySQL", "React"],
+        projects: [{ name: "Bank System", tech: "Java, Spring, React", bullets: ["Developed banking dashboard with React frontend and Spring backend."] }]
+      }
+    };
+    const reactJd = {
+      title: "Lead Frontend React Engineer",
+      company: "DesignCorp",
+      description: "We are seeking a Lead Frontend React Engineer to build accessibility-focused React applications."
+    };
+
+    const promptC = buildtailorResumePrompt({ resume: javaDevResume, job: reactJd });
+    expect(promptC).toContain("Lead Frontend React Engineer");
+    expect(promptC).toContain("RULE 5 - DYNAMIC SKILLS PLACEMENT");
   });
 });

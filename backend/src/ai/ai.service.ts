@@ -73,10 +73,14 @@ const tailoredResumeFallback = {
   beforeAtsScore: 68,
   afterAtsScore: 91,
   addedKeywords: ["REST API", "JWT authentication", "responsive UI", "MongoDB aggregation"],
+  genuineGaps: ["AWS Cloud Architecture"],
+  keywordStuffingWarnings: [],
   updatedSummary: "Full-stack developer focused on React, Node.js, Express, and MongoDB with hands-on project experience building production-style web apps.",
   updatedSkills: ["React", "TypeScript", "Node.js", "Express", "MongoDB", "REST APIs", "JWT", "Tailwind CSS"],
   improvedProjects: ["Reframed project bullets around API design, authentication, data modeling, and deployment readiness."],
   changedSections: ["summary", "skills", "projects"],
+  sectionOrdering: ["summary", "skills", "projects", "experience", "education", "certifications"],
+  pageLimit: 1,
   pdfUrl: ""
 };
 
@@ -566,10 +570,14 @@ function getSchemaTemplate(feature: string): string {
   "beforeAtsScore": number (0 to 100),
   "afterAtsScore": number (0 to 100),
   "addedKeywords": ["string"],
+  "genuineGaps": ["string"],
+  "keywordStuffingWarnings": ["string"],
   "updatedSummary": "string",
   "updatedSkills": ["string"],
   "improvedProjects": ["string"],
   "changedSections": ["string"],
+  "sectionOrdering": ["string"],
+  "pageLimit": number (1 or 2),
   "pdfUrl": ""
 }`;
     case "world-class-resume":

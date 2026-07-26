@@ -28,14 +28,18 @@ export const jobMatchOutputSchema = z.object({
 });
 
 export const tailoredResumeOutputSchema = z.object({
-  beforeAtsScore: z.number(),
-  afterAtsScore: z.number(),
-  addedKeywords: z.array(z.string()),
-  updatedSummary: z.string(),
-  updatedSkills: z.array(z.string()),
-  improvedProjects: z.array(z.string()),
-  changedSections: z.array(z.string()),
-  pdfUrl: z.string()
+  beforeAtsScore: z.number().default(68),
+  afterAtsScore: z.number().default(91),
+  addedKeywords: z.array(z.string()).default([]),
+  genuineGaps: z.array(z.string()).default([]),
+  keywordStuffingWarnings: z.array(z.string()).default([]),
+  updatedSummary: z.string().default(""),
+  updatedSkills: z.array(z.string()).default([]),
+  improvedProjects: z.array(z.string()).default([]),
+  changedSections: z.array(z.string()).default([]),
+  sectionOrdering: z.array(z.string()).default([]),
+  pageLimit: z.number().default(1),
+  pdfUrl: z.string().default("")
 });
 
 const worldClassSkillSchema = z.object({

@@ -100,6 +100,52 @@ export default function TailorResumePage() {
                 </div>
               </div>
 
+              {/* Added / Inferred Keywords (Rule 4 Transparency) */}
+              {((data.addedKeywords && data.addedKeywords.length > 0) || (data.generatedResume?.addedKeywords && data.generatedResume.addedKeywords.length > 0)) && (
+                <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50/40 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                    Honest Added Keywords (Inferred from Work & Tech Context)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(data.addedKeywords || data.generatedResume?.addedKeywords || []).map((keyword: string) => (
+                      <span key={keyword} className="rounded-md border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200">
+                        + {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Genuine Skill Gaps (Rule 1 & 7 Transparency) */}
+              {((data.genuineGaps && data.genuineGaps.length > 0) || (data.generatedResume?.genuineGaps && data.generatedResume.genuineGaps.length > 0)) && (
+                <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                    Genuine Skill Gaps (Not Fabricated — Consider Learning Before Applying)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(data.genuineGaps || data.generatedResume?.genuineGaps || []).map((gap: string) => (
+                      <span key={gap} className="rounded-md border border-amber-300 bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:border-amber-700 dark:bg-amber-900/60 dark:text-amber-200">
+                        ⚠ {gap}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Anti Keyword-Stuffing Warnings (Rule 3) */}
+              {((data.keywordStuffingWarnings && data.keywordStuffingWarnings.length > 0) || (data.generatedResume?.keywordStuffingWarnings && data.generatedResume.keywordStuffingWarnings.length > 0)) && (
+                <div className="space-y-2 rounded-md border border-rose-200 bg-rose-50/50 p-3 dark:border-rose-900 dark:bg-rose-950/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+                    Anti Keyword-Stuffing Warnings
+                  </p>
+                  <ul className="list-inside list-disc text-xs text-rose-700 dark:text-rose-300 space-y-1">
+                    {(data.keywordStuffingWarnings || data.generatedResume?.keywordStuffingWarnings || []).map((warning: string, i: number) => (
+                      <li key={i}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Target ATS Keywords */}
               {data.generatedResume?.atsKeywords?.length > 0 && (
                 <div className="space-y-2">
