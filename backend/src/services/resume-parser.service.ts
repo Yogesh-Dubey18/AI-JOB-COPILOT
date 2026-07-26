@@ -229,14 +229,26 @@ function isPaginationArtifact(line: string): boolean {
 
 function isAtsKeywordFooter(line: string): boolean {
   const clean = line.trim();
-  if (clean.length < 40) return false;
+  if (clean.length < 35) return false;
+  if (clean.includes("·")) return false;
   if (/^[-•*–—\d\.]/.test(clean)) return false;
-  const sanitized = clean.replace(/node\.js/gi, "nodejs").replace(/next\.js/gi, "nextjs").replace(/vue\.js/gi, "vuejs").replace(/express\.js/gi, "expressjs");
-  if (sanitized.includes(".") || sanitized.includes(":") || sanitized.includes(";")) return false;
 
-  const titleMatches = clean.match(/\b(Full\s+Stack|Software|Frontend|Backend|Developer|Engineer|Web|React|Node\.js|MERN|JavaScript|TypeScript|Python|Java|REST|API|Cloud|DevOps|UI\/UX)\b/gi) || [];
+  const sanitized = clean
+    .replace(/\b(node|next|vue|express|react|chart|d3|three)\.js\b/gi, "$1js")
+    .replace(/\b(c\+\+|c\#|\.net)\b/gi, "code");
+
+  const hasActionVerb = /\b(built|engineered|architected|developed|designed|implemented|delivered|shipped|created|deployed|integrated|managed|led|optimized|handled)\b/i.test(sanitized);
+  if (hasActionVerb && (/\.\s+[A-Z]/.test(sanitized) || (sanitized.endsWith(".") && sanitized.split(/\s+/).length > 6))) {
+    return false;
+  }
+
+  const techMatches = clean.match(/\b(Developer|Engineer|JavaScript|TypeScript|Python|Java|HTML5|CSS3|React|Next|Node|Express|MongoDB|MySQL|PostgreSQL|REST|API|APIs|Git|GitHub|Tailwind|JWT|Authentication|RBAC|Stripe|Groq|AI|LLM|Streaming|Agile|Scrum|CI\/CD|Docker|AWS|Vercel|Render|OOP|DSA|DBMS|MVC|SDLC|Testing|Debugging|BCA|MERN|Performance|Optimization|Clean\s+Code)\b/gi) || [];
+  const hrMatches = clean.match(/\b(Relocation|Remote|Work|Immediate|Joiner|Fresher|Graduate|India|Bangalore|Bengaluru|Hyderabad|Noida|Gurugram|Pune|Mumbai|Chennai|Delhi)\b/gi) || [];
+
   const words = clean.split(/\s+/).filter(Boolean);
-  return words.length >= 5 && titleMatches.length >= 3 && (titleMatches.length / words.length) > 0.35;
+  const totalMatches = techMatches.length + hrMatches.length;
+
+  return words.length >= 5 && totalMatches >= 3 && (totalMatches / words.length) > 0.28;
 }
 
 const strongActionVerbs = /^(built|engineered|architected|developed|designed|implemented|delivered|shipped|created|deployed|integrated|managed|spearheaded|automated|handled|scaled|crafted|executed)\b/i;
@@ -254,7 +266,10 @@ function preprocessProjectLines(rawLines: string[]): string[] {
       const endsWithTerminal = /[.:!·]$/.test(current) || current.endsWith(" —") || current.endsWith(" -");
       const isNextBullet = /^[-•*–—\d\.]/.test(nextLine);
       const isNextTechLine = techHeaderRegex.test(nextLine) || nextLine.includes("·");
-      const isNextContinuation = !isNextBullet && !isNextTechLine && (/^[a-z)]/.test(nextLine) || /^[$₹€£]/.test(nextLine) || continuationConjunctions.test(nextLine));
+      const isNextContinuation = !isNextBullet && !isNextTechLine && (
+        /^[a-z()\[\],+&\/\\$₹€£]/.test(nextLine) || 
+        continuationConjunctions.test(nextLine)
+      );
 
       if (!endsWithTerminal && isNextContinuation) {
         current = current + " " + nextLine;
@@ -273,7 +288,7 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
 
   if (clean.includes("·")) return { isTitle: false, name: "", tech: "" };
   if (/^[-•*–—\d\.]/.test(clean)) return { isTitle: false, name: "", tech: "" };
-  if (/^[a-z$₹€£]/.test(clean) || continuationConjunctions.test(clean)) return { isTitle: false, name: "", tech: "" };
+  if (/^[a-z()\[\],+&\/\\$₹€£]/.test(clean) || continuationConjunctions.test(clean)) return { isTitle: false, name: "", tech: "" };
   if (techHeaderRegex.test(clean)) return { isTitle: false, name: "", tech: "" };
 
   const wordCount = clean.split(/\s+/).filter(Boolean).length;
@@ -543,9 +558,11 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   for (let i = 0; i < projectLines.length; i++) {
     const line = projectLines[i];
     const nextLine = projectLines[i + 1];
+
+    const justStartedProject = Boolean(currentProject && currentProject.bullets.length === 0 && !currentProject.tech);
     const isFirstLine = projects.length === 0 && !currentProject;
 
-    const titleCheck = isNewProjectTitle(line, nextLine, isFirstLine);
+    const titleCheck = !justStartedProject ? isNewProjectTitle(line, nextLine, isFirstLine) : { isTitle: false, name: "", tech: "" };
 
     if (titleCheck.isTitle) {
       if (currentProject) {
@@ -691,11 +708,13 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     return { name: certName, issuer, year, full: clean };
   }).filter(Boolean).map(c => c!.full || c!.name);
 
-  // 10. Achievements Processing (Filtered against Artifacts, Footers & Project Names)
+  // 10. Achievements Processing (Filtered against Artifacts, Footers, Project Names & Summary Fragments)
   const projectNamesLower = new Set(finalProjects.map(p => p.name.toLowerCase()));
+  const summaryLower = summaryText.toLowerCase().trim();
+
   const rawAchievements = [
     ...sections.achievements,
-    ...lines.filter(l => !isAtsKeywordFooter(l) && !isPaginationArtifact(l) && /300\+|leet\s*code|geeksfor\s*geeks|gfg|deployed|competition|hackathon|open\s*source/i.test(l))
+    ...sections.none.filter(l => !isAtsKeywordFooter(l) && !isPaginationArtifact(l) && /300\+|leet\s*code|geeksfor\s*geeks|gfg|competition|hackathon|open\s*source/i.test(l))
   ];
   const achievements = Array.from(new Set(rawAchievements.map(l => l.replace(/^[-•*–—]\s*/, "").trim()).filter(clean => {
     if (!clean) return false;
@@ -703,6 +722,12 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     if (isAtsKeywordFooter(clean)) return false;
     if (projectNamesLower.has(clean.toLowerCase())) return false;
     if (/^(frontend|backend|database|tools|cloud|ui):/i.test(clean)) return false;
+
+    // Filter out summary text substrings/tails (Bug D)
+    const cleanLower = clean.toLowerCase();
+    if (summaryLower && summaryLower.length > 20 && summaryLower.includes(cleanLower)) return false;
+    if (summaryLower && summaryLower.length > 20 && cleanLower.length > 20 && summaryLower.includes(cleanLower.substring(0, 25))) return false;
+
     return true;
   })));
 

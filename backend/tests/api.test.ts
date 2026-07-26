@@ -2077,6 +2077,9 @@ Yogesh Dubey
 Full Stack Developer | MERN Stack
 yogeshdubey8924@gmail.com | +91-6392778770 | Ayodhya, UP
 
+SUMMARY
+Full Stack Developer with expertise in React, Node.js, and TypeScript. Focused on scalable architectures, clean maintainable code. Comfortable in Agile teams. 300+ DSA problems solved. DUCAT Full Stack Certified (2024). Immediate joiner.
+
 TECHNICAL SKILLS
 Frontend: React.js, Next.js, TypeScript, JavaScript, HTML5, CSS3, Tailwind CSS
 Backend: Node.js, Express.js, REST APIs, JWT Authentication
@@ -2085,6 +2088,7 @@ Tools: Git, GitHub, VS Code, Postman, Vercel, Render
 
 PROJECTS
 AI Job Copilot
+AI-Powered Full Stack SaaS Platform (Live, Production) Live Demo · GitHub
 Next.js · React.js · TypeScript · Tailwind CSS · Node.js · Express.js · MongoDB · MySQL · Groq AI · JWT · Stripe · GitHub Actions · Vercel / Render
 - Shipped 12 production features: AI resume analyzer, STAR resume re-writer, cover letter generator.
 - Built subscription monetization tiers (Free / ₹499 /
@@ -2096,7 +2100,8 @@ React.js · Tailwind CSS · Express.js · MongoDB · JWT
 
 Sigma GPT — Real-Time AI Chat Application
 React.js · Express.js · Socket.io · Tailwind CSS
-- Developed real-time streaming AI chatbot using Socket.io (Node.js + Python), React.memo
+- Developed real-time streaming AI chatbot using Socket.io
+(Node.js + Python), React.memo
 and debounced polling requests for state sync.
 
 Zerodha Stock Analytics Dashboard
@@ -2110,7 +2115,9 @@ ACHIEVEMENTS
 - Solved 300+ DSA problems on LeetCode & GeeksforGeeks.
 - Winner of Smart India Hackathon 2023.
 
-Full Stack Developer Full Stack Web Developer Software Developer React Developer Node.js Engineer Frontend Engineer Backend Engineer MERN Stack Engineer JavaScript Developer TypeScript Developer REST API Engineer
+Developer JavaScript TypeScript Java Python HTML5 CSS3 MongoDB MySQL PostgreSQL REST API RESTful APIs Git GitHub Express.js Next.js Tailwind CSS JWT Authentication RBAC Stripe Groq AI LLM API Real-Time Streaming Responsive Web Design
+Mobile First Performance Optimization Code Review Clean Code Agile Scrum CI/CD GitHub Actions Vercel AWS Docker OOP DSA Data Structures Algorithms DBMS MVC SDLC Unit Testing Debugging Fresher 2025 Graduate BCA Computer Applications
+Open to Relocation Remote Work Immediate Joiner India Bangalore Hyderabad Noida Gurugram Pune Mumbai Chennai
 - 1 of 1 --
     `;
 
@@ -2118,6 +2125,7 @@ Full Stack Developer Full Stack Web Developer Software Developer React Developer
 
     // Print actual JSON output for inspection
     console.log("PARSED_PROJECTS_OUTPUT:", JSON.stringify(parsed.projects, null, 2));
+    console.log("PARSED_ACHIEVEMENTS_OUTPUT:", JSON.stringify(parsed.achievements, null, 2));
 
     // Assert EXACTLY 4 project entries
     expect(parsed.projects).toHaveLength(4);
@@ -2129,14 +2137,17 @@ Full Stack Developer Full Stack Web Developer Software Developer React Developer
     expect(parsed.projects[1].tech).toContain("React.js · Tailwind CSS");
 
     expect(parsed.projects[2].name).toBe("Sigma GPT");
-    expect(parsed.projects[2].bullets.some((b: string) => b.includes("and debounced polling"))).toBe(true);
+    expect(parsed.projects[2].bullets.some((b: string) => b.includes("(Node.js + Python), React.memo and debounced polling"))).toBe(true);
 
     expect(parsed.projects[3].name).toBe("Zerodha Stock Analytics Dashboard");
 
-    // Verify artifact and footer filtering
+    // Verify Bug C & D artifact and footer filtering in achievements
+    expect(parsed.achievements).toHaveLength(2);
     expect(parsed.achievements).toContain("Solved 300+ DSA problems on LeetCode & GeeksforGeeks.");
+    expect(parsed.achievements).toContain("Winner of Smart India Hackathon 2023.");
     expect(parsed.achievements.some((a: string) => a.includes("- 1 of 1 --"))).toBe(false);
-    expect(parsed.achievements.some((a: string) => a.includes("Full Stack Developer Full Stack Web Developer"))).toBe(false);
-    expect(parsed.atsKeywordsFooter.length).toBeGreaterThan(0);
+    expect(parsed.achievements.some((a: string) => a.includes("Developer JavaScript TypeScript"))).toBe(false);
+    expect(parsed.achievements.some((a: string) => a.includes("maintainable code"))).toBe(false);
+    expect(parsed.atsKeywordsFooter.length).toBeGreaterThanOrEqual(3);
   });
 });
