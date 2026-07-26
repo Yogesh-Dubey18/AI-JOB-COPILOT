@@ -257,6 +257,21 @@ function isAtsKeywordFooter(line: string): boolean {
   return words.length >= 5 && totalMatches >= 3 && (totalMatches / words.length) > 0.28;
 }
 
+function isImplicitTechLine(line: string): boolean {
+  const clean = line.trim().replace(bulletMarkerRegex, "");
+  if (!clean) return false;
+  if (techHeaderRegex.test(clean) || clean.includes("·")) return true;
+  if (strongActionVerbs.test(clean)) return false;
+  if (/[.:!]$/.test(clean)) return false;
+
+  const wordCount = clean.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 12) return false;
+
+  const techKeywords = /react|node|express|django|python|java|spring|mysql|postgres|mongodb|docker|aws|html|css|javascript|typescript|c\+\+|c\#|go|rust|redis|kafka|graphql|d3|redux|bootstrap|tailwind|vue|angular|sql|git/i;
+  const isCommaOrSlash = clean.includes(",") || clean.includes("/") || clean.includes("|");
+  return isCommaOrSlash && techKeywords.test(clean);
+}
+
 function preprocessProjectLines(rawLines: string[]): string[] {
   const cleanLines = rawLines.map(l => l.trim()).filter(l => Boolean(l) && !isPaginationArtifact(l) && !isAtsKeywordFooter(l));
   const merged: string[] = [];
@@ -267,7 +282,7 @@ function preprocessProjectLines(rawLines: string[]): string[] {
       const nextLine = cleanLines[i + 1];
       const endsWithTerminal = /[.:!·]$/.test(current) || current.endsWith(" —") || current.endsWith(" -");
       const isNextBullet = bulletMarkerRegex.test(nextLine);
-      const isNextTechLine = techHeaderRegex.test(nextLine) || nextLine.includes("·");
+      const isNextTechLine = techHeaderRegex.test(nextLine) || nextLine.includes("·") || isImplicitTechLine(nextLine);
       const isNextContinuation = !isNextBullet && !isNextTechLine && (
         /^[a-z()\[\],+&\/\\$₹€£]/.test(nextLine) || 
         continuationConjunctions.test(nextLine)
@@ -293,6 +308,8 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
   if (/^[a-z()\[\],+&\/\\$₹€£]/.test(clean) || continuationConjunctions.test(clean)) return { isTitle: false, name: "", tech: "" };
   if (techHeaderRegex.test(clean)) return { isTitle: false, name: "", tech: "" };
 
+  if (strongActionVerbs.test(clean)) return { isTitle: false, name: "", tech: "" };
+
   const wordCount = clean.split(/\s+/).filter(Boolean).length;
   if (wordCount > 14 || clean.length > 85) return { isTitle: false, name: "", tech: "" };
 
@@ -310,7 +327,7 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
   }
 
   const cleanNextLine = nextLine ? nextLine.replace(bulletMarkerRegex, "").trim() : "";
-  const isNextTechLine = nextLine ? (nextLine.includes("·") || techHeaderRegex.test(nextLine)) : false;
+  const isNextTechLine = nextLine ? (nextLine.includes("·") || techHeaderRegex.test(nextLine) || isImplicitTechLine(nextLine)) : false;
   const isNextBulletVerb = cleanNextLine ? strongActionVerbs.test(cleanNextLine) : false;
 
   if (isNextTechLine || isNextBulletVerb || isFirstLine) {
@@ -409,7 +426,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   }
 
   // 3. Section Grouping with Artifact & Footer Filtering
-  type SectionName = "summary" | "skills" | "projects" | "experience" | "education" | "certifications" | "achievements" | "softSkills" | "languages" | "none";
+  type SectionName = "summary" | "skills" | "projects" | "experience" | "education" | "certifications" | "achievements" | "softSkills" | "languages" | "education_certifications" | "none";
   let currentSection: SectionName = "none";
   const sections: Record<SectionName, string[]> = {
     summary: [],
@@ -421,10 +438,12 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     achievements: [],
     softSkills: [],
     languages: [],
+    education_certifications: [],
     none: []
   };
 
   const headerPatterns: { name: SectionName; regex: RegExp }[] = [
+    { name: "education_certifications", regex: /^education\s*(?:&|and|\+)\s*(?:certifications?|certificates?|awards?|achievements?)\b/i },
     { name: "summary", regex: /^(?:professional\s+)?summary\b/i },
     { name: "summary", regex: /^(?:career\s+)?objective\b/i },
     { name: "summary", regex: /^about(?:\s+me)?\b/i },
@@ -470,7 +489,15 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     if (matchedSection) {
       currentSection = matchedSection;
       if (remainingText) {
-        sections[currentSection].push(remainingText);
+        if (currentSection === "education_certifications") {
+          if (/certified|certification|certificate|oracle|aws|udemy|coursera|nptel|\((?:19|20)\d{2}\)/i.test(remainingText)) {
+            sections.certifications.push(remainingText);
+          } else {
+            sections.education.push(remainingText);
+          }
+        } else {
+          sections[currentSection].push(remainingText);
+        }
       }
       continue;
     }
@@ -481,7 +508,13 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     }
 
     if (currentSection !== "none") {
-      if (currentSection === "languages" && /^(frontend|backend|database|cloud|tools|ui|devops):\s*/i.test(cleanLine)) {
+      if (currentSection === "education_certifications") {
+        if (/certified|certification|certificate|oracle|aws|udemy|coursera|nptel|\((?:19|20)\d{2}\)/i.test(cleanLine)) {
+          sections.certifications.push(cleanLine);
+        } else {
+          sections.education.push(cleanLine);
+        }
+      } else if (currentSection === "languages" && /^(frontend|backend|database|cloud|tools|ui|devops):\s*/i.test(cleanLine)) {
         sections.skills.push(cleanLine);
       } else {
         sections[currentSection].push(cleanLine);
@@ -590,7 +623,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
         duration: ""
       };
     } else if (currentProject) {
-      const isTechLine = line.includes("·") || techHeaderRegex.test(line);
+      const isTechLine = line.includes("·") || techHeaderRegex.test(line) || isImplicitTechLine(line);
       const liveMatch = line.match(/https?:\/\/[^\s)]+/i)?.[0] || "";
       const ghMatch = line.match(/github\.com\/[^\s)]+/i)?.[0] || "";
 
@@ -598,7 +631,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       if (ghMatch && !currentProject.github) currentProject.github = ghMatch;
 
       if (isTechLine) {
-        const extractedTech = line.replace(techHeaderRegex, "").trim();
+        const extractedTech = line.replace(techHeaderRegex, "").replace(/^technologies:\s*/i, "").trim();
         currentProject.tech = currentProject.tech ? `${currentProject.tech} · ${extractedTech}` : extractedTech;
       } else {
         const bulletText = line.replace(bulletMarkerRegex, "").replace(/^\d+[\.\)]\s*/, "").replace(/%¸/g, "").trim();
@@ -678,15 +711,19 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     const isEduLine = lower.includes("bca") || lower.includes("b.c.a") || lower.includes("b.tech") || 
                      lower.includes("bachelor") || lower.includes("master") || lower.includes("mca") ||
                      lower.includes("class xii") || lower.includes("xii") || lower.includes("12th") || 
-                     lower.includes("class x") || lower.includes("10th") || lower.includes("school") || lower.includes("college");
+                     lower.includes("class x") || lower.includes("10th") || lower.includes("school") || lower.includes("college") ||
+                     /\b(b\.?s\.?|b\.?a\.?|m\.?s\.?|m\.?tech|mba|diploma|phd|b\.s|b\.a|m\.s)\b/i.test(line);
 
     if (isEduLine) {
       let degree = "";
-      if (line.match(/b\.?c\.?a/i)) degree = "BCA — Bachelor of Computer Applications";
-      else if (line.match(/b\.?tech/i)) degree = "B.Tech — Bachelor of Technology";
-      else if (line.match(/class\s+xii|12th/i)) degree = "Class XII (Senior Secondary)";
-      else if (line.match(/class\s+x|10th/i)) degree = "Class X (Secondary)";
-      else degree = line.split(/[|,-]/)[0].trim();
+      if (line.match(/\bb\.?c\.?a\b/i)) degree = "BCA — Bachelor of Computer Applications";
+      else if (line.match(/\bb\.?tech\b/i)) degree = "B.Tech — Bachelor of Technology";
+      else if (line.match(/\bm\.?tech\b/i)) degree = "M.Tech — Master of Technology";
+      else if (line.match(/\bm\.?c\.?a\b/i)) degree = "MCA — Master of Computer Applications";
+      else if (line.match(/\bmba\b/i)) degree = "MBA — Master of Business Administration";
+      else if (line.match(/\bclass\s+xii|12th\b/i)) degree = "Class XII (Senior Secondary)";
+      else if (line.match(/\bclass\s+x|10th\b/i)) degree = "Class X (Secondary)";
+      else degree = line.split(/[,|-]/)[0].trim();
 
       const yearMatch = line.match(/\b((?:19|20)\d{2}\s*[-–to\s]+\s*(?:(?:19|20)\d{2}|present))\b/i) || line.match(/\b(19|20)\d{2}\b/);
       const year = yearMatch ? yearMatch[0].replace(/\s+/g, " ") : "";
