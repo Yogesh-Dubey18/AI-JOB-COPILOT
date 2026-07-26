@@ -218,25 +218,87 @@ export async function extractResumeText(filePath: string, fileType: string) {
 }
 
 function isPaginationArtifact(line: string): boolean {
-  const clean = line.replace(/^[-\u2010-\u2015—–\s]+|[--\u2010-\u2015—–\s]+$/g, "").trim().toLowerCase();
+  const clean = line.trim();
   if (!clean) return false;
-  if (/^\d+\s+of\s+\d+$/.test(clean)) return true;
-  if (/^page\s+\d+(\s+of\s+\d+)?$/.test(clean)) return true;
-  if (/^-\s*\d+\s*of\s*\d+\s*-+$/.test(clean)) return true;
-  if (/^--\s*\d+\s*of\s*\d+\s*--$/.test(clean)) return true;
+  if (/^[-—–\s]*\d+\s+of\s+\d+\s*[-—–\s]*$/i.test(clean)) return true;
+  if (/^[-—–\s]*page\s+\d+(\s+of\s+\d+)?\s*[-—–\s]*$/i.test(clean)) return true;
+  if (/^[-—–\s]*-\s*\d+\s+of\s+\d+\s*--\s*$/i.test(clean)) return true;
+  if (/^[-—–\s]*\d+\s*[-—–\s]*$/.test(clean) && clean.length < 10) return true;
   return false;
 }
 
 function isAtsKeywordFooter(line: string): boolean {
   const clean = line.trim();
-  if (clean.length < 45) return false;
+  if (clean.length < 40) return false;
   if (/^[-•*–—\d\.]/.test(clean)) return false;
   const sanitized = clean.replace(/node\.js/gi, "nodejs").replace(/next\.js/gi, "nextjs").replace(/vue\.js/gi, "vuejs").replace(/express\.js/gi, "expressjs");
   if (sanitized.includes(".") || sanitized.includes(":") || sanitized.includes(";")) return false;
 
   const titleMatches = clean.match(/\b(Full\s+Stack|Software|Frontend|Backend|Developer|Engineer|Web|React|Node\.js|MERN|JavaScript|TypeScript|Python|Java|REST|API|Cloud|DevOps|UI\/UX)\b/gi) || [];
   const words = clean.split(/\s+/).filter(Boolean);
-  return words.length >= 6 && titleMatches.length >= 4 && (titleMatches.length / words.length) > 0.35;
+  return words.length >= 5 && titleMatches.length >= 3 && (titleMatches.length / words.length) > 0.35;
+}
+
+const strongActionVerbs = /^(built|engineered|architected|developed|designed|implemented|delivered|shipped|created|deployed|integrated|managed|spearheaded|automated|handled|scaled|crafted|executed)\b/i;
+const continuationConjunctions = /^(and|or|layer|the|with|in|for|of|to|at|by|from|which|that)\b/i;
+const techHeaderRegex = /^(tech\s*stack|technologies|tools|built\s*with|stack|tech|environment):\s*/i;
+
+function preprocessProjectLines(rawLines: string[]): string[] {
+  const cleanLines = rawLines.map(l => l.trim()).filter(l => Boolean(l) && !isPaginationArtifact(l) && !isAtsKeywordFooter(l));
+  const merged: string[] = [];
+
+  for (let i = 0; i < cleanLines.length; i++) {
+    let current = cleanLines[i];
+    while (i + 1 < cleanLines.length) {
+      const nextLine = cleanLines[i + 1];
+      const endsWithTerminal = /[.:!·]$/.test(current) || current.endsWith(" —") || current.endsWith(" -");
+      const isNextBullet = /^[-•*–—\d\.]/.test(nextLine);
+      const isNextTechLine = techHeaderRegex.test(nextLine) || nextLine.includes("·");
+      const isNextContinuation = !isNextBullet && !isNextTechLine && (/^[a-z)]/.test(nextLine) || /^[$₹€£]/.test(nextLine) || continuationConjunctions.test(nextLine));
+
+      if (!endsWithTerminal && isNextContinuation) {
+        current = current + " " + nextLine;
+        i++;
+      } else {
+        break;
+      }
+    }
+    merged.push(current);
+  }
+  return merged;
+}
+
+function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLine: boolean): { isTitle: boolean; name: string; tech: string } {
+  const clean = line.trim();
+
+  if (clean.includes("·")) return { isTitle: false, name: "", tech: "" };
+  if (/^[-•*–—\d\.]/.test(clean)) return { isTitle: false, name: "", tech: "" };
+  if (/^[a-z$₹€£]/.test(clean) || continuationConjunctions.test(clean)) return { isTitle: false, name: "", tech: "" };
+  if (techHeaderRegex.test(clean)) return { isTitle: false, name: "", tech: "" };
+
+  const wordCount = clean.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 14 || clean.length > 85) return { isTitle: false, name: "", tech: "" };
+
+  let namePart = clean;
+  let techPart = "";
+  if (clean.includes("|") || clean.includes(" — ") || clean.includes(" - ")) {
+    const sep = clean.includes("|") ? "|" : (clean.includes(" — ") ? " — " : " - ");
+    const parts = clean.split(sep);
+    namePart = parts[0].trim();
+    techPart = parts.slice(1).join(sep).trim();
+    if (namePart.length > 2 && namePart.length < 75 && !strongActionVerbs.test(namePart)) {
+      return { isTitle: true, name: namePart, tech: techPart };
+    }
+  }
+
+  const isNextTechLine = nextLine ? (nextLine.includes("·") || techHeaderRegex.test(nextLine)) : false;
+  const isNextBulletVerb = nextLine ? (strongActionVerbs.test(nextLine.replace(/^[-•*–—\d\.]+\s*/, ""))) : false;
+
+  if (isNextTechLine || isNextBulletVerb || isFirstLine) {
+    return { isTitle: true, name: namePart, tech: techPart };
+  }
+
+  return { isTitle: false, name: "", tech: "" };
 }
 
 export function parseResumeText(text: string, userFullName?: string, userProfile?: { email?: string; phone?: string }) {
@@ -476,69 +538,44 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   // 6. Projects Processing (Strict Boundary Detection)
   const projects: any[] = [];
   let currentProject: any = null;
-  const commonActionVerbs = /^(architected|built|developed|designed|engineered|implemented|integrated|created|deployed|managed|led|spearheaded|optimized|automated|handled|scaled|configured|maintained|collaborated|authored|published|crafted|executed)\b/i;
-  const techPrefixRegex = /^(tech\s*stack|technologies|tools|built\s*with|stack|tech|environment):\s*/i;
+  const projectLines = preprocessProjectLines(sections.projects);
 
-  for (const rawLine of sections.projects) {
-    const line = rawLine.trim();
-    if (!line || isPaginationArtifact(line) || isAtsKeywordFooter(line)) continue;
+  for (let i = 0; i < projectLines.length; i++) {
+    const line = projectLines[i];
+    const nextLine = projectLines[i + 1];
+    const isFirstLine = projects.length === 0 && !currentProject;
 
-    const isBullet = line.startsWith("-") || line.startsWith("•") || line.startsWith("*") || line.startsWith("–") || line.startsWith("—") || /^\d+[\.\)]\s*/.test(line);
-    let bulletText = line.replace(/^[-•*–—]\s*/, "").replace(/^\d+[\.\)]\s*/, "").trim();
-    bulletText = bulletText.replace(/%¸/g, "").replace(/demonstrating hands-on implementation/gi, "").replace(/from the uploaded resume/gi, "").trim();
+    const titleCheck = isNewProjectTitle(line, nextLine, isFirstLine);
 
-    const liveMatch = line.match(/https?:\/\/[^\s)]+/i)?.[0] || "";
-    const ghMatch = line.match(/github\.com\/[^\s)]+/i)?.[0] || "";
-    const isTechLine = techPrefixRegex.test(line);
-
-    let isNewProject = false;
-    let namePart = "";
-    let techPart = "";
-
-    if (!isBullet && !isTechLine && !line.startsWith("http") && !line.startsWith("github.com")) {
-      if (line.includes("|") || line.includes(" — ") || line.includes(" - ")) {
-        const sep = line.includes("|") ? "|" : (line.includes(" — ") ? " — " : " - ");
-        const parts = line.split(sep);
-        const first = parts[0].trim();
-        if (first.length > 2 && first.length < 100 && !commonActionVerbs.test(first)) {
-          isNewProject = true;
-          namePart = first;
-          techPart = parts.slice(1).join(sep).trim();
-        }
-      } else if (/^(project|title):\s*/i.test(line)) {
-        isNewProject = true;
-        namePart = line.replace(/^(project|title):\s*/i, "").trim();
-      } else if (!commonActionVerbs.test(line) && !line.endsWith(".")) {
-        if (!currentProject || currentProject.bullets.length > 0 || currentProject.tech) {
-          isNewProject = true;
-          namePart = line;
-        }
-      }
-    }
-
-    if (isNewProject) {
+    if (titleCheck.isTitle) {
       if (currentProject) {
         projects.push(currentProject);
       }
       currentProject = {
-        name: namePart.replace(/%¸/g, "").trim(),
-        tech: techPart.replace(/%¸/g, "").replace(/^tech\s*stack:\s*/i, "").trim(),
+        name: titleCheck.name.replace(/%¸/g, "").trim(),
+        tech: titleCheck.tech.replace(/%¸/g, "").replace(/^tech\s*stack:\s*/i, "").trim(),
         description: "",
         bullets: [],
-        live: liveMatch,
-        github: ghMatch,
+        live: line.match(/https?:\/\/[^\s)]+/i)?.[0] || "",
+        github: line.match(/github\.com\/[^\s)]+/i)?.[0] || "",
         duration: ""
       };
-    } else if (isTechLine && currentProject) {
-      const extractedTech = line.replace(techPrefixRegex, "").trim();
-      currentProject.tech = currentProject.tech ? `${currentProject.tech}, ${extractedTech}` : extractedTech;
-    } else if (currentProject && bulletText) {
-      if (currentProject.bullets.length === 0 && !isBullet && !commonActionVerbs.test(bulletText) && currentProject.name.length < 35 && bulletText.length < 40 && !bulletText.endsWith(".")) {
-        currentProject.name = `${currentProject.name} — ${bulletText}`;
+    } else if (currentProject) {
+      const isTechLine = line.includes("·") || techHeaderRegex.test(line);
+      const liveMatch = line.match(/https?:\/\/[^\s)]+/i)?.[0] || "";
+      const ghMatch = line.match(/github\.com\/[^\s)]+/i)?.[0] || "";
+
+      if (liveMatch && !currentProject.live) currentProject.live = liveMatch;
+      if (ghMatch && !currentProject.github) currentProject.github = ghMatch;
+
+      if (isTechLine) {
+        const extractedTech = line.replace(techHeaderRegex, "").trim();
+        currentProject.tech = currentProject.tech ? `${currentProject.tech} · ${extractedTech}` : extractedTech;
       } else {
-        if (liveMatch && !currentProject.live) currentProject.live = liveMatch;
-        if (ghMatch && !currentProject.github) currentProject.github = ghMatch;
-        currentProject.bullets.push(bulletText);
+        const bulletText = line.replace(/^[-•*–—]\s*/, "").replace(/^\d+[\.\)]\s*/, "").replace(/%¸/g, "").trim();
+        if (bulletText) {
+          currentProject.bullets.push(bulletText);
+        }
       }
     }
   }
@@ -548,15 +585,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   }
 
   const finalProjects = projects.map(p => {
-    if (p.bullets.length === 0) {
-      if (p.name.length > 40) {
-        const desc = p.name;
-        const words = p.name.split(" ");
-        p.name = words.slice(0, 4).join(" ");
-        p.bullets.push(desc);
-      } else {
-        p.bullets.push(p.name);
-      }
+    if (p.bullets.length === 0 && p.name) {
+      p.bullets.push(p.name);
     }
     p.description = p.bullets[0] || p.name;
     return p;
