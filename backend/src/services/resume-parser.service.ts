@@ -227,18 +227,24 @@ function isPaginationArtifact(line: string): boolean {
   return false;
 }
 
+const strongActionVerbs = /^(built|engineered|architected|developed|designed|implemented|delivered|shipped|created|deployed|integrated|managed|spearheaded|automated|handled|scaled|crafted|executed|practiced|solved|won|completed|achieved|earned|authored|published|certified)\b/i;
+const continuationConjunctions = /^(and|or|layer|the|with|in|for|of|to|at|by|from|which|that)\b/i;
+const techHeaderRegex = /^(tech\s*stack|technologies|tools|built\s*with|stack|tech|environment):\s*/i;
+const bulletMarkerRegex = /^[-\uF0A7\uF0B7\u2022\u2023\u2043\u25B6\u25BA\u25A0\u25AA\u25CF\u25CB\u25E6\u25CA\uF000-\uFFFF•*–—\d\.]+\s*/;
+
 function isAtsKeywordFooter(line: string): boolean {
   const clean = line.trim();
   if (clean.length < 35) return false;
   if (clean.includes("·")) return false;
-  if (/^[-•*–—\d\.]/.test(clean)) return false;
+  if (techHeaderRegex.test(clean)) return false;
+  if (bulletMarkerRegex.test(clean)) return false;
 
   const sanitized = clean
     .replace(/\b(node|next|vue|express|react|chart|d3|three)\.js\b/gi, "$1js")
     .replace(/\b(c\+\+|c\#|\.net)\b/gi, "code");
 
-  const hasActionVerb = /\b(built|engineered|architected|developed|designed|implemented|delivered|shipped|created|deployed|integrated|managed|led|optimized|handled)\b/i.test(sanitized);
-  if (hasActionVerb && (/\.\s+[A-Z]/.test(sanitized) || (sanitized.endsWith(".") && sanitized.split(/\s+/).length > 6))) {
+  const hasActionVerb = strongActionVerbs.test(sanitized);
+  if (hasActionVerb) {
     return false;
   }
 
@@ -251,10 +257,6 @@ function isAtsKeywordFooter(line: string): boolean {
   return words.length >= 5 && totalMatches >= 3 && (totalMatches / words.length) > 0.28;
 }
 
-const strongActionVerbs = /^(built|engineered|architected|developed|designed|implemented|delivered|shipped|created|deployed|integrated|managed|spearheaded|automated|handled|scaled|crafted|executed)\b/i;
-const continuationConjunctions = /^(and|or|layer|the|with|in|for|of|to|at|by|from|which|that)\b/i;
-const techHeaderRegex = /^(tech\s*stack|technologies|tools|built\s*with|stack|tech|environment):\s*/i;
-
 function preprocessProjectLines(rawLines: string[]): string[] {
   const cleanLines = rawLines.map(l => l.trim()).filter(l => Boolean(l) && !isPaginationArtifact(l) && !isAtsKeywordFooter(l));
   const merged: string[] = [];
@@ -264,7 +266,7 @@ function preprocessProjectLines(rawLines: string[]): string[] {
     while (i + 1 < cleanLines.length) {
       const nextLine = cleanLines[i + 1];
       const endsWithTerminal = /[.:!·]$/.test(current) || current.endsWith(" —") || current.endsWith(" -");
-      const isNextBullet = /^[-•*–—\d\.]/.test(nextLine);
+      const isNextBullet = bulletMarkerRegex.test(nextLine);
       const isNextTechLine = techHeaderRegex.test(nextLine) || nextLine.includes("·");
       const isNextContinuation = !isNextBullet && !isNextTechLine && (
         /^[a-z()\[\],+&\/\\$₹€£]/.test(nextLine) || 
@@ -284,10 +286,10 @@ function preprocessProjectLines(rawLines: string[]): string[] {
 }
 
 function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLine: boolean): { isTitle: boolean; name: string; tech: string } {
-  const clean = line.trim();
+  const clean = line.trim().replace(bulletMarkerRegex, "");
 
   if (clean.includes("·")) return { isTitle: false, name: "", tech: "" };
-  if (/^[-•*–—\d\.]/.test(clean)) return { isTitle: false, name: "", tech: "" };
+  if (bulletMarkerRegex.test(line)) return { isTitle: false, name: "", tech: "" };
   if (/^[a-z()\[\],+&\/\\$₹€£]/.test(clean) || continuationConjunctions.test(clean)) return { isTitle: false, name: "", tech: "" };
   if (techHeaderRegex.test(clean)) return { isTitle: false, name: "", tech: "" };
 
@@ -296,7 +298,8 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
 
   let namePart = clean;
   let techPart = "";
-  if (clean.includes("|") || clean.includes(" — ") || clean.includes(" - ")) {
+
+  if (clean.includes("|") || clean.includes(" — ") || clean.includes(" - ") || (clean.includes(" - ") && !clean.startsWith("-"))) {
     const sep = clean.includes("|") ? "|" : (clean.includes(" — ") ? " — " : " - ");
     const parts = clean.split(sep);
     namePart = parts[0].trim();
@@ -306,8 +309,9 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
     }
   }
 
+  const cleanNextLine = nextLine ? nextLine.replace(bulletMarkerRegex, "").trim() : "";
   const isNextTechLine = nextLine ? (nextLine.includes("·") || techHeaderRegex.test(nextLine)) : false;
-  const isNextBulletVerb = nextLine ? (strongActionVerbs.test(nextLine.replace(/^[-•*–—\d\.]+\s*/, ""))) : false;
+  const isNextBulletVerb = cleanNextLine ? strongActionVerbs.test(cleanNextLine) : false;
 
   if (isNextTechLine || isNextBulletVerb || isFirstLine) {
     return { isTitle: true, name: namePart, tech: techPart };
@@ -589,7 +593,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
         const extractedTech = line.replace(techHeaderRegex, "").trim();
         currentProject.tech = currentProject.tech ? `${currentProject.tech} · ${extractedTech}` : extractedTech;
       } else {
-        const bulletText = line.replace(/^[-•*–—]\s*/, "").replace(/^\d+[\.\)]\s*/, "").replace(/%¸/g, "").trim();
+        const bulletText = line.replace(bulletMarkerRegex, "").replace(/^\d+[\.\)]\s*/, "").replace(/%¸/g, "").trim();
         if (bulletText) {
           currentProject.bullets.push(bulletText);
         }
@@ -615,8 +619,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
 
   for (const line of sections.experience) {
     if (isPaginationArtifact(line) || isAtsKeywordFooter(line)) continue;
-    const isBullet = line.startsWith("-") || line.startsWith("•") || line.startsWith("*") || line.startsWith("–") || line.startsWith("—");
-    let bulletText = line.replace(/^[-•*–—]\s*/, "").trim();
+    const isBullet = line.startsWith("-") || line.startsWith("•") || line.startsWith("*") || line.startsWith("–") || line.startsWith("—") || bulletMarkerRegex.test(line);
+    let bulletText = line.replace(bulletMarkerRegex, "").trim();
 
     if (!isBullet && line.length < 100 && (line.includes("|") || line.includes("-") || line.match(/\b(19|20)\d{2}\b/))) {
       if (currentExp) {
@@ -696,17 +700,23 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   }
 
   // 9. Certifications Processing
+  const certAchievements: string[] = [];
   const certifications = sections.certifications.map(line => {
     if (isPaginationArtifact(line) || isAtsKeywordFooter(line)) return null;
-    const clean = line.replace(/^[-•*–—]\s*/, "").trim();
-    if (!clean) return null;
+    const clean = line.replace(bulletMarkerRegex, "").trim();
+    if (!clean || clean.startsWith("&") || clean.toUpperCase() === "STRENGTHS") return null;
+
+    if (/300\+|leet\s*code|geeksfor\s*geeks|gfg|competition|hackathon|solved|winner|award/i.test(clean)) {
+      certAchievements.push(clean);
+    }
+
     const parts = clean.split("|");
     const certName = parts[0]?.trim() || clean;
     const issuer = parts[1]?.trim() || "";
     const yearMatch = clean.match(/\b(20\d{2})\b/);
     const year = yearMatch ? yearMatch[0] : "";
     return { name: certName, issuer, year, full: clean };
-  }).filter(Boolean).map(c => c!.full || c!.name);
+  }).filter(Boolean).map(c => c!.full || c!.name).filter(c => !certAchievements.includes(c));
 
   // 10. Achievements Processing (Filtered against Artifacts, Footers, Project Names & Summary Fragments)
   const projectNamesLower = new Set(finalProjects.map(p => p.name.toLowerCase()));
@@ -714,9 +724,10 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
 
   const rawAchievements = [
     ...sections.achievements,
+    ...certAchievements,
     ...sections.none.filter(l => !isAtsKeywordFooter(l) && !isPaginationArtifact(l) && /300\+|leet\s*code|geeksfor\s*geeks|gfg|competition|hackathon|open\s*source/i.test(l))
   ];
-  const achievements = Array.from(new Set(rawAchievements.map(l => l.replace(/^[-•*–—]\s*/, "").trim()).filter(clean => {
+  const achievements = Array.from(new Set(rawAchievements.map(l => l.replace(bulletMarkerRegex, "").replace(/^[-•*–—]\s*/, "").trim()).filter(clean => {
     if (!clean) return false;
     if (isPaginationArtifact(clean)) return false;
     if (isAtsKeywordFooter(clean)) return false;
@@ -726,7 +737,6 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     // Filter out summary text substrings/tails (Bug D)
     const cleanLower = clean.toLowerCase();
     if (summaryLower && summaryLower.length > 20 && summaryLower.includes(cleanLower)) return false;
-    if (summaryLower && summaryLower.length > 20 && cleanLower.length > 20 && summaryLower.includes(cleanLower.substring(0, 25))) return false;
 
     return true;
   })));

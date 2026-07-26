@@ -2150,4 +2150,69 @@ Open to Relocation Remote Work Immediate Joiner India Bangalore Hyderabad Noida 
     expect(parsed.achievements.some((a: string) => a.includes("maintainable code"))).toBe(false);
     expect(parsed.atsKeywordsFooter.length).toBeGreaterThanOrEqual(3);
   });
+
+  it("correctly parses Yogesh Dubey's actual uploaded resume PDF text into 4 clean projects and achievements", () => {
+    const realResumeText = `
+YOGESH DUBEY
+Ayodhya, Uttar Pradesh | +91 7081341498 | YogeshDubey8924@gmail.com
+github.com/Yogesh-Dubey18
+FULL STACK DEVELOPER
+SUMMARY
+Full Stack Developer fresher and BCA graduate with hands-on training in Java DSA, React.js, Node.js, REST APIs, MongoDB,
+MySQL and PostgreSQL. Strong problem-solving foundation with 300+ DSA problems solved and practical project experience building AI,
+job-platform, analytics and rental-booking web applications. Seeking a Full Stack, Backend or MERN Developer role where I can build
+clean, scalable and user-focused products.
+TECHNICAL SKILLS
+ Programming Languages: Java, JavaScript, TypeScript, Python
+ Frontend: React.js, HTML5, CSS3, Responsive UI, Component-Based Design
+ Backend & APIs: Node.js, Express.js, REST APIs, Authentication Basics, API Integration
+ Databases: MongoDB, MySQL, PostgreSQL, Mongoose, SQL Fundamentals
+ Tools & Platforms: Git, GitHub, VS Code, Postman, Vercel, AWS Basics, Docker Basics, Kubernetes Basics
+ Core CS: Data Structures & Algorithms, OOP, DBMS, Operating System Basics, Problem Solving
+PROJECTS
+AI Job Copilot Pro MAX
+Tech Stack: React.js, Node.js, REST APIs, Resume Parsing, AI Workflows
+ Built a job-assistance platform concept with profile-based job search, resume analysis, application tracking and AI-guided
+workflows.
+ Designed user flows for resume upload, ATS checks, targeted resume generation, manual application tracking and
+interview preparation.
+ Focused on clean dashboard UX, protected routes, backend API structure and scalable feature modules for real-world job
+seekers.
+Sigma GPT - AI Conversational Web App
+Tech Stack: React.js, TypeScript, REST APIs, Java/Python Backend Services
+ Developed an AI-powered chat-style web application with real-time response flow and reusable React components.
+ Integrated REST API communication between frontend and backend services with structured request/response handling.
+Airbnb / Indian Holiday Rentals Clone
+Tech Stack: React.js, Node.js, Express.js, MySQL
+ Created a property rental platform for listing stays, viewing property details and supporting booking-style user journeys.
+ Implemented full-stack structure using frontend pages, backend routes and relational database design for property data.
+Zerodha Stock Market Analysis App
+Tech Stack: React.js, TypeScript, REST APIs, Java/Python Backend Services
+ Built a stock-market analytics dashboard UI to display market information using reusable components and API-driven
+data flow.
+ Practiced data rendering, dashboard layout, loading states and clean frontend architecture for financial analytics use
+cases.
+EDUCATION
+Bachelor of Computer Applications (BCA), Jhunjhunwala PG College, Ayodhya 2022 - 2025
+CGPA: 7.68
+XII (Senior Secondary), UP LPCP School, Basti, Uttar Pradesh 2022
+CERTIFICATIONS & ACHIEVEMENTS
+ Completed Java DSA and Full Stack Development Certification from DUCAT.
+ Solved 300+ DSA problems on LeetCode, GeeksforGeeks and similar platforms.
+ Strong interests: competitive programming, open-source contribution, technology blogging and AI/web development.
+STRENGTHS
+Quick learner | Adaptable | Good listener | Problem solver | Consistent coding practice | Product-focused mindset
+
+-- 1 of 1 --
+    `;
+
+    const parsed = parseResumeText(realResumeText, "Yogesh Dubey");
+
+    expect(parsed.projects).toHaveLength(4);
+    expect(parsed.projects[0].name).toBe("AI Job Copilot Pro MAX");
+    expect(parsed.projects[1].name).toBe("Sigma GPT");
+    expect(parsed.projects[2].name).toBe("Airbnb / Indian Holiday Rentals Clone");
+    expect(parsed.projects[3].name).toBe("Zerodha Stock Market Analysis App");
+    expect(parsed.achievements.some((a: string) => a.includes("300+ DSA problems"))).toBe(true);
+  });
 });
