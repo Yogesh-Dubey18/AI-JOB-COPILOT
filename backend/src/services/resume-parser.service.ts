@@ -230,7 +230,7 @@ function isPaginationArtifact(line: string): boolean {
 const strongActionVerbs = /^(built|engineered|architected|developed|designed|implemented|delivered|shipped|created|deployed|integrated|managed|spearheaded|automated|handled|scaled|crafted|executed|practiced|solved|won|completed|achieved|earned|authored|published|certified)\b/i;
 const continuationConjunctions = /^(and|or|layer|the|with|in|for|of|to|at|by|from|which|that)\b/i;
 const techHeaderRegex = /^(tech\s*stack|technologies|tools|built\s*with|stack|tech|environment):\s*/i;
-const bulletMarkerRegex = /^[-\uF0A7\uF0B7\u2022\u2023\u2043\u25B6\u25BA\u25A0\u25AA\u25CF\u25CB\u25E6\u25CA\uF000-\uFFFF•*–—\d\.]+\s*/;
+const bulletMarkerRegex = /^(?:[-\uF0A7\uF0B7\u2022\u2023\u2043\u25B6\u25BA\u25A0\u25AA\u25CF\u25CB\u25E6\u25CA\uF000-\uFFFF•*–—]|\d+[\.\)])\s*/;
 
 function isAtsKeywordFooter(line: string): boolean {
   const clean = line.trim();
@@ -243,10 +243,13 @@ function isAtsKeywordFooter(line: string): boolean {
     .replace(/\b(node|next|vue|express|react|chart|d3|three)\.js\b/gi, "$1js")
     .replace(/\b(c\+\+|c\#|\.net)\b/gi, "code");
 
-  const hasActionVerb = strongActionVerbs.test(sanitized);
-  if (hasActionVerb) {
+  if (strongActionVerbs.test(sanitized)) {
     return false;
   }
+
+  // A genuine bullet/sentence continuation with commas/prose is NOT an ATS keyword footer
+  if (/[a-z]{3,}[,\s]+(and|with|for|using|via|under|at|on|in)\b/i.test(clean)) return false;
+  if (/\b(features|users|optimization|latency|deployment|databases|integration|backends?|frontend|analytics)\b/i.test(clean) && (clean.includes(",") || clean.includes("—"))) return false;
 
   const techMatches = clean.match(/\b(Developer|Engineer|JavaScript|TypeScript|Python|Java|HTML5|CSS3|React|Next|Node|Express|MongoDB|MySQL|PostgreSQL|REST|API|APIs|Git|GitHub|Tailwind|JWT|Authentication|RBAC|Stripe|Groq|AI|LLM|Streaming|Agile|Scrum|CI\/CD|Docker|AWS|Vercel|Render|OOP|DSA|DBMS|MVC|SDLC|Testing|Debugging|BCA|MERN|Performance|Optimization|Clean\s+Code)\b/gi) || [];
   const hrMatches = clean.match(/\b(Relocation|Remote|Work|Immediate|Joiner|Fresher|Graduate|India|Bangalore|Bengaluru|Hyderabad|Noida|Gurugram|Pune|Mumbai|Chennai|Delhi)\b/gi) || [];
@@ -254,7 +257,9 @@ function isAtsKeywordFooter(line: string): boolean {
   const words = clean.split(/\s+/).filter(Boolean);
   const totalMatches = techMatches.length + hrMatches.length;
 
-  return words.length >= 5 && totalMatches >= 3 && (totalMatches / words.length) > 0.28;
+  const isJobTitleSequence = /\b(Developer|Engineer|Architect)\s+(JavaScript|TypeScript|Java|Python|React|Node|MERN)\b/i.test(clean) && words.length >= 8;
+
+  return isJobTitleSequence || (words.length >= 6 && totalMatches >= 4 && (totalMatches / words.length) > 0.45);
 }
 
 function isImplicitTechLine(line: string): boolean {
@@ -273,22 +278,23 @@ function isImplicitTechLine(line: string): boolean {
 }
 
 function preprocessProjectLines(rawLines: string[]): string[] {
-  const cleanLines = rawLines.map(l => l.trim()).filter(l => Boolean(l) && !isPaginationArtifact(l) && !isAtsKeywordFooter(l));
+  const cleanLines = rawLines.map(l => l.trim()).filter(l => Boolean(l) && !isPaginationArtifact(l));
   const merged: string[] = [];
 
   for (let i = 0; i < cleanLines.length; i++) {
     let current = cleanLines[i];
+    if (isAtsKeywordFooter(current)) continue;
+
     while (i + 1 < cleanLines.length) {
       const nextLine = cleanLines[i + 1];
-      const endsWithTerminal = /[.:!·]$/.test(current) || current.endsWith(" —") || current.endsWith(" -");
+      const endsWithTerminal = /[.:!·]$/.test(current) && !current.endsWith(" +") && !current.endsWith(" —") && !current.endsWith(" -");
+      const endsWithOpenOrOperator = /[+\-(,\[&]$/.test(current) || current.endsWith(" —") || current.endsWith(" -") || !endsWithTerminal;
+
       const isNextBullet = bulletMarkerRegex.test(nextLine);
       const isNextTechLine = techHeaderRegex.test(nextLine) || nextLine.includes("·") || isImplicitTechLine(nextLine);
-      const isNextContinuation = !isNextBullet && !isNextTechLine && (
-        /^[a-z()\[\],+&\/\\$₹€£]/.test(nextLine) || 
-        continuationConjunctions.test(nextLine)
-      );
+      const isNextTitle = isNewProjectTitle(nextLine, cleanLines[i + 2], false).isTitle;
 
-      if (!endsWithTerminal && isNextContinuation) {
+      if (endsWithOpenOrOperator && !isNextBullet && !isNextTechLine && !isNextTitle) {
         current = current + " " + nextLine;
         i++;
       } else {
@@ -462,7 +468,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     { name: "softSkills", regex: /^(?:key\s+|core\s+)?strengths\b/i },
     { name: "softSkills", regex: /^(?:key\s+|core\s+)?soft\s+skills?\b/i },
     { name: "softSkills", regex: /^personal\s+traits?\b/i },
-    { name: "languages", regex: /^languages?(?:\s+known)?\b/i }
+    { name: "languages", regex: /^(?:spoken\s+)?languages?(?:\s+known)?\s*[:\-\s|•]*$/i }
   ];
 
   const capturedAtsFooters: string[] = [];
@@ -514,7 +520,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
         } else {
           sections.education.push(cleanLine);
         }
-      } else if (currentSection === "languages" && /^(frontend|backend|database|cloud|tools|ui|devops):\s*/i.test(cleanLine)) {
+      } else if (currentSection === "languages" && (/^[a-z0-9\/\s\-&]+:\s*/i.test(cleanLine) || /programming\s+languages/i.test(cleanLine))) {
         sections.skills.push(cleanLine);
       } else {
         sections[currentSection].push(cleanLine);
@@ -796,12 +802,34 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     ...certAchievements,
     ...sections.none.filter(l => !isAtsKeywordFooter(l) && !isPaginationArtifact(l) && /300\+|leet\s*code|geeksfor\s*geeks|gfg|competition|hackathon|open\s*source/i.test(l))
   ];
-  const achievements = Array.from(new Set(rawAchievements.map(l => l.replace(bulletMarkerRegex, "").replace(/^[-•*–—]\s*/, "").trim()).filter(clean => {
+
+  const mergedAchievements: string[] = [];
+  for (let i = 0; i < rawAchievements.length; i++) {
+    let line = rawAchievements[i].trim();
+    if (!line || isPaginationArtifact(line)) continue;
+
+    while (i + 1 < rawAchievements.length) {
+      const nextLine = rawAchievements[i + 1].trim();
+      const endsWithTerminal = /[.:!]$/.test(line) && !line.endsWith(" +") && !line.endsWith(" —") && !line.endsWith(" -");
+      const isNextBullet = bulletMarkerRegex.test(nextLine);
+      const isNextHeader = /^(summary|skills|projects|experience|education|certifications|achievements)\b/i.test(nextLine);
+
+      if (!endsWithTerminal && !isNextBullet && !isNextHeader && !isAtsKeywordFooter(nextLine)) {
+        line = line + " " + nextLine;
+        i++;
+      } else {
+        break;
+      }
+    }
+    mergedAchievements.push(line);
+  }
+
+  const achievements = Array.from(new Set(mergedAchievements.map(l => l.replace(bulletMarkerRegex, "").replace(/^[-•*–—]\s*/, "").trim()).filter(clean => {
     if (!clean) return false;
     if (isPaginationArtifact(clean)) return false;
     if (isAtsKeywordFooter(clean)) return false;
     if (projectNamesLower.has(clean.toLowerCase())) return false;
-    if (/^(frontend|backend|database|tools|cloud|ui):/i.test(clean)) return false;
+    if (/^(frontend|backend|database|tools|cloud|ui|ai|cs|styling|devops):/i.test(clean)) return false;
 
     // Filter out summary text substrings/tails (Bug D)
     const cleanLower = clean.toLowerCase();
@@ -839,10 +867,10 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   }
 
   for (const line of sections.languages) {
-    if (/^(frontend|backend|database|tools|cloud|ui):/i.test(line)) continue;
+    if (/^[a-z0-9\/\s\-&]+:\s*/i.test(line)) continue;
     const clean = line.replace(/^[-•*–—]\s*/, "").trim();
     if (clean && !isPaginationArtifact(clean) && !isAtsKeywordFooter(clean)) {
-      if (!clean.toLowerCase().includes("react") && !clean.toLowerCase().includes("express") && !clean.toLowerCase().includes("mongodb")) {
+      if (!clean.toLowerCase().includes("react") && !clean.toLowerCase().includes("express") && !clean.toLowerCase().includes("mongodb") && !clean.toLowerCase().includes("architecture") && !clean.toLowerCase().includes("jwt")) {
         extractedLanguages.add(clean);
       }
     }
