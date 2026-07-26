@@ -388,10 +388,15 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   if (!phone && userProfile?.phone) phone = userProfile.phone;
 
   let location = "";
-  const locationMatch = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*(UP|Uttar\s+Pradesh|Delhi|New\s+Delhi|Haryana|Karnataka|Maharashtra|India|Bengaluru|Bangalore|Noida|Gurugram|Mumbai|Pune|Hyderabad)\b/i);
-  if (locationMatch) {
-    location = locationMatch[0].trim();
-  } else {
+  for (const line of nonDbLines) {
+    const lineNoPipes = line.split(/[|•]/)[0].trim();
+    const locMatch = lineNoPipes.match(/\b([A-Z][a-zA-Z\s]+),\s*(UP|Uttar\s+Pradesh|Delhi|New\s+Delhi|Haryana|Karnataka|Maharashtra|India|Bengaluru|Bangalore|Noida|Gurugram|Mumbai|Pune|Hyderabad|US|USA)\b/i);
+    if (locMatch) {
+      location = locMatch[0].trim();
+      break;
+    }
+  }
+  if (!location) {
     for (const line of nonDbLines) {
       if (line.includes(",") && !line.includes("@") && !line.includes("github.com") && !line.includes("linkedin.com") && line.length < 40) {
         const parts = line.split(",");
@@ -435,7 +440,9 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     { name: "certifications", regex: /^certificates?\b/i },
     { name: "achievements", regex: /^achievements?\b/i },
     { name: "achievements", regex: /^key\s+achievements?\b/i },
-    { name: "softSkills", regex: /^soft\s+skills?\b/i },
+    { name: "softSkills", regex: /^(?:key\s+|core\s+)?strengths\b/i },
+    { name: "softSkills", regex: /^(?:key\s+|core\s+)?soft\s+skills?\b/i },
+    { name: "softSkills", regex: /^personal\s+traits?\b/i },
     { name: "languages", regex: /^languages?(?:\s+known)?\b/i }
   ];
 
@@ -446,11 +453,6 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     if (!cleanLine) continue;
 
     if (isPaginationArtifact(cleanLine)) continue;
-
-    if (isAtsKeywordFooter(cleanLine)) {
-      capturedAtsFooters.push(cleanLine);
-      continue;
-    }
 
     let matchedSection: SectionName | null = null;
     let remainingText = cleanLine;
@@ -470,14 +472,19 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       if (remainingText) {
         sections[currentSection].push(remainingText);
       }
-    } else {
-      if (currentSection !== "none") {
-        // If a tech category line like "Frontend:" is inside languages section, route to skills
-        if (currentSection === "languages" && /^(frontend|backend|database|cloud|tools|ui|devops):\s*/i.test(cleanLine)) {
-          sections.skills.push(cleanLine);
-        } else {
-          sections[currentSection].push(cleanLine);
-        }
+      continue;
+    }
+
+    if (currentSection !== "summary" && isAtsKeywordFooter(cleanLine)) {
+      capturedAtsFooters.push(cleanLine);
+      continue;
+    }
+
+    if (currentSection !== "none") {
+      if (currentSection === "languages" && /^(frontend|backend|database|cloud|tools|ui|devops):\s*/i.test(cleanLine)) {
+        sections.skills.push(cleanLine);
+      } else {
+        sections[currentSection].push(cleanLine);
       }
     }
   }
@@ -519,34 +526,35 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   for (const line of [...sections.skills, ...sections.languages]) {
     const catMatch = line.match(/^(frontend|backend|database|db|cloud|devops|tools|ui|ui\/ux|ai[-\/\s]*apis?):\s*(.*)$/i);
     if (catMatch) {
-      const rawCat = catMatch[1].toLowerCase();
-      const rawItems = catMatch[2].split(/[,|•·;]+/).map(s => s.trim()).filter(Boolean);
-      
-      if (rawCat.includes("frontend") || rawCat.includes("ui")) {
-        categorizedSkills.frontend = Array.from(new Set([...categorizedSkills.frontend, ...rawItems]));
-      } else if (rawCat.includes("backend") || rawCat.includes("ai")) {
-        categorizedSkills.backend = Array.from(new Set([...categorizedSkills.backend, ...rawItems]));
-      } else if (rawCat.includes("database") || rawCat.includes("db")) {
-        categorizedSkills.database = Array.from(new Set([...categorizedSkills.database, ...rawItems]));
-      } else if (rawCat.includes("cloud") || rawCat.includes("devops")) {
-        categorizedSkills.cloud = Array.from(new Set([...categorizedSkills.cloud, ...rawItems]));
-      } else if (rawCat.includes("tools")) {
-        categorizedSkills.tools = Array.from(new Set([...categorizedSkills.tools, ...rawItems]));
-      }
+      const cat = catMatch[1].toLowerCase();
+      const items = catMatch[2].split(/[,|·]/).map(s => s.trim()).filter(Boolean);
+
+      if (cat.includes("front")) categorizedSkills.frontend.push(...items);
+      else if (cat.includes("back") || cat.includes("api")) categorizedSkills.backend.push(...items);
+      else if (cat.includes("db") || cat.includes("data")) categorizedSkills.database.push(...items);
+      else if (cat.includes("cloud") || cat.includes("devops")) categorizedSkills.cloud.push(...items);
+      else if (cat.includes("tool") || cat.includes("ui")) categorizedSkills.tools.push(...items);
     }
   }
 
-  const allSkillsList = Array.from(new Set([
+  // Deduplicate categorized skills
+  categorizedSkills.frontend = Array.from(new Set(categorizedSkills.frontend));
+  categorizedSkills.backend = Array.from(new Set(categorizedSkills.backend));
+  categorizedSkills.database = Array.from(new Set(categorizedSkills.database));
+  categorizedSkills.cloud = Array.from(new Set(categorizedSkills.cloud));
+  categorizedSkills.tools = Array.from(new Set(categorizedSkills.tools));
+  categorizedSkills.languages = Array.from(new Set(categorizedSkills.languages));
+
+  // Build top-level skills array
+  const skills = Array.from(new Set([
     ...categorizedSkills.frontend,
     ...categorizedSkills.backend,
     ...categorizedSkills.database,
     ...categorizedSkills.cloud,
     ...categorizedSkills.tools,
-    ...categorizedSkills.languages,
-    ...knownSkills.filter(skill => new RegExp("\\b" + skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(allSkillsText))
-  ]));
+    ...categorizedSkills.languages
+  ])) as any;
 
-  const skills: any = allSkillsList;
   skills.frontend = categorizedSkills.frontend;
   skills.backend = categorizedSkills.backend;
   skills.database = categorizedSkills.database;
@@ -663,38 +671,59 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
 
   // 8. Education Processing
   const education: any[] = [];
-  for (const line of sections.education) {
+  for (let i = 0; i < sections.education.length; i++) {
+    const line = sections.education[i];
     if (isPaginationArtifact(line) || isAtsKeywordFooter(line)) continue;
-    if (line.toLowerCase().includes("degree") || line.toLowerCase().includes("bca") || line.toLowerCase().includes("b.c.a") || line.toLowerCase().includes("b.tech") || line.toLowerCase().includes("bachelor") || line.toLowerCase().includes("school") || line.toLowerCase().includes("college") || line.toLowerCase().includes("class xii") || line.toLowerCase().includes("class x")) {
+    const lower = line.toLowerCase();
+    const isEduLine = lower.includes("bca") || lower.includes("b.c.a") || lower.includes("b.tech") || 
+                     lower.includes("bachelor") || lower.includes("master") || lower.includes("mca") ||
+                     lower.includes("class xii") || lower.includes("xii") || lower.includes("12th") || 
+                     lower.includes("class x") || lower.includes("10th") || lower.includes("school") || lower.includes("college");
+
+    if (isEduLine) {
       let degree = "";
       if (line.match(/b\.?c\.?a/i)) degree = "BCA — Bachelor of Computer Applications";
       else if (line.match(/b\.?tech/i)) degree = "B.Tech — Bachelor of Technology";
-      else if (line.match(/class\s+xii/i) || line.match(/12th/i)) degree = "Class XII";
-      else if (line.match(/class\s+x/i) || line.match(/10th/i)) degree = "Class X";
-      else degree = line.split(/[|-]/)[0].trim();
+      else if (line.match(/class\s+xii|12th/i)) degree = "Class XII (Senior Secondary)";
+      else if (line.match(/class\s+x|10th/i)) degree = "Class X (Secondary)";
+      else degree = line.split(/[|,-]/)[0].trim();
+
+      const yearMatch = line.match(/\b((?:19|20)\d{2}\s*[-–to\s]+\s*(?:(?:19|20)\d{2}|present))\b/i) || line.match(/\b(19|20)\d{2}\b/);
+      const year = yearMatch ? yearMatch[0].replace(/\s+/g, " ") : "";
+
+      const nextLine = sections.education[i + 1] || "";
+      const cgpaMatch = line.match(/(?:cgpa|gpa)[:\s]*([\d\.]+)/i) || nextLine.match(/(?:cgpa|gpa)[:\s]*([\d\.]+)/i);
+      const cgpa = cgpaMatch ? cgpaMatch[1] : "";
 
       let college = "";
       if (line.includes("|")) {
-        college = line.split("|")[0].trim();
-      } else {
-        college = line;
+        const parts = line.split("|");
+        college = parts[0].includes("BCA") || parts[0].includes("XII") ? parts[1]?.trim() || parts[0].trim() : parts[0].trim();
+      } else if (line.includes(",")) {
+        const parts = line.split(",");
+        const instPart = parts.find(p => /college|school|university|institute|academy|pg\s+college/i.test(p));
+        if (instPart) {
+          const instIndex = parts.indexOf(instPart);
+          const locPart = parts[instIndex + 1] && !/\d{4}/.test(parts[instIndex + 1]) ? `, ${parts[instIndex + 1].trim()}` : "";
+          college = `${instPart.trim()}${locPart}`;
+        } else {
+          college = parts.slice(1).join(", ").replace(/\b(20\d{2})\b.*/, "").trim();
+        }
       }
 
-      const yearMatch = line.match(/\b(20\d{2})[-–](20\d{2})\b/) || line.match(/\b(20\d{2})\b/);
-      const year = yearMatch ? yearMatch[0] : "";
+      if (!college || college.length < 3) {
+        college = line.replace(/^(bca|b\.tech|xii|12th|class\s+xii)\s*[-—,]?/i, "").replace(/\b(20\d{2})\b.*/, "").trim() || "Institution";
+      }
 
-      const cgpaMatch = line.match(/cgpa[:\s]*(\d\.\d+)/i) || line.match(/gpa[:\s]*(\d\.\d+)/i);
-      const cgpa = cgpaMatch ? cgpaMatch[1] : "";
-
-      const boardMatch = line.match(/up\s+board|cbse|icse|state\s+board/i);
-      const board = boardMatch ? boardMatch[0] : "";
+      college = college.replace(/^(Bachelor of Computer Applications \(BCA\)|Class XII \(Senior Secondary\)|XII \(Senior Secondary\))\s*,?\s*/i, "")
+                       .replace(/\b\d{4}\b.*/, "").trim();
 
       education.push({
         degree,
-        college: college.replace(degree, "").replace(/[|-]/g, "").trim() || "Institution",
+        college: college || "Institution",
         year,
         cgpa,
-        board
+        board: line.match(/up\s+board|cbse|icse|state\s+board/i)?.[0] || ""
       });
     }
   }
@@ -704,7 +733,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   const certifications = sections.certifications.map(line => {
     if (isPaginationArtifact(line) || isAtsKeywordFooter(line)) return null;
     const clean = line.replace(bulletMarkerRegex, "").trim();
-    if (!clean || clean.startsWith("&") || clean.toUpperCase() === "STRENGTHS") return null;
+    if (!clean || clean.startsWith("&") || clean.toUpperCase() === "STRENGTHS" || /^strong\s+interests?:/i.test(clean) || /^quick\s+learner/i.test(clean)) return null;
 
     if (/300\+|leet\s*code|geeksfor\s*geeks|gfg|competition|hackathon|solved|winner|award/i.test(clean)) {
       certAchievements.push(clean);

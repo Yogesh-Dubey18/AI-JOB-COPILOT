@@ -2213,6 +2213,25 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     expect(parsed.projects[1].name).toBe("Sigma GPT");
     expect(parsed.projects[2].name).toBe("Airbnb / Indian Holiday Rentals Clone");
     expect(parsed.projects[3].name).toBe("Zerodha Stock Market Analysis App");
-    expect(parsed.achievements.some((a: string) => a.includes("300+ DSA problems"))).toBe(true);
+
+    // Bug 1 - Full summary preserved starting from first sentence
+    expect(parsed.summary).toContain("Full Stack Developer fresher and BCA graduate with hands-on training");
+
+    // Bug 2 - Clean location without name or newlines
+    expect(parsed.location).toBe("Ayodhya, Uttar Pradesh");
+
+    // Bug 3 - Clean certifications without STRENGTHS or interest bio lines
+    expect(parsed.certifications).toEqual(["Completed Java DSA and Full Stack Development Certification from DUCAT."]);
+    expect(parsed.achievements).toEqual(["Solved 300+ DSA problems on LeetCode, GeeksforGeeks and similar platforms."]);
+
+    // Bug 4 - Education year range and school name
+    expect(parsed.education).toHaveLength(2);
+    expect(parsed.education[0].degree).toBe("BCA — Bachelor of Computer Applications");
+    expect(parsed.education[0].college).toBe("Jhunjhunwala PG College");
+    expect(parsed.education[0].year).toBe("2022 - 2025");
+
+    expect(parsed.education[1].degree).toBe("XII (Senior Secondary)");
+    expect(parsed.education[1].college).toBe("UP LPCP School, Basti");
+    expect(parsed.education[1].year).toBe("2022");
   });
 });
