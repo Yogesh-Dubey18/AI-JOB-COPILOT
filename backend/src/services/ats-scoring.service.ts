@@ -173,15 +173,24 @@ function scoreOptimization(resume: any, targetRole: string): { score: number; ma
 // Measures: contact completeness, links, email format, no risky email domains.
 function scoreBestPractices(resume: any): { score: number; max: number; why: string; issues: string[] } {
   const parsed = resume?.parsedData || {};
+  const contact = parsed.contact || resume?.contact || {};
   const rawText = String(resume?.rawText || "");
-  const emailRaw = String(parsed.email || "");
-  const phoneRaw = String(parsed.phone || rawText.match(/(?:\+?\d[\s-]?){10,14}/)?.[0] || "");
-  const links = Array.isArray(parsed.links) ? parsed.links : [];
+  const emailRaw = String(parsed.email || resume?.email || contact.email || "");
+  const phoneRaw = String(parsed.phone || resume?.phone || contact.phone || rawText.match(/(?:\+?\d[\s-]?){10,14}/)?.[0] || "");
+  const links = [
+    ...(Array.isArray(parsed.links) ? parsed.links : []),
+    ...(Array.isArray(resume?.links) ? resume.links : []),
+    parsed.github || resume?.github || contact.github || "",
+    parsed.linkedin || resume?.linkedin || contact.linkedin || "",
+    parsed.portfolio || resume?.portfolio || contact.portfolio || ""
+  ].map(String).filter(Boolean);
+
+  const allText = links.join(" ") + " " + rawText;
 
   const hasEmail = Boolean(emailRaw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i));
   const hasPhone = phoneRaw.replace(/\D/g, "").length >= 10;
-  const hasLinkedIn = links.some((l: string) => /linkedin\.com/i.test(l));
-  const hasGitHub = links.some((l: string) => /github\.com/i.test(l));
+  const hasLinkedIn = /linkedin\.com/i.test(allText);
+  const hasGitHub = /github\.com/i.test(allText);
   const hasPersonalEmail = /gmail\.com|yahoo\.com|outlook\.com|hotmail\.com/i.test(emailRaw);
   const hasProfessionalEmail = hasEmail && !hasPersonalEmail;
 
@@ -208,11 +217,14 @@ function scoreBestPractices(resume: any): { score: number; max: number; why: str
 // Measures: section completeness, actionable role alignment.
 function scoreApplicationReadiness(resume: any, targetRole: string): { score: number; max: number; why: string; issues: string[] } {
   const parsed = resume?.parsedData || {};
+  const contact = parsed.contact || resume?.contact || {};
   const rawText = String(resume?.rawText || "");
   const searchable = normalize(rawText);
-  const hasName = Boolean(parsed.name && String(parsed.name).length > 1);
-  const hasCertifications = (parsed.certifications || []).length > 0;
-  const hasLinks = (parsed.links || []).length > 0;
+  const hasName = Boolean((parsed.name || resume?.name) && String(parsed.name || resume?.name).length > 1);
+  const hasCertifications = (parsed.certifications || resume?.certifications || []).length > 0;
+  const hasLinks = (parsed.links || resume?.links || []).length > 0 ||
+                   Boolean(parsed.github || resume?.github || contact.github || parsed.linkedin || resume?.linkedin || contact.linkedin || parsed.portfolio || resume?.portfolio || contact.portfolio) ||
+                   /github\.com|linkedin\.com|https?:\/\//i.test(rawText);
   const hasRoleKeyword = normalize(targetRole).split(/\s+/).some((token) => token.length > 3 && searchable.includes(token));
 
   // Points: name (2), links (2), certifications (2), role keyword in resume (2), recent projects/experience (2)

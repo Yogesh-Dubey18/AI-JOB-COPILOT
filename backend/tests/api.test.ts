@@ -9,6 +9,7 @@ import { recordUsageEvent } from "../src/services/usage.service.js";
 import { buildBeautifulResumePdfBuffer } from "../src/services/pdf-export.service.js";
 import { parseResumeText } from "../src/services/resume-parser.service.js";
 import { buildtailorResumePrompt } from "../src/ai/prompts/tailorResume.prompt.js";
+import { scoreResumeForRole } from "../src/services/ats-scoring.service.js";
 
 async function authAgent() {
   const agent = request.agent(app);
@@ -2295,5 +2296,26 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     const promptC = buildtailorResumePrompt({ resume: javaDevResume, job: reactJd });
     expect(promptC).toContain("Lead Frontend React Engineer");
     expect(promptC).toContain("RULE 5 - DYNAMIC SKILLS PLACEMENT");
+  });
+
+  it("recognizes dedicated github and linkedin fields in ATS Best Practices scoring even if links array is empty", async () => {
+    const dummyResume = {
+      rawText: "Yogesh Dubey | Full Stack Developer | yogesh@example.com | +91 9876543210",
+      parsedData: {
+        name: "Yogesh Dubey",
+        email: "yogesh@example.com",
+        phone: "+91 9876543210",
+        github: "github.com/Yogesh-Dubey18",
+        linkedin: "linkedin.com/in/yogesh-dubey-4a28a9382",
+        links: [],
+        skills: ["React", "Node.js", "MongoDB"],
+        projects: [{ name: "AI Job Copilot", bullets: ["Built full stack web application."] }]
+      }
+    };
+
+    const scoreResult = await scoreResumeForRole(dummyResume, "Full Stack Developer");
+    const issues = scoreResult.weaknesses || [];
+    expect(issues).not.toContain("No LinkedIn URL found. Add your LinkedIn profile link.");
+    expect(issues).not.toContain("No GitHub URL found. For tech roles, GitHub is expected.");
   });
 });
