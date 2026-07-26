@@ -2318,4 +2318,70 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     expect(issues).not.toContain("No LinkedIn URL found. Add your LinkedIn profile link.");
     expect(issues).not.toContain("No GitHub URL found. For tech roles, GitHub is expected.");
   });
+
+  it("evaluates Gold-Standard Recruiter Criteria for tech and non-tech resumes", async () => {
+    // 1. Tech Resume Test (Pro MAX structure)
+    const techResume = {
+      rawText: "Yogesh Dubey | Full Stack Developer | yogesh@example.com | +91 9876543210 | github.com/Yogesh-Dubey18 | linkedin.com/in/yogesh-dubey\nSummary: Passionate Full Stack Developer specializing in React, Node.js, and Cloud deployments.\nEngineered AI Job Copilot using React and Node.js with sub-50ms UI latency, handling 500+ requests. Independently built backend microservices.",
+      parsedData: {
+        name: "Yogesh Dubey",
+        title: "Full Stack Developer",
+        email: "yogesh@example.com",
+        phone: "+91 9876543210",
+        github: "github.com/Yogesh-Dubey18",
+        linkedin: "linkedin.com/in/yogesh-dubey",
+        summary: "Passionate Full Stack Developer specializing in React, Node.js, and Cloud deployments with production experience.",
+        skills: ["React", "Node.js", "MongoDB", "TypeScript", "Express", "REST API"],
+        projects: [
+          {
+            name: "AI Job Copilot",
+            bullets: ["Engineered REST APIs using Node.js, supporting 500+ concurrent requests with sub-50ms latency.", "Independently built and deployed CI/CD pipeline on Vercel."]
+          }
+        ],
+        experience: [
+          {
+            role: "Full Stack Engineer Intern",
+            company: "Tech Corp",
+            bullets: ["Developed scalable frontend features in React."]
+          }
+        ],
+        education: [
+          {
+            degree: "Bachelor of Computer Applications",
+            institution: "University"
+          }
+        ]
+      }
+    };
+
+    const techScore = await scoreResumeForRole(techResume, "Full Stack Developer");
+    expect(techScore.atsScore).toBeGreaterThanOrEqual(70);
+    expect(techScore.strengths.some((s: string) => s.toLowerCase().includes("action") || s.toLowerCase().includes("content") || s.toLowerCase().includes("quantified") || s.toLowerCase().includes("section") || s.toLowerCase().includes("keyword"))).toBe(true);
+
+    // 2. Non-Tech Resume Fixture (Senior Marketing Manager)
+    const nonTechResume = {
+      rawText: "Samantha Reed | Senior Marketing Manager | samantha@example.com | +1 555-0199 | linkedin.com/in/samantha-reed\nWorked on marketing campaigns and was responsible for social media management.",
+      parsedData: {
+        name: "Samantha Reed",
+        title: "Senior Marketing Manager",
+        email: "samantha@example.com",
+        phone: "+1 555-0199",
+        linkedin: "linkedin.com/in/samantha-reed",
+        skills: ["Marketing Strategy", "SEO", "Google Analytics", "Social Media"],
+        experience: [
+          {
+            role: "Marketing Specialist",
+            bullets: ["Worked on email marketing campaigns and was responsible for customer acquisition."]
+          }
+        ]
+      }
+    };
+
+    const nonTechScore = await scoreResumeForRole(nonTechResume, "Senior Marketing Manager");
+    // Verifies passive voice warning is triggered (Criterion 2)
+    const weaknesses = nonTechScore.weaknesses || [];
+    expect(weaknesses.some((w: string) => w.toLowerCase().includes("passive") || w.toLowerCase().includes("worked on"))).toBe(true);
+    // Verifies non-tech role keywords are recognized
+    expect(nonTechScore.categoryScores.optimization.score).toBeGreaterThan(0);
+  });
 });

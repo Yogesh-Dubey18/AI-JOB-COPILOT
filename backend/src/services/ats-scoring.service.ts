@@ -12,7 +12,11 @@ const roleKeywordBanks = {
   fullstack: ["React", "Node.js", "Express", "MongoDB", "TypeScript", "REST API", "Authentication", "Testing", "Deployment", "Git"],
   python: ["Python", "Django", "Flask", "REST API", "PostgreSQL", "Docker", "Git", "Testing", "Authentication", "Deployment"],
   devops: ["Docker", "Kubernetes", "CI/CD", "AWS", "Terraform", "Linux", "Bash", "Git", "Monitoring", "Deployment"],
-  data: ["Python", "SQL", "Pandas", "NumPy", "Machine Learning", "Data Analysis", "Visualization", "Statistics", "Jupyter", "Git"]
+  data: ["Python", "SQL", "Pandas", "NumPy", "Machine Learning", "Data Analysis", "Visualization", "Statistics", "Jupyter", "Git"],
+  marketing: ["Marketing Strategy", "SEO", "Content Strategy", "Campaign Management", "Google Analytics", "Social Media", "Conversion Rate", "ROI", "Email Marketing", "Brand Growth"],
+  sales: ["Sales Pipeline", "B2B Sales", "Lead Generation", "CRM", "Salesforce", "Revenue Growth", "Account Management", "Negotiation", "Quota Attainment", "Client Acquisition"],
+  product: ["Product Strategy", "Product Roadmap", "User Research", "Agile", "Scrum", "PRD", "KPIs", "A/B Testing", "Cross-Functional Leadership", "User Experience"],
+  operations: ["Process Optimization", "Operations Management", "Supply Chain", "Vendor Management", "Budgeting", "SLA Management", "Cross-Functional Leadership", "Efficiency"]
 } as const;
 
 export const technicalKeywordBank = Array.from(new Set<string>([
@@ -24,17 +28,41 @@ export const technicalKeywordBank = Array.from(new Set<string>([
 const actionVerbs = [
   "built", "created", "developed", "implemented", "designed", "integrated", "optimized",
   "deployed", "tested", "improved", "debugged", "launched", "architected", "led", "migrated",
-  "automated", "reduced", "increased", "delivered", "shipped", "refactored", "scaled", "configured"
+  "automated", "reduced", "increased", "delivered", "shipped", "refactored", "scaled", "configured",
+  "spearheaded", "managed", "drove", "negotiated", "closed", "crafted", "generated", "accelerated", "established"
+];
+
+// Passive voice patterns flagged by Gold-Standard Criterion 2
+const passiveVoicePatterns = [
+  /\bworked\s+on\b/i,
+  /\bresponsible\s+for\b/i,
+  /\bhelped\s+with\b/i,
+  /\bassisted\s+in\b/i,
+  /\bduties\s+included\b/i
+];
+
+// Leadership & ownership signal patterns (Criterion 6)
+const leadershipPatterns = [
+  /\bindependently\s+built\b/i,
+  /\bspearheaded\b/i,
+  /\bled\b/i,
+  /\bdrove\s+adoption\b/i,
+  /\barchitected\b/i,
+  /\bmanaged\s+team\b/i,
+  /\bfounded\b/i,
+  /\bowned\b/i
 ];
 
 // Quantification patterns: numbers used with measurable units in bullet points.
 const quantificationPatterns = [
   /\d+\s*%/i,                          // 30%
-  /\d+[kmb]\+?\s*(users|requests|api|jobs|downloads|records|rows|nodes)/i, // 10k users
+  /\$\d+[\d,]*\s*(k|m|b)?/i,           // $100k revenue
+  /\d+[kmb]\+?\s*(users|requests|api|jobs|downloads|records|rows|nodes|leads|sales)/i, // 10k users
   /reduced.*by.*\d+/i,                 // reduced by 40
   /increased.*by.*\d+/i,               // increased by 25%
   /improved.*\d+/i,                    // improved 3x
-  /\d+x\s*(faster|improvement|speed)/i // 3x faster
+  /\d+x\s*(faster|improvement|speed)/i, // 3x faster
+  /\b\d+\s+(team\s+members|projects|campaigns|clients|accounts)\b/i
 ];
 
 type RoleBankName = keyof typeof roleKeywordBanks;
@@ -51,6 +79,10 @@ function includesTerm(text: string, term: string) {
 
 function selectRoleBank(targetRole: string): RoleBankName {
   const role = normalize(targetRole);
+  if (role.includes("marketing") || role.includes("seo") || role.includes("brand")) return "marketing";
+  if (role.includes("sales") || role.includes("account") || role.includes("b2b")) return "sales";
+  if (role.includes("product") || role.includes("prd") || role.includes("roadmap")) return "product";
+  if (role.includes("ops") || role.includes("operation") || role.includes("supply")) return "operations";
   if (role.includes("mern")) return "mern";
   if (role.includes("node") || role.includes("backend")) return "node";
   if (role.includes("react")) return "react";
@@ -77,36 +109,46 @@ function unique(items: string[]) {
 }
 
 // ---------- Content Score (max 25) ----------
-// Measures: word count, active voice (action verbs), quantified bullets.
+// Measures: scannability, active voice, impact framing, quantification, leadership signals.
 function scoreContent(resume: any): { score: number; max: number; why: string; issues: string[] } {
   const rawText = String(resume?.rawText || "");
   const parsed = resume?.parsedData || {};
   const wordCount = rawText.split(/\s+/).filter(Boolean).length;
-  const bullets = [...(parsed.projects || []), ...(parsed.experience || [])].map((b) => String(b || "").toLowerCase());
+  const bullets = [...(parsed.projects || []), ...(parsed.experience || [])].map((b) => String(b?.bullets || b?.description || b || "").toLowerCase());
 
   const detectedActionVerbs = actionVerbs.filter((verb) => rawText.toLowerCase().includes(verb));
+  const detectedPassivePhrases = bullets.filter((b) => passiveVoicePatterns.some((p) => p.test(b)));
   const quantifiedBullets = bullets.filter((b) => quantificationPatterns.some((p) => p.test(b)));
+  const leadershipSignals = bullets.filter((b) => leadershipPatterns.some((p) => p.test(b)));
   const hasProfileSummary = String(parsed.summary || "").length >= 80;
 
-  // Points: word count (0-8), action verbs (0-7), quantified bullets (0-6), summary (0-4)
-  const wordScore = Math.min(8, Math.round(Math.min(wordCount, 600) / 75));
-  const verbScore = Math.min(7, detectedActionVerbs.length);
+  // Gold-Standard Criterion 1: Scannability (6-10 sec test)
+  const hasNameInHeader = Boolean((parsed.name || resume?.name) && String(parsed.name || resume?.name).length > 1);
+  const hasTitleInHeader = Boolean((parsed.title || resume?.title) && String(parsed.title || resume?.title).length > 2);
+  const isScannable = hasNameInHeader && hasTitleInHeader;
+
+  // Points breakdown: word count (0-6), action verbs (0-6), quantified bullets (0-6), scannability & leadership (0-4), summary (0-3)
+  const wordScore = Math.min(6, Math.round(Math.min(wordCount, 600) / 100));
+  const verbScore = Math.min(6, detectedActionVerbs.length);
   const quantScore = Math.min(6, quantifiedBullets.length * 2);
-  const summaryScore = hasProfileSummary ? 4 : 0;
-  const score = wordScore + verbScore + quantScore + summaryScore;
+  const leadershipScore = (isScannable ? 2 : 0) + (leadershipSignals.length > 0 ? 2 : 0);
+  const summaryScore = hasProfileSummary ? 3 : 0;
+  const score = Math.min(25, wordScore + verbScore + quantScore + leadershipScore + summaryScore);
 
   const issues: string[] = [];
+  if (!isScannable) issues.push("Scannability warning: Ensure candidate name and target role title are prominently visible in top header.");
   if (wordCount < 200) issues.push("Resume appears very short (under 200 words). Add project and experience detail.");
-  if (detectedActionVerbs.length < 3) issues.push("Add more action verbs (built, implemented, deployed, optimized, etc.).");
-  if (quantifiedBullets.length === 0) issues.push("No measurable impact found (e.g., 'reduced load time by 40%'). Add numbers where truthful.");
+  if (detectedActionVerbs.length < 3) issues.push("Add strong action verbs (built, implemented, managed, optimized, etc.).");
+  if (detectedPassivePhrases.length > 0) issues.push(`Found passive phrasing in bullets (e.g. 'worked on', 'responsible for'). Rewrite following formula: [Action Verb] + [What was built/managed] + [Scale] + [Outcome].`);
+  if (quantifiedBullets.length === 0) issues.push("No measurable impact found (e.g., 'reduced load time by 40%' or 'managed $100k budget'). Add truthful metrics where possible.");
   if (!hasProfileSummary) issues.push("Summary section is missing or too short (under 80 characters).");
 
-  const why = `Content score ${score}/25: ${wordCount} words detected, ${detectedActionVerbs.length} action verbs, ${quantifiedBullets.length} quantified bullet(s), summary ${hasProfileSummary ? "present" : "missing"}.`;
+  const why = `Content score ${score}/25: ${wordCount} words, ${detectedActionVerbs.length} action verbs, ${quantifiedBullets.length} quantified bullet(s), Scannability: ${isScannable ? "Pass" : "Warn"}.`;
   return { score, max: 25, why, issues };
 }
 
 // ---------- Format Score (max 20) ----------
-// Measures: section presence, estimated page fit, ATS-risky formatting detection.
+// Measures: section presence, seniority-based page fit, ATS-risky formatting detection.
 function scoreFormat(resume: any): { score: number; max: number; why: string; issues: string[] } {
   const rawText = String(resume?.rawText || "");
   const parsed = resume?.parsedData || {};
@@ -117,18 +159,21 @@ function scoreFormat(resume: any): { score: number; max: number; why: string; is
     : [];
   const searchable = normalize(rawText);
 
-  const hasContactSection = Boolean(parsed.email || parsed.phone);
+  const hasContactSection = Boolean(parsed.email || parsed.phone || resume?.email || resume?.phone);
   const hasSkillsSection = (detectedSections as string[]).some((s: string) => s.includes("skill")) || (parsed.skills?.length > 0);
   const hasExperienceSection = (detectedSections as string[]).some((s: string) => s.includes("experience") || s.includes("work")) || (parsed.experience?.length > 0);
   const hasProjectSection = (detectedSections as string[]).some((s: string) => s.includes("project")) || (parsed.projects?.length > 0);
   const hasEducationSection = (detectedSections as string[]).some((s: string) => s.includes("education")) || (parsed.education?.length > 0);
 
-  // Page fit: <600 words = good ATS scan zone. >900 = likely 2 pages.
-  const pageFit = wordCount <= 650;
-  // Check for table/column formatting risk keywords
+  // Gold-Standard Criterion 5: Seniority-Based Length Rule
+  const isSenior = /\b(senior|lead|manager|director|head|principal|vp)\b/i.test(String(parsed.title || resume?.title || ""));
+  const maxWordLimit = isSenior ? 1200 : 650;
+  const pageFit = wordCount <= maxWordLimit;
+
+  // Check for table/column formatting risk keywords (Criterion 4)
   const hasRiskyFormatting = searchable.includes("|") && searchable.includes("\t");
 
-  // Points: each required section (0-15) + page fit (0-3) + no risky formatting (0-2)
+  // Points: required sections (0-15) + page fit (0-3) + clean layout (0-2)
   const sectionScore = [hasContactSection, hasSkillsSection, hasExperienceSection, hasProjectSection, hasEducationSection]
     .filter(Boolean).length * 3;
   const pageFitScore = pageFit ? 3 : 1;
@@ -139,11 +184,11 @@ function scoreFormat(resume: any): { score: number; max: number; why: string; is
   if (!hasSkillsSection) issues.push("Skills section appears missing or not detected by parser.");
   if (!hasExperienceSection && !hasProjectSection) issues.push("No experience or projects section detected. Add structured sections.");
   if (!hasEducationSection) issues.push("Education section missing or not detected.");
-  if (!pageFit) issues.push("Resume may exceed one page (over 650 words). ATS works best with single-page resumes.");
-  if (hasRiskyFormatting) issues.push("Tables or tab characters detected — some ATS parsers misread table-based layouts.");
+  if (!pageFit) issues.push(`Resume word count (${wordCount} words) exceeds recommended ATS limit for ${isSenior ? "senior (1200 words / 2 pages)" : "0-7 yrs (650 words / 1 page)"}.`);
+  if (hasRiskyFormatting) issues.push("Tables or tab characters detected — multi-column layouts risk ATS parsing errors.");
 
   const sectionList = [hasContactSection && "Contact", hasSkillsSection && "Skills", hasExperienceSection && "Experience", hasProjectSection && "Projects", hasEducationSection && "Education"].filter(Boolean).join(", ");
-  const why = `Format score ${score}/20: Sections found — ${sectionList || "none detected"}. Page fit: ${pageFit ? "good" : "may exceed one page"}. ATS-risky formatting: ${hasRiskyFormatting ? "detected" : "none"}.`;
+  const why = `Format score ${score}/20: Sections found — ${sectionList || "none detected"}. Page fit: ${pageFit ? "good" : "exceeds seniority limit"}. Layout: ${hasRiskyFormatting ? "multi-column risk" : "clean"}.`;
   return { score, max: 20, why, issues };
 }
 
