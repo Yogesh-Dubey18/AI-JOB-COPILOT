@@ -310,8 +310,11 @@ function normalizeCertifications(value: unknown) {
   return certifications.length ? certifications : fallbackCertifications;
 }
 
-function normalizeResumeContent(resume: any, overrideUserName?: string): WorldClassResume {
-  const rawSkills = resume.skills || resume.categorizedSkills;
+function normalizeResumeContent(resumeInput: any, overrideUserName?: string): WorldClassResume {
+  const content = resumeInput?.content || {};
+  const parsedData = resumeInput?.parsedData || {};
+  const rawSkills = resumeInput?.skills || content?.skills || parsedData?.skills || resumeInput?.categorizedSkills || content?.categorizedSkills || parsedData?.categorizedSkills;
+
   let skillsObj: any = {};
   if (Array.isArray(rawSkills)) {
     const cats = categorizeSkills(rawSkills);
@@ -330,8 +333,14 @@ function normalizeResumeContent(resume: any, overrideUserName?: string): WorldCl
     };
   }
 
+  const projectsSource = (Array.isArray(resumeInput?.projects) && resumeInput.projects.length > 0)
+    ? resumeInput.projects
+    : ((Array.isArray(content?.projects) && content.projects.length > 0)
+      ? content.projects
+      : (Array.isArray(parsedData?.projects) ? parsedData.projects : []));
+
   // Normalize projects
-  let projectsList = toArray(resume.projects).map((proj: any) => {
+  let projectsList = toArray(projectsSource).map((proj: any) => {
     const bullets = toArray(proj.bullets || proj.bulletPoints);
     return {
       name: cleanProjectName(firstText(proj.name, proj.title)),
@@ -352,8 +361,14 @@ function normalizeResumeContent(resume: any, overrideUserName?: string): WorldCl
     }));
   }
 
+  const experienceSource = (Array.isArray(resumeInput?.experience) && resumeInput.experience.length > 0)
+    ? resumeInput.experience
+    : ((Array.isArray(content?.experience) && content.experience.length > 0)
+      ? content.experience
+      : (Array.isArray(parsedData?.experience) ? parsedData.experience : []));
+
   // Normalize experience
-  const experienceList = toArray(resume.experience).map((exp: any) => {
+  const experienceList = toArray(experienceSource).map((exp: any) => {
     const bullets = toArray(exp.bullets || exp.bulletPoints);
     return {
       title: cleanPdfString(firstText(exp.title, exp.role)),
@@ -363,8 +378,14 @@ function normalizeResumeContent(resume: any, overrideUserName?: string): WorldCl
     };
   }).filter(e => e.title || e.company);
 
+  const educationSource = (Array.isArray(resumeInput?.education) && resumeInput.education.length > 0)
+    ? resumeInput.education
+    : ((Array.isArray(content?.education) && content.education.length > 0)
+      ? content.education
+      : (Array.isArray(parsedData?.education) ? parsedData.education : []));
+
   // Normalize education
-  let educationList = toArray(resume.education).map((edu: any) => {
+  let educationList = toArray(educationSource).map((edu: any) => {
     return {
       degree: cleanPdfString(firstText(edu.degree, edu.course)),
       college: cleanPdfString(firstText(edu.college, edu.institution, edu.school)),
@@ -392,8 +413,14 @@ function normalizeResumeContent(resume: any, overrideUserName?: string): WorldCl
     }));
   }
 
+  const certsSource = (Array.isArray(resumeInput?.certifications) && resumeInput.certifications.length > 0)
+    ? resumeInput.certifications
+    : ((Array.isArray(content?.certifications) && content.certifications.length > 0)
+      ? content.certifications
+      : (Array.isArray(parsedData?.certifications) ? parsedData.certifications : []));
+
   // Certifications
-  let certificationsList = toArray(resume.certifications).map(cleanPdfString).filter(Boolean);
+  let certificationsList = toArray(certsSource).map(cleanPdfString).filter(Boolean);
   if (certificationsList.length === 0) {
     certificationsList = fallbackCertifications.map(cleanPdfString);
   }
@@ -406,23 +433,34 @@ function normalizeResumeContent(resume: any, overrideUserName?: string): WorldCl
     tools: toArray(skillsObj?.tools).map(cleanPdfString)
   };
 
+  const nameVal = firstText(resumeInput?.name, content?.name, parsedData?.name, resumeInput?.generatedResume?.name);
+  const titleVal = firstText(resumeInput?.title, content?.title, parsedData?.title, resumeInput?.headline);
+  const contactObj = resumeInput?.contact || content?.contact || parsedData?.contact || {};
+  const emailVal = firstText(contactObj?.email, resumeInput?.email, content?.email, parsedData?.email);
+  const phoneVal = firstText(contactObj?.phone, resumeInput?.phone, content?.phone, parsedData?.phone);
+  const githubVal = firstText(contactObj?.github, resumeInput?.github, content?.github, parsedData?.github, resumeInput?.githubUrl);
+  const linkedinVal = firstText(contactObj?.linkedin, resumeInput?.linkedin, content?.linkedin, parsedData?.linkedin, resumeInput?.linkedinUrl);
+  const locationVal = firstText(contactObj?.location, resumeInput?.location, content?.location, parsedData?.location);
+  const summaryVal = firstText(resumeInput?.summary, content?.summary, parsedData?.summary, fallbackSummary);
+  const userFullNameVal = firstText(overrideUserName, resumeInput?.userFullName, content?.userFullName, parsedData?.userFullName, resumeInput?.fullName);
+
   const candidateName = resolveCandidateRealName(
-    firstText(resume.name, resume.parsedData?.name, resume.generatedResume?.name),
-    overrideUserName || resume.userFullName || resume.fullName,
-    resume.contact?.email || resume.email
+    nameVal,
+    userFullNameVal,
+    emailVal
   );
 
   return {
     name: candidateName,
-    title: cleanPdfString(firstText(resume.title, resume.headline, "Full Stack Developer | MERN Stack")),
+    title: cleanPdfString(titleVal || "Full Stack Developer | MERN Stack"),
     contact: {
-      email: cleanPdfString(firstText(resume.contact?.email, resume.email)),
-      phone: cleanPdfString(firstText(resume.contact?.phone, resume.phone)),
-      github: cleanPdfString(firstText(resume.contact?.github, resume.github, resume.githubUrl)),
-      linkedin: cleanPdfString(firstText(resume.contact?.linkedin, resume.linkedin, resume.linkedinUrl)),
-      location: cleanPdfString(firstText(resume.contact?.location, resume.location))
+      email: cleanPdfString(emailVal),
+      phone: cleanPdfString(phoneVal),
+      github: cleanPdfString(githubVal),
+      linkedin: cleanPdfString(linkedinVal),
+      location: cleanPdfString(locationVal)
     },
-    summary: cleanPdfString(firstText(resume.summary, fallbackSummary)),
+    summary: cleanPdfString(summaryVal),
     skills: cleanedSkills,
     projects: projectsList,
     experience: experienceList,

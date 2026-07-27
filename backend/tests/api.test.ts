@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { PDFParse } from "pdf-parse";
 import { app } from "../src/app.js";
 import { resetMemoryStore } from "../src/utils/memoryStore.js";
-import { createRecord, updateRecord, findOneRecord } from "../src/utils/repository.js";
+import { createRecord, updateRecord, findOneRecord, findRecordById } from "../src/utils/repository.js";
 import { ensureSampleJobs } from "../src/services/job.service.js";
 import { recordUsageEvent } from "../src/services/usage.service.js";
 import { buildBeautifulResumePdfBuffer, resolveCandidateRealName } from "../src/services/pdf-export.service.js";
@@ -2541,5 +2541,74 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     expect(textResult.text).not.toContain("Candidate");
     expect(textResult.text).toContain("Stock Market Analysis App");
     expect(textResult.text).not.toContain("Stock Marcket");
+  });
+
+  it("persists name, title, and contact when generating world-class resume versions and exports to PDF with dual-path reading", async () => {
+    const agent = await authAgent();
+    const uploadRes = await agent
+      .post("/api/resumes/upload")
+      .attach("resume", Buffer.from("%PDF-1.4\nFull Stack Developer specializing in MERN stack. Yogesh Dubey."), "Yogesh_Dubey_Resume.pdf")
+      .expect(201);
+    const resumeId = uploadRes.body.data._id;
+
+    const genRes = await agent
+      .post("/api/resumes/generate-world-class")
+      .send({ resumeId, targetRole: "Senior Full Stack Engineer" })
+      .expect(201);
+
+    const versionId = genRes.body.data.resumeVersionId;
+    expect(versionId).toBeDefined();
+
+    const versionDoc = await findRecordById("resumeVersions", versionId);
+    expect(versionDoc).toBeDefined();
+    expect(versionDoc.content).toBeDefined();
+    expect(versionDoc.content.name).toBeTruthy();
+    expect(versionDoc.content.name).not.toBe("Candidate");
+    expect(versionDoc.content.title).toBeTruthy();
+    expect(versionDoc.content.contact).toBeDefined();
+
+    const pdfExportRes = await agent
+      .post("/api/pdf-export/resume")
+      .send({ id: versionId })
+      .expect(200);
+
+    expect(pdfExportRes.headers["content-type"]).toContain("application/pdf");
+    expect(pdfExportRes.body.length).toBeGreaterThan(100);
+  });
+
+  it("cleans project tech fields via cleanProjectTech whether from base Resume or generated ResumeVersion", async () => {
+    const rawBaseProject = {
+      name: "Zerodha | Stock Marcket Analysis App - (Kit Web / Website UI) - (JavaScript ,React.js)",
+      techStack: ["JavaScript", "React.js", "Node.js"]
+    };
+    const rawVersionProject = {
+      name: "Airbnb-style Website for Indian holiday rentals and homes",
+      tech: "React.js · Tailwind CSS · Express.js · MongoDB · JWT - ( stck: React.js)"
+    };
+
+    const pdfBase = await buildBeautifulResumePdfBuffer("user-123", {
+      name: "Yogesh Dubey",
+      projects: [rawBaseProject]
+    });
+
+    const pdfVersion = await buildBeautifulResumePdfBuffer("user-123", {
+      content: {
+        name: "Yogesh Dubey",
+        projects: [rawVersionProject]
+      }
+    });
+
+    const parserBase = new PDFParse({ data: new Uint8Array(pdfBase) });
+    const textBase = await parserBase.getText();
+    await parserBase.destroy().catch(() => {});
+
+    const parserVersion = new PDFParse({ data: new Uint8Array(pdfVersion) });
+    const textVersion = await parserVersion.getText();
+    await parserVersion.destroy().catch(() => {});
+
+    expect(textBase.text).toContain("Stock Market Analysis App");
+    expect(textBase.text).not.toContain("Stock Marcket");
+    expect(textVersion.text).toContain("Airbnb-style Website for Indian holiday rentals and homes");
+    expect(textVersion.text).not.toMatch(/\(\s*stck:\s*React\.js\)/);
   });
 });

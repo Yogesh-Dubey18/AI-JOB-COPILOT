@@ -44,6 +44,9 @@ function flattenWorldClassSkills(skills: any = {}) {
 
 function buildWorldClassVersionContent(generated: any) {
   return {
+    name: generated.name || "",
+    title: generated.title || "",
+    contact: generated.contact || {},
     summary: generated.summary || "",
     skills: flattenWorldClassSkills(generated.skills),
     projects: Array.isArray(generated.projects) ? generated.projects : [],
