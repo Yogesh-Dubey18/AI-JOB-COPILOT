@@ -1,4 +1,4 @@
-import { aiService } from "../ai/ai.service.js";
+import { aiService, preserveSourceProjectBullets } from "../ai/ai.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findOneRecord, findRecordById } from "../utils/repository.js";
 import { scoreResumeAgainstJobDescription, scoreResumeForRole } from "./ats-scoring.service.js";
@@ -400,6 +400,20 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
   
   // Categorize and fix the wrong buckets
   generatedResume.skills = normalizeSkillsObject(generatedResume.skills);
+
+  // Guarantee all distinct source project bullets are preserved across generated output
+  const sourceProjects = Array.isArray(resume.parsedData?.projects) ? resume.parsedData.projects : [];
+  if (Array.isArray(generatedResume.projects) && sourceProjects.length > 0) {
+    generatedResume.projects = generatedResume.projects.map((genProj: any) => {
+      const matchedSource = sourceProjects.find((sp: any) => sp.name && (sp.name.toLowerCase().includes(String(genProj.name || "").toLowerCase()) || String(genProj.name || "").toLowerCase().includes(sp.name.toLowerCase())));
+      if (matchedSource) {
+        const srcBullets = Array.isArray(matchedSource.bullets) ? matchedSource.bullets : [matchedSource.description || ""].filter(Boolean);
+        const currentBullets = Array.isArray(genProj.bullets) ? genProj.bullets : [];
+        genProj.bullets = preserveSourceProjectBullets(currentBullets, srcBullets, genProj.name || "");
+      }
+      return genProj;
+    });
+  }
 
   const content = buildWorldClassVersionContent(generatedResume);
   const changeSummary = computeChangeSummary(resume, content);

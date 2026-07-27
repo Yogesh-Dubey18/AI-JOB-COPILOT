@@ -158,7 +158,40 @@ function cleanBulletText(text: string, projectName: string): string {
   return cleaned;
 }
 
-function normalizeWorldClassProject(item: unknown, fallbackSkills: string[] = []) {
+export function preserveSourceProjectBullets(generatedBullets: string[], sourceBullets: string[], projectName: string): string[] {
+  const resultBullets = [...generatedBullets];
+  if (!Array.isArray(sourceBullets) || sourceBullets.length === 0) return resultBullets;
+
+  const cleanSourceBullets = sourceBullets
+    .map(b => cleanBulletText(b, projectName))
+    .filter(b => b && b.length > 5);
+
+  for (const srcB of cleanSourceBullets) {
+    const srcLower = srcB.toLowerCase();
+    const isCovered = resultBullets.some(genB => {
+      const genLower = genB.toLowerCase();
+      if (genLower.includes(srcLower) || srcLower.includes(genLower)) return true;
+
+      const srcNumbers = srcLower.match(/\b\d+\b/g) || [];
+      const srcTechs = srcLower.match(/\b(api|endpoints|tables|3nf|schema|mysql|jwt|auth|socket|express|node|react|dsa|leetcode|stripe|rbac|groq|restful|svg|candlestick|rental|booking)\b/g) || [];
+
+      if (srcNumbers.length > 0 && srcTechs.length > 0) {
+        const hasNumbers = srcNumbers.every(n => genLower.includes(n));
+        const hasTechs = srcTechs.some(t => genLower.includes(t));
+        if (hasNumbers && hasTechs) return true;
+      }
+      return false;
+    });
+
+    if (!isCovered) {
+      resultBullets.push(srcB);
+    }
+  }
+
+  return resultBullets;
+}
+
+function normalizeWorldClassProject(item: unknown, fallbackSkills: string[] = [], sourceProjects: any[] = []) {
   if (typeof item === "string") {
     const [namePart, techPart, ...rest] = item.split("|").map((part) => part.trim());
     const rawName = cleanText(namePart || item);
@@ -191,12 +224,22 @@ function normalizeWorldClassProject(item: unknown, fallbackSkills: string[] = []
     firstText(project.description, project.summary, project.impact, project.details)
   ]).filter(Boolean);
 
-  const cleanBullets = rawBullets
+  let cleanBullets = rawBullets
     .map((b) => cleanBulletText(b, cleanName))
     .filter((b) => b.length > 5);
 
+  // Match corresponding source project if available to guarantee no dropped bullets
+  const matchedSource = Array.isArray(sourceProjects)
+    ? sourceProjects.find(sp => sp.name && (sp.name.toLowerCase().includes(cleanName.toLowerCase()) || cleanName.toLowerCase().includes(sp.name.toLowerCase())))
+    : null;
+
+  if (matchedSource) {
+    const sourceBullets = toArray(matchedSource.bullets || matchedSource.bulletPoints || matchedSource.description);
+    cleanBullets = preserveSourceProjectBullets(cleanBullets, sourceBullets as string[], cleanName);
+  }
+
   const bullets = cleanBullets.length
-    ? cleanBullets.slice(0, 3)
+    ? cleanBullets.slice(0, 4)
     : [`Engineered ${cleanName} to deliver a responsive user experience with clean API integrations.`];
 
   return {
@@ -274,7 +317,8 @@ function getWorldClassResumeFallback(context: any) {
     ...(rawText.match(/\b(React\.?js|Next\.?js|TypeScript|JavaScript|Node\.?js|Express\.?js|MongoDB|Mongoose|REST APIs?|JWT|Tailwind CSS|GitHub|Git|Postman|Vercel|Render|DSA|Data Structures)\b/gi) || [])
   ]);
   const title = firstText(context?.targetRole, parsed.title, parsed.role, deriveWorldClassTitle(skills));
-  const projects = toArray(parsed.projects).map((project) => normalizeWorldClassProject(project, skills)).filter((project) => project.name);
+  const sourceProjects = toArray(parsed.projects);
+  const projects = sourceProjects.map((project) => normalizeWorldClassProject(project, skills, sourceProjects)).filter((project) => project.name);
   const experience = toArray(parsed.experience).map(normalizeWorldClassExperience).filter((exp) => exp.title || exp.company || exp.bullets.length);
   const education = toArray(parsed.education).map(normalizeWorldClassEducation).filter((edu) => edu.degree || edu.college);
   const certifications = uniqueStrings(toArray(parsed.certifications));

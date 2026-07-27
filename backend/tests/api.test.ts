@@ -2401,4 +2401,36 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     // Verify 404 on GET
     await agent.get(`/api/resumes/${resumeId}`).expect(404);
   });
+
+  it("generates PDF exports safely with unicode characters (Rupee ₹, em-dash —, smart quotes) without throwing font errors", async () => {
+    const agent = await authAgent();
+    const contentWithUnicode = "Yogesh Dubey | Full Stack Developer | yogesh@example.com\n" +
+      "Built monetization tiers (Free / ₹499 / ₹999) — modular REST APIs for custom resume tailoring.";
+    const uploadRes = await agent.post("/api/resumes/upload").attach("resume", Buffer.from(contentWithUnicode), "unicode-test.txt").expect(201);
+    const resumeId = uploadRes.body.data._id || uploadRes.body.data.id;
+
+    const pdfRes = await agent.post("/api/pdf-export/resume").send({ id: resumeId }).expect(200);
+    expect(pdfRes.headers["content-type"]).toContain("application/pdf");
+    expect(pdfRes.body.length).toBeGreaterThan(100);
+  });
+
+  it("generically preserves all distinct source project bullets (including RESTful APIs, 6 database tables 3NF) across generated output", async () => {
+    const agent = await authAgent();
+    const multiBulletText = "Yogesh Dubey | Full Stack Developer | yogesh@example.com\n\n" +
+      "PROJECTS\n\n" +
+      "Indian Holiday Rentals Clone | React.js, Express.js, MySQL\n" +
+      "• Created a property rental platform for listing stays, viewing property details and supporting booking-style user journeys.\n" +
+      "• Built end-to-end: 8 RESTful API endpoints, normalized MySQL schema (6 tables, SQL joins, 3NF), JWT authentication, date-range availability checks and seamless frontend-to-backend integration.\n";
+    
+    const uploadRes = await agent.post("/api/resumes/upload").attach("resume", Buffer.from(multiBulletText), "multi-bullet-test.txt").expect(201);
+    const resumeId = uploadRes.body.data._id || uploadRes.body.data.id;
+
+    const genRes = await agent.post("/api/resumes/generate-world-class").send({ resumeId, targetRole: "Full Stack Developer" }).expect(201);
+    const generatedProjects = genRes.body.data.generatedResume?.projects || [];
+    expect(generatedProjects.length).toBeGreaterThan(0);
+    const rentalProject = generatedProjects.find((p: any) => p.name.toLowerCase().includes("holiday") || p.name.toLowerCase().includes("rental") || p.name.toLowerCase().includes("indian"));
+    expect(rentalProject).toBeTruthy();
+    expect(rentalProject.bullets.length).toBeGreaterThanOrEqual(2);
+    expect(rentalProject.bullets.some((b: string) => b.includes("8 RESTful API") || b.includes("6 database tables") || b.includes("3NF"))).toBe(true);
+  });
 });

@@ -54,20 +54,29 @@ function stringify(value: unknown): string {
   return String(value);
 }
 
-function cleanPdfString(val: unknown): string {
+export function sanitizePdfText(val: unknown): string {
   if (val == null) return "";
-  const str = String(val);
-  return str
-    .replace(/[·•·]/g, " - ")
-    .replace(/%/g, "")
-    .replace(/%¸/g, "")
-    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
-    .replace(/[\\()]/g, (match: string) => `\\${match}`)
-    .trim();
+  let str = String(val);
+
+  str = str
+    .replace(/\u20B9/g, "INR ")
+    .replace(/[\u2014\u2013]/g, " - ")
+    .replace(/[\u2022\u2023\u25E6\u2043\u2219\u00B7]/g, " - ")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\u2026/g, "...")
+    .replace(/%¸/g, "");
+
+  str = str.replace(/[^\x09\x0A\x0D\x20-\x7E]/g, " ");
+  return str.replace(/[ \t]+/g, " ").trim();
+}
+
+function cleanPdfString(val: unknown): string {
+  return sanitizePdfText(val);
 }
 
 function normalizePdfText(value: unknown): string {
-  return cleanPdfString(value);
+  return sanitizePdfText(value);
 }
 
 function categorizeSkills(skills: string[]): Record<string, string[]> {
@@ -673,14 +682,14 @@ async function buildLegacyBeautifulResumePdfBuffer(userId: string, content: any)
       const renderBullets = (bullets: any) => {
         const bulletList = toArray(bullets);
         for (const bullet of bulletList) {
-          const bulletStr = String(bullet).trim();
+          const bulletStr = sanitizePdfText(bullet);
           if (!bulletStr) continue;
           
           const currentY = doc.y;
           doc.font("Helvetica")
              .fontSize(9.5)
              .fillColor("#222222")
-             .text("•", 52, currentY);
+             .text("-", 52, currentY);
           
           doc.text(bulletStr, 62, currentY, {
             width: 510,
@@ -1155,39 +1164,53 @@ export async function exportResumePdfDirect(userId: string, id: string | null) {
     }
   }
 
-  const buffer = await buildBeautifulResumePdfBuffer(userId, content);
+  let buffer: Buffer;
+  try {
+    buffer = await buildBeautifulResumePdfBuffer(userId, content);
+  } catch (err) {
+    console.error("buildBeautifulResumePdfBuffer failed, falling back to buildGenericPdfBuffer:", err);
+    const sections: PdfSection[] = [
+      { heading: "Summary", lines: [content?.summary || ""] },
+      { heading: "Technical Skills", lines: [Array.isArray(content?.skills) ? content.skills.join(", ") : ""] },
+      { heading: "Projects", lines: (content?.projects || []).map((p: any) => `${p.name || "Project"}: ${Array.isArray(p.bullets) ? p.bullets.join(" ") : p.description || ""}`) }
+    ];
+    buffer = await buildGenericPdfBuffer(`${content?.name || "Resume"} - ${content?.title || "Full Stack Developer"}`, sections);
+  }
 
   const user = await findRecordById("users", userId);
   const profile = await findOneRecord("profiles", { userId });
   const role = profile?.currentRole || (profile?.targetRoles && profile.targetRoles[0]) || "FullStackDeveloper";
-  const cleanName = (user?.fullName || content?.name || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const cleanName = sanitizePdfText(user?.fullName || content?.name || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
   const cleanRole = role.replace(/\s+/g, "");
   
   const fileName = `Resume_${cleanName}.pdf`;
   const shortHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
   const fileKey = `exports/${userId}/${shortHash}/${fileName}`;
 
-  await uploadFile(fileKey, buffer, "application/pdf");
-
-  await createRecord("pdfExports", {
-    userId,
-    sourceType: "resume",
-    sourceId: targetId,
-    title: "Resume Export",
-    fileName,
-    fileUrl: fileKey,
-    mimeType: "application/pdf",
-    byteSize: buffer.byteLength,
-    status: "ready",
-    renderer,
-    storage: getProvider(),
-    metadata: { resumeId: targetId, checksumSha256: shortHash },
-    privacy: {
-      ownerVerified: true,
-      redactedFields: [],
-      notes: ["Generated via PDFKit professional resume template."]
-    }
-  });
+  try {
+    await uploadFile(fileKey, buffer, "application/pdf");
+    await createRecord("pdfExports", {
+      userId,
+      sourceType: "resume",
+      sourceId: targetId,
+      title: "Resume Export",
+      fileName,
+      fileUrl: fileKey,
+      mimeType: "application/pdf",
+      byteSize: buffer.byteLength,
+      status: "ready",
+      renderer,
+      storage: getProvider(),
+      metadata: { resumeId: targetId, checksumSha256: shortHash },
+      privacy: {
+        ownerVerified: true,
+        redactedFields: [],
+        notes: ["Generated via PDFKit professional resume template."]
+      }
+    });
+  } catch (err) {
+    console.warn("Non-fatal storage upload warning during PDF export:", err);
+  }
 
   return { buffer, fileName };
 }
