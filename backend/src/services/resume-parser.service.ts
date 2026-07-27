@@ -3,6 +3,7 @@ import { PDFParse } from "pdf-parse";
 import fs from "fs";
 import path from "node:path";
 import { technicalKeywordBank } from "./ats-scoring.service.js";
+import { cleanProjectName, cleanProjectTech } from "./pdf-export.service.js";
 
 async function pdfParse(dataBuffer: Buffer): Promise<{ text: string }> {
   try {
@@ -359,6 +360,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     if (!s || typeof s !== "string") return "";
     return s
       .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}📌🛠💻🎯📚🧑💻❖✦➢➤▪▫%¸]/gu, "")
+      .replace(/\bMarcket\b/gi, "Market")
+      .replace(/\bWesite\b/gi, "Website")
       .replace(/\s{2,}/g, " ")
       .trim();
   };
@@ -382,7 +385,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     const hasEmail = emailPattern.test(cleanLine);
     const hasPhone = phonePattern.test(cleanLine) || cleanLine.match(/\d{4,}/) !== null;
     const hasUrl = nameUrlPattern.test(cleanLine);
-    const isSectionHeader = /^(summary|objective|skills|projects|experience|employment|education|certifications|achievements)\b/i.test(cleanLine);
+    const isSectionHeader = /^(?:professional\s+|career\s+|technical\s+|academic\s+|work\s+)?(summary|objective|profile|about|skills|projects|experience|employment|education|certifications|achievements|positions)\b/i.test(cleanLine);
 
     if (!hasEmail && !hasPhone && !hasUrl && !isSectionHeader && cleanLine.length < 50) {
       let parsedName = cleanLine;
@@ -399,7 +402,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   // Title extraction: check line after name
   if (nameLineIndex !== -1 && nameLineIndex + 1 < nonDbLines.length) {
     const potentialTitle = sanitizeStr(nonDbLines[nameLineIndex + 1]);
-    const isSectionHeader = /^(summary|objective|skills|projects|experience|employment|education|certifications|achievements)\b/i.test(potentialTitle);
+    const isSectionHeader = /^(?:professional\s+|career\s+|technical\s+|academic\s+|work\s+)?(summary|objective|profile|about|skills|projects|experience|employment|education|certifications|achievements|positions)\b/i.test(potentialTitle);
     if (!emailPattern.test(potentialTitle) && !phonePattern.test(potentialTitle) && !nameUrlPattern.test(potentialTitle) && !isSectionHeader && potentialTitle.length < 60) {
       title = potentialTitle.replace(/[|•]/g, "|").trim();
     }
@@ -562,6 +565,20 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   if (summaryText.includes("@") || summaryText.match(/\d{10}/)) {
     summaryText = "";
   }
+  if (!summaryText) {
+    const topLines = lines.map(l => sanitizeStr(l)).filter(Boolean);
+    const firstTechSectionIndex = topLines.findIndex(l => /^(?:technical\s+|core\s+)?skills|projects|experience|education/i.test(l));
+    const limit = firstTechSectionIndex > 0 ? firstTechSectionIndex : Math.min(topLines.length, 12);
+    const proseCandidates = topLines.slice(0, limit).filter(l => {
+      if (!l || isPaginationArtifact(l) || isAtsKeywordFooter(l)) return false;
+      if (emailPattern.test(l) || phonePattern.test(l) || nameUrlPattern.test(l)) return false;
+      if (l === name || l === title || /^(summary|objective|profile|about)\b/i.test(l)) return false;
+      return l.length > 15 && !l.includes("·") && !techHeaderRegex.test(l);
+    });
+    if (proseCandidates.length > 0) {
+      summaryText = proseCandidates.join(" ").trim();
+    }
+  }
 
   // 5. Skills Categorization & Technical Breakdown Parsing
   const allSkillsText = sections.skills.join(" ") + " " + text;
@@ -683,10 +700,23 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   }
 
   const finalProjects = projects.map(p => {
+    let pName = cleanProjectName(p.name);
+    let pTech = cleanProjectTech(p.tech || "");
+    if (!pTech && p.name && p.name.includes("(")) {
+      const parenMatch = p.name.match(/^([^(]+)\(([^()]+)\)$/);
+      if (parenMatch) {
+        pName = cleanProjectName(parenMatch[1]);
+        pTech = cleanProjectTech(parenMatch[2]);
+      }
+    }
     if (!p.description && p.bullets.length > 0) {
       p.description = p.bullets[0];
     }
-    return p;
+    return {
+      ...p,
+      name: pName,
+      tech: pTech
+    };
   });
 
   // 7. Experience Processing
@@ -871,6 +901,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     if (isAtsKeywordFooter(clean)) return false;
     if (projectNamesLower.has(clean.toLowerCase())) return false;
     if (/^(frontend|backend|database|tools|cloud|ui|ai|cs|styling|devops):/i.test(clean)) return false;
+    if (/^\/?\s*(hobbies|interests|languages|personal\s+details|profile)\b/i.test(clean)) return false;
+    if (clean.includes("/ HOBBIES") || clean.includes("/ HOBBY")) return false;
 
     // Filter out summary text substrings/tails (Bug D)
     const cleanLower = clean.toLowerCase();

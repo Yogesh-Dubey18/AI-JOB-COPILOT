@@ -43,6 +43,13 @@ function flattenWorldClassSkills(skills: any = {}) {
 }
 
 function buildWorldClassVersionContent(generated: any) {
+  const certs = Array.isArray(generated.certifications) ? generated.certifications : [];
+  const achs = Array.isArray(generated.achievements) ? generated.achievements : [];
+  const mergedCertAchs = Array.from(new Set(
+    [...certs, ...achs]
+      .map((item: any) => typeof item === "string" ? item.trim() : (item?.full || item?.name || String(item || "")))
+      .filter(Boolean)
+  ));
   return {
     name: generated.name || "",
     title: generated.title || "",
@@ -52,7 +59,8 @@ function buildWorldClassVersionContent(generated: any) {
     projects: Array.isArray(generated.projects) ? generated.projects : [],
     experience: Array.isArray(generated.experience) ? generated.experience : [],
     education: Array.isArray(generated.education) ? generated.education : [],
-    certifications: Array.isArray(generated.certifications) ? generated.certifications : []
+    certifications: mergedCertAchs,
+    achievements: mergedCertAchs
   };
 }
 

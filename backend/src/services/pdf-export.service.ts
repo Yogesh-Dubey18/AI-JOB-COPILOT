@@ -98,24 +98,24 @@ export function resolveCandidateRealName(sourceName: string | undefined, userFul
   return "Candidate";
 }
 
-function cleanProjectName(rawName: unknown): string {
+export function cleanProjectName(rawName: unknown): string {
   if (!rawName) return "Project";
   const strVal = typeof rawName === "string" ? rawName : stringify(rawName);
   let clean = cleanPdfString(strVal);
   if (clean.includes(" - (") || clean.includes(" | (")) {
     clean = clean.split(/\s*[-|]\s*\(/)[0].trim();
   }
-  return clean.replace(/^project:\s*/i, "").trim() || "Project";
+  return clean.replace(/^project:\s*/i, "").replace(/\bMarcket\b/gi, "Market").trim() || "Project";
 }
 
-function cleanProjectTech(rawTech: unknown): string {
+export function cleanProjectTech(rawTech: unknown): string {
   if (!rawTech) return "";
   const strVal = typeof rawTech === "string" ? rawTech : stringify(rawTech);
   const cleaned = cleanPdfString(strVal);
   if (!cleaned) return "";
   
   if (cleaned.length < 80 && !cleaned.includes("(") && !cleaned.includes(" - (")) {
-    return cleaned.replace(/^tech\s*stack:\s*/i, "").replace(/^\|\s*/, "").trim();
+    return cleaned.replace(/^tech\s*stack:\s*/i, "").replace(/^\|\s*/, "").replace(/\s+-\s+/g, " · ").trim();
   }
 
   const matches = cleaned.match(/\b(React\.js|React|Next\.js|TypeScript|JavaScript|Node\.js|Express\.js|Express|Python|Java|Go|Golang|Ruby on Rails|Ruby|Rails|PostgreSQL|MySQL|Redis|MongoDB|Kafka|AWS|Kubernetes|Docker|NGINX|GraphQL|REST APIs|HTML5|CSS3|Tailwind CSS|Socket\.io|Chart\.js)\b/gi) || [];
@@ -132,7 +132,7 @@ function cleanProjectTech(rawTech: unknown): string {
       if (lower === "rails" || lower === "ruby") canonical = "Ruby on Rails";
       canonicalSet.add(canonical);
     }
-    return Array.from(canonicalSet).join(", ");
+    return Array.from(canonicalSet).join(" · ");
   }
 
   return "";
@@ -413,14 +413,16 @@ function normalizeResumeContent(resumeInput: any, overrideUserName?: string): Wo
     }));
   }
 
-  const certsSource = (Array.isArray(resumeInput?.certifications) && resumeInput.certifications.length > 0)
-    ? resumeInput.certifications
-    : ((Array.isArray(content?.certifications) && content.certifications.length > 0)
-      ? content.certifications
-      : (Array.isArray(parsedData?.certifications) ? parsedData.certifications : []));
+  const certsAndAchsRaw = [
+    ...(Array.isArray(resumeInput?.certifications) ? resumeInput.certifications : []),
+    ...(Array.isArray(content?.certifications) ? content.certifications : []),
+    ...(Array.isArray(parsedData?.certifications) ? parsedData.certifications : []),
+    ...(Array.isArray(resumeInput?.achievements) ? resumeInput.achievements : []),
+    ...(Array.isArray(content?.achievements) ? content.achievements : []),
+    ...(Array.isArray(parsedData?.achievements) ? parsedData.achievements : [])
+  ];
 
-  // Certifications
-  let certificationsList = toArray(certsSource).map(cleanPdfString).filter(Boolean);
+  let certificationsList = Array.from(new Set(certsAndAchsRaw.map(cleanPdfString).filter(Boolean)));
   if (certificationsList.length === 0) {
     certificationsList = fallbackCertifications.map(cleanPdfString);
   }
