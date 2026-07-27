@@ -229,7 +229,7 @@ function isPaginationArtifact(line: string): boolean {
 
 const strongActionVerbs = /^(built|engineered|architected|developed|designed|implemented|delivered|shipped|created|deployed|integrated|managed|spearheaded|automated|handled|scaled|crafted|executed|practiced|solved|won|completed|achieved|earned|authored|published|certified)\b/i;
 const continuationConjunctions = /^(and|or|layer|the|with|in|for|of|to|at|by|from|which|that)\b/i;
-const techHeaderRegex = /^(tech\s*stack|technologies|tools|built\s*with|stack|tech|environment):\s*/i;
+const techHeaderRegex = /^(?:tech(?:nologies|nology)?\s*stack|tech|stack|built\s+with|technologies|tools|languages|frontend|backend|databases?)\s*[:\-\s|•]*/i;
 const bulletMarkerRegex = /^(?:[-\uF0A7\uF0B7\u2022\u2023\u2043\u25B6\u25BA\u25A0\u25AA\u25CF\u25CB\u25E6\u25CA\uF000-\uFFFF•*–—]|\d+[\.\)])\s*/;
 
 function isAtsKeywordFooter(line: string): boolean {
@@ -293,8 +293,9 @@ function preprocessProjectLines(rawLines: string[]): string[] {
       const isNextBullet = bulletMarkerRegex.test(nextLine);
       const isNextTechLine = techHeaderRegex.test(nextLine) || nextLine.includes("·") || isImplicitTechLine(nextLine);
       const isNextTitle = isNewProjectTitle(nextLine, cleanLines[i + 2], false).isTitle;
+      const isNextActionVerb = strongActionVerbs.test(nextLine.replace(bulletMarkerRegex, "").trim());
 
-      if (endsWithOpenOrOperator && !isNextBullet && !isNextTechLine && !isNextTitle) {
+      if (endsWithOpenOrOperator && !isNextBullet && !isNextTechLine && !isNextTitle && !isNextActionVerb) {
         current = current + " " + nextLine;
         i++;
       } else {
@@ -307,7 +308,7 @@ function preprocessProjectLines(rawLines: string[]): string[] {
 }
 
 function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLine: boolean): { isTitle: boolean; name: string; tech: string } {
-  const clean = line.trim().replace(bulletMarkerRegex, "");
+  const clean = line.trim().replace(bulletMarkerRegex, "").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2000}-\u{2BFF}📌🛠💻🎯📚🧑💻❖✦➢➤▪▫%¸]/gu, "").trim();
 
   if (clean.includes("·")) return { isTitle: false, name: "", tech: "" };
   if (bulletMarkerRegex.test(line)) return { isTitle: false, name: "", tech: "" };
@@ -315,6 +316,16 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
   if (techHeaderRegex.test(clean)) return { isTitle: false, name: "", tech: "" };
 
   if (strongActionVerbs.test(clean)) return { isTitle: false, name: "", tech: "" };
+
+  // Check parenthesized project title format like "Zerodha Stock Market Analysis App (PostgreSQL, Redis, Kafka, AWS, Kubernetes, Docker, NGINX)"
+  const parenMatch = clean.match(/^([^(]+)\(([^()]+)\)$/);
+  if (parenMatch) {
+    const pName = parenMatch[1].trim();
+    const pTech = parenMatch[2].trim();
+    if (pName.length >= 3 && pName.length <= 65 && !strongActionVerbs.test(pName)) {
+      return { isTitle: true, name: pName, tech: pTech };
+    }
+  }
 
   const wordCount = clean.split(/\s+/).filter(Boolean).length;
   if (wordCount > 14 || clean.length > 85) return { isTitle: false, name: "", tech: "" };
@@ -332,11 +343,11 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
     }
   }
 
-  const cleanNextLine = nextLine ? nextLine.replace(bulletMarkerRegex, "").trim() : "";
+  const cleanNextLine = nextLine ? nextLine.replace(bulletMarkerRegex, "").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2000}-\u{2BFF}📌🛠💻🎯📚🧑💻❖✦➢➤▪▫%¸]/gu, "").trim() : "";
   const isNextTechLine = nextLine ? (nextLine.includes("·") || techHeaderRegex.test(nextLine) || isImplicitTechLine(nextLine)) : false;
   const isNextBulletVerb = cleanNextLine ? strongActionVerbs.test(cleanNextLine) : false;
 
-  if (isNextTechLine || isNextBulletVerb || isFirstLine) {
+  if (isNextTechLine || isNextBulletVerb || isFirstLine || (wordCount >= 2 && wordCount <= 10 && !/[.:!]$/.test(clean))) {
     return { isTitle: true, name: namePart, tech: techPart };
   }
 
@@ -344,6 +355,14 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
 }
 
 export function parseResumeText(text: string, userFullName?: string, userProfile?: { email?: string; phone?: string }) {
+  const sanitizeStr = (s: any): string => {
+    if (!s || typeof s !== "string") return "";
+    return s
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}📌🛠💻🎯📚🧑💻❖✦➢➤▪▫%¸]/gu, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
   const lines = text.split(/\r?\n/).map(l => l.trim());
   const nonDbLines = lines.filter(Boolean);
 
@@ -357,7 +376,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   let nameLineIndex = -1;
 
   for (let i = 0; i < nonDbLines.length; i++) {
-    const cleanLine = nonDbLines[i].trim();
+    const cleanLine = sanitizeStr(nonDbLines[i]);
     if (!cleanLine || isPaginationArtifact(cleanLine) || isAtsKeywordFooter(cleanLine)) continue;
 
     const hasEmail = emailPattern.test(cleanLine);
@@ -379,7 +398,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
 
   // Title extraction: check line after name
   if (nameLineIndex !== -1 && nameLineIndex + 1 < nonDbLines.length) {
-    const potentialTitle = nonDbLines[nameLineIndex + 1].trim();
+    const potentialTitle = sanitizeStr(nonDbLines[nameLineIndex + 1]);
     const isSectionHeader = /^(summary|objective|skills|projects|experience|employment|education|certifications|achievements)\b/i.test(potentialTitle);
     if (!emailPattern.test(potentialTitle) && !phonePattern.test(potentialTitle) && !nameUrlPattern.test(potentialTitle) && !isSectionHeader && potentialTitle.length < 60) {
       title = potentialTitle.replace(/[|•]/g, "|").trim();
@@ -399,8 +418,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   // 2. Contact Info
   const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w{2,}/i)?.[0] || "";
   const phoneMatch = text.match(/(\+91[\s-]?)?[6-9]\d{9}/)?.[0] || text.match(/(?:\+?\d[\s-]?){10,14}/)?.[0] || "";
-  const githubMatch = text.match(/github\.com\/[\w-]+/i)?.[0] || "";
-  const linkedinMatch = text.match(/linkedin\.com\/in\/[\w-]+/i)?.[0] || "";
+  const githubMatch = text.match(/github\.com\/[a-zA-Z0-9_-]+/i)?.[0] || "";
+  const linkedinMatch = text.match(/linkedin\.com\/in\/[a-zA-Z0-9_-]+/i)?.[0] || "";
   
   const portfolioMatch = text.match(/https?:\/\/[a-zA-Z0-9.-]+\.(?:vercel\.app|netlify\.app|github\.io)/i)?.[0] || 
                          text.match(/https?:\/\/(?:www\.)?[a-zA-Z0-9-]+\.(?:me|dev|io|com)(?!\/(?:github|linkedin))/i)?.[0] || "";
@@ -412,10 +431,9 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
 
   let location = "";
   for (const line of nonDbLines) {
-    const lineNoPipes = line.split(/[|•]/)[0].trim();
-    const locMatch = lineNoPipes.match(/\b([A-Z][a-zA-Z\s]+),\s*(UP|Uttar\s+Pradesh|Delhi|New\s+Delhi|Haryana|Karnataka|Maharashtra|India|Bengaluru|Bangalore|Noida|Gurugram|Mumbai|Pune|Hyderabad|US|USA)\b/i);
+    const locMatch = line.match(/\b([A-Z][a-zA-B\s]+,\s*(?:India|USA|UK|Karnataka|Maharashtra|Telangana|Delhi|UP|Uttar\s+Pradesh))\b/i);
     if (locMatch) {
-      location = locMatch[0].trim();
+      location = locMatch[1].trim();
       break;
     }
   }
@@ -431,7 +449,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     }
   }
 
-  // 3. Section Grouping with Artifact & Footer Filtering
+  // 3. Section Grouping with Emoji & Artifact Filtering
   type SectionName = "summary" | "skills" | "projects" | "experience" | "education" | "certifications" | "achievements" | "softSkills" | "languages" | "education_certifications" | "none";
   let currentSection: SectionName = "none";
   const sections: Record<SectionName, string[]> = {
@@ -465,6 +483,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     { name: "certifications", regex: /^certificates?\b/i },
     { name: "achievements", regex: /^achievements?\b/i },
     { name: "achievements", regex: /^key\s+achievements?\b/i },
+    { name: "achievements", regex: /^(?:positions?\s+of\s+)?responsibility\b/i },
+    { name: "achievements", regex: /^(?:responsibilities|extracurricular)\b/i },
     { name: "softSkills", regex: /^(?:key\s+|core\s+)?strengths\b/i },
     { name: "softSkills", regex: /^(?:key\s+|core\s+)?soft\s+skills?\b/i },
     { name: "softSkills", regex: /^personal\s+traits?\b/i },
@@ -474,19 +494,22 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   const capturedAtsFooters: string[] = [];
 
   for (const line of lines) {
-    const cleanLine = line.trim();
-    if (!cleanLine) continue;
+    const rawLine = line.trim();
+    if (!rawLine) continue;
 
-    if (isPaginationArtifact(cleanLine)) continue;
+    if (isPaginationArtifact(rawLine)) continue;
+
+    const sanitizedLine = sanitizeStr(rawLine);
+    if (!sanitizedLine) continue;
 
     let matchedSection: SectionName | null = null;
-    let remainingText = cleanLine;
+    let remainingText = sanitizedLine;
 
     for (const pattern of headerPatterns) {
-      const match = cleanLine.match(pattern.regex);
+      const match = sanitizedLine.match(pattern.regex);
       if (match) {
         matchedSection = pattern.name;
-        remainingText = cleanLine.substring(match[0].length).trim();
+        remainingText = sanitizedLine.substring(match[0].length).trim();
         remainingText = remainingText.replace(/^[:\-\s•|·]+/, "").trim();
         break;
       }
@@ -508,22 +531,22 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       continue;
     }
 
-    if (currentSection !== "summary" && isAtsKeywordFooter(cleanLine)) {
-      capturedAtsFooters.push(cleanLine);
+    if (currentSection !== "summary" && isAtsKeywordFooter(sanitizedLine)) {
+      capturedAtsFooters.push(sanitizedLine);
       continue;
     }
 
     if (currentSection !== "none") {
       if (currentSection === "education_certifications") {
-        if (/certified|certification|certificate|oracle|aws|udemy|coursera|nptel|\((?:19|20)\d{2}\)/i.test(cleanLine)) {
-          sections.certifications.push(cleanLine);
+        if (/certified|certification|certificate|oracle|aws|udemy|coursera|nptel|\((?:19|20)\d{2}\)/i.test(sanitizedLine)) {
+          sections.certifications.push(sanitizedLine);
         } else {
-          sections.education.push(cleanLine);
+          sections.education.push(sanitizedLine);
         }
-      } else if (currentSection === "languages" && (/^[a-z0-9\/\s\-&]+:\s*/i.test(cleanLine) || /programming\s+languages/i.test(cleanLine))) {
-        sections.skills.push(cleanLine);
+      } else if (currentSection === "languages" && (/^[a-z0-9\/\s\-&]+:\s*/i.test(sanitizedLine) || /programming\s+languages/i.test(sanitizedLine))) {
+        sections.skills.push(sanitizedLine);
       } else {
-        sections[currentSection].push(cleanLine);
+        sections[currentSection].push(sanitizedLine);
       }
     }
   }

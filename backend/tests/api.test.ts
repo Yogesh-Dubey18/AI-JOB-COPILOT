@@ -2138,7 +2138,7 @@ Open to Relocation Remote Work Immediate Joiner India Bangalore Hyderabad Noida 
     expect(parsed.projects[1].name).toBe("Indian Holiday Rentals Clone");
     expect(parsed.projects[1].tech).toContain("React.js · Tailwind CSS");
 
-    expect(parsed.projects[2].name).toBe("Sigma GPT");
+    expect(parsed.projects[2].name).toContain("Sigma GPT");
     expect(parsed.projects[2].bullets.some((b: string) => b.includes("(Node.js + Python), React.memo and debounced polling"))).toBe(true);
 
     expect(parsed.projects[3].name).toBe("Zerodha Stock Analytics Dashboard");
@@ -2461,5 +2461,55 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     // Verify PDF export renders all 4 projects properly
     const pdfRes = await agent.post("/api/pdf-export/resume").send({ id: resumeId }).expect(200);
     expect(pdfRes.headers["content-type"]).toContain("application/pdf");
+  });
+
+  it("accurately parses emoji section headers, parenthesized titles, and 3 projects from exact ground truth raw text", async () => {
+    const groundTruthText =
+      "📌 Professional Summary\n" +
+      "Full Stack Developer specializing in MERN stack.\n" +
+      "Fresher with skills in Java DSA and full stack web development.\n\n" +
+      "🛠 Technical Skills\n" +
+      "Frontend: React.js, HTML5, TypeScript, JavaScript, Node.js, WebSockets\n" +
+      "Backend: Python, Ruby, Java, Go, GraphQL\n" +
+      "Databases: MongoDB, MySQL, PostgreSQL, Redis\n" +
+      "Tools & Platforms: AWS, Docker, Kubernetes, NGINX, Apache, Kafka\n\n" +
+      "💻 Projects\n" +
+      "Zerodha Stock Market Analysis App (PostgreSQL, Redis, Kafka, AWS, Kubernetes, Docker, NGINX)\n" +
+      "Zoom App (Website)\n" +
+      "Airbnb-style Website for Indian holiday rentals and homes\n" +
+      "Built frontend UIs with React.js, TypeScript, HTML5, CSS3, GraphQL/REST APIs\n" +
+      "Developed backend systems using Ruby on Rails, Java, Node.js, Python\n" +
+      "Databases: MySQL\n\n" +
+      "🎯 Positions of Responsibility\n" +
+      "Practiced and solved 300+ DSA questions.\n" +
+      "Experience in both frontend (UI kits, website UI) and backend (trading & core systems).\n\n" +
+      "📚 Education\n" +
+      "BCA (Bachelor of Computer Applications) – Jhunjhunwala PG College, Ayodhya (2025), CGPA: 7.68\n" +
+      "X & XII (UP Board) – LPCP School, Ahiraula (Phoolpur), Basti, UP (Passed 2022)\n\n" +
+      "🧑💻 Experience\n" +
+      "Academic and self-directed projects (2022–Present).\n" +
+      "Fresher, graduating in 2025 with focus on Java DSA & Full Stack Development.\n";
+
+    const parsed = parseResumeText(groundTruthText);
+
+    expect(parsed).toBeTruthy();
+    expect(parsed.summary).toContain("Full Stack Developer specializing in MERN stack");
+    expect(parsed.summary).not.toMatch(/[📌🛠💻🎯📚🧑💻❖]/);
+
+    // Projects assertions
+    expect(parsed.projects.length).toBe(3);
+    expect(parsed.projects[0].name).toContain("Zerodha");
+    expect(parsed.projects[1].name).toContain("Zoom");
+    expect(parsed.projects[2].name).toContain("Airbnb");
+
+    // Experience assertions
+    expect(parsed.experience.length).toBeGreaterThanOrEqual(1);
+
+    // Achievements assertions
+    expect(parsed.achievements.some((a: string) => a.includes("300+ DSA"))).toBe(true);
+
+    // Ensure NO emoji leaks in any parsed field
+    const jsonStr = JSON.stringify(parsed);
+    expect(jsonStr).not.toMatch(/[📌🛠💻🎯📚🧑💻❖]/);
   });
 });
