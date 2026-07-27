@@ -235,7 +235,7 @@ const bulletMarkerRegex = /^(?:[-\uF0A7\uF0B7\u2022\u2023\u2043\u25B6\u25BA\u25A
 function isAtsKeywordFooter(line: string): boolean {
   const clean = line.trim();
   if (clean.length < 35) return false;
-  if (clean.includes("·")) return false;
+  if (clean.includes("·") || clean.includes("|") || clean.includes(" — ") || clean.includes(" - ")) return false;
   if (techHeaderRegex.test(clean)) return false;
   if (bulletMarkerRegex.test(clean)) return false;
 

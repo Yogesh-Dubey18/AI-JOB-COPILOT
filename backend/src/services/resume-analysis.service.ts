@@ -401,19 +401,35 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
   // Categorize and fix the wrong buckets
   generatedResume.skills = normalizeSkillsObject(generatedResume.skills);
 
-  // Guarantee all distinct source project bullets are preserved across generated output
+  // Reconcile and guarantee all source projects (including flagship projects) are present
   const sourceProjects = Array.isArray(resume.parsedData?.projects) ? resume.parsedData.projects : [];
-  if (Array.isArray(generatedResume.projects) && sourceProjects.length > 0) {
-    generatedResume.projects = generatedResume.projects.map((genProj: any) => {
-      const matchedSource = sourceProjects.find((sp: any) => sp.name && (sp.name.toLowerCase().includes(String(genProj.name || "").toLowerCase()) || String(genProj.name || "").toLowerCase().includes(sp.name.toLowerCase())));
-      if (matchedSource) {
-        const srcBullets = Array.isArray(matchedSource.bullets) ? matchedSource.bullets : [matchedSource.description || ""].filter(Boolean);
-        const currentBullets = Array.isArray(genProj.bullets) ? genProj.bullets : [];
-        genProj.bullets = preserveSourceProjectBullets(currentBullets, srcBullets, genProj.name || "");
-      }
-      return genProj;
-    });
+  const currentGenProjects: any[] = Array.isArray(generatedResume.projects) ? generatedResume.projects : [];
+
+  for (const srcP of sourceProjects) {
+    if (!srcP || !srcP.name) continue;
+    const srcName = String(srcP.name).trim();
+    const exists = currentGenProjects.some((gp: any) => gp.name && (gp.name.toLowerCase().includes(srcName.toLowerCase()) || srcName.toLowerCase().includes(String(gp.name).toLowerCase())));
+    if (!exists) {
+      const srcBullets = Array.isArray(srcP.bullets) && srcP.bullets.length > 0 ? srcP.bullets : [srcP.description || ""].filter(Boolean);
+      currentGenProjects.unshift({
+        name: srcName,
+        tech: srcP.tech || srcP.techStack || "",
+        bullets: srcBullets.length > 0 ? srcBullets : [`Built and deployed ${srcName} with full-stack implementation.`],
+        live: srcP.live || "",
+        github: srcP.github || ""
+      });
+    }
   }
+
+  generatedResume.projects = currentGenProjects.map((genProj: any) => {
+    const matchedSource = sourceProjects.find((sp: any) => sp.name && (sp.name.toLowerCase().includes(String(genProj.name || "").toLowerCase()) || String(genProj.name || "").toLowerCase().includes(sp.name.toLowerCase())));
+    if (matchedSource) {
+      const srcBullets = Array.isArray(matchedSource.bullets) ? matchedSource.bullets : [matchedSource.description || ""].filter(Boolean);
+      const currentBullets = Array.isArray(genProj.bullets) ? genProj.bullets : [];
+      genProj.bullets = preserveSourceProjectBullets(currentBullets, srcBullets, genProj.name || "");
+    }
+    return genProj;
+  });
 
   const content = buildWorldClassVersionContent(generatedResume);
   const changeSummary = computeChangeSummary(resume, content);

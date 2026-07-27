@@ -159,36 +159,67 @@ function cleanBulletText(text: string, projectName: string): string {
 }
 
 export function preserveSourceProjectBullets(generatedBullets: string[], sourceBullets: string[], projectName: string): string[] {
-  const resultBullets = [...generatedBullets];
-  if (!Array.isArray(sourceBullets) || sourceBullets.length === 0) return resultBullets;
+  const cleanGen = (generatedBullets || []).map(b => cleanText(b)).filter(b => b.length > 5 && b.toLowerCase() !== projectName.toLowerCase());
+  const cleanSrc = (sourceBullets || []).map(b => cleanText(b)).filter(b => b.length > 5 && b.toLowerCase() !== projectName.toLowerCase());
 
-  const cleanSourceBullets = sourceBullets
-    .map(b => cleanBulletText(b, projectName))
-    .filter(b => b && b.length > 5);
+  const result: string[] = [];
+  const seenLower = new Set<string>();
 
-  for (const srcB of cleanSourceBullets) {
-    const srcLower = srcB.toLowerCase();
-    const isCovered = resultBullets.some(genB => {
-      const genLower = genB.toLowerCase();
-      if (genLower.includes(srcLower) || srcLower.includes(genLower)) return true;
-
-      const srcNumbers = srcLower.match(/\b\d+\b/g) || [];
-      const srcTechs = srcLower.match(/\b(api|endpoints|tables|3nf|schema|mysql|jwt|auth|socket|express|node|react|dsa|leetcode|stripe|rbac|groq|restful|svg|candlestick|rental|booking)\b/g) || [];
-
-      if (srcNumbers.length > 0 && srcTechs.length > 0) {
-        const hasNumbers = srcNumbers.every(n => genLower.includes(n));
-        const hasTechs = srcTechs.some(t => genLower.includes(t));
-        if (hasNumbers && hasTechs) return true;
-      }
-      return false;
-    });
-
-    if (!isCovered) {
-      resultBullets.push(srcB);
+  for (const b of cleanGen) {
+    const key = b.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!seenLower.has(key)) {
+      seenLower.add(key);
+      result.push(b);
     }
   }
 
-  return resultBullets;
+  for (const srcB of cleanSrc) {
+    const srcLower = srcB.toLowerCase();
+    const srcKey = srcLower.replace(/[^a-z0-9]/g, "");
+
+    if (seenLower.has(srcKey)) continue;
+
+    const srcWords = new Set(srcLower.split(/[^a-z0-9]+/).filter(w => w.length > 2));
+    const srcNumbers = srcLower.match(/\b\d+\b/g) || [];
+
+    let isCovered = false;
+    for (const genB of result) {
+      const genLower = genB.toLowerCase();
+
+      if (genLower.includes(srcLower) || srcLower.includes(genLower)) {
+        isCovered = true;
+        break;
+      }
+
+      if (srcNumbers.length > 0) {
+        const hasAllNumbers = srcNumbers.every(num => genLower.includes(num));
+        if (hasAllNumbers) {
+          const genWords = new Set(genLower.split(/[^a-z0-9]+/).filter(w => w.length > 2));
+          let matchCount = 0;
+          srcWords.forEach(w => { if (genWords.has(w)) matchCount++; });
+          if (srcWords.size > 0 && (matchCount / srcWords.size) >= 0.35) {
+            isCovered = true;
+            break;
+          }
+        }
+      } else {
+        const genWords = new Set(genLower.split(/[^a-z0-9]+/).filter(w => w.length > 2));
+        let matchCount = 0;
+        srcWords.forEach(w => { if (genWords.has(w)) matchCount++; });
+        if (srcWords.size > 0 && (matchCount / srcWords.size) >= 0.5) {
+          isCovered = true;
+          break;
+        }
+      }
+    }
+
+    if (!isCovered) {
+      result.push(srcB);
+      seenLower.add(srcKey);
+    }
+  }
+
+  return result;
 }
 
 function normalizeWorldClassProject(item: unknown, fallbackSkills: string[] = [], sourceProjects: any[] = []) {
@@ -219,16 +250,15 @@ function normalizeWorldClassProject(item: unknown, fallbackSkills: string[] = []
   const explicitTech = toArray(project.techStack || project.technologies || project.tech || project.stack).map(cleanText).filter(Boolean);
   const techStack = explicitTech.length ? explicitTech : [];
 
-  const rawBullets = uniqueStrings([
-    ...toArray(project.bullets || project.bulletPoints || project.keyFeatures || project.features),
-    firstText(project.description, project.summary, project.impact, project.details)
-  ]).filter(Boolean);
+  const explicitBullets = toArray(project.bullets || project.bulletPoints || project.keyFeatures || project.features);
+  const rawBullets = explicitBullets.length > 0
+    ? explicitBullets
+    : toArray(project.description || project.summary || project.impact || project.details);
 
   let cleanBullets = rawBullets
-    .map((b) => cleanBulletText(b, cleanName))
-    .filter((b) => b.length > 5);
+    .map((b) => cleanBulletText(cleanText(b), cleanName))
+    .filter((b) => b.length > 5 && b.toLowerCase() !== cleanName.toLowerCase());
 
-  // Match corresponding source project if available to guarantee no dropped bullets
   const matchedSource = Array.isArray(sourceProjects)
     ? sourceProjects.find(sp => sp.name && (sp.name.toLowerCase().includes(cleanName.toLowerCase()) || cleanName.toLowerCase().includes(sp.name.toLowerCase())))
     : null;

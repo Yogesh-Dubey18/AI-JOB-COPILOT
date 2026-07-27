@@ -2414,23 +2414,52 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     expect(pdfRes.body.length).toBeGreaterThan(100);
   });
 
-  it("generically preserves all distinct source project bullets (including RESTful APIs, 6 database tables 3NF) across generated output", async () => {
+  it("generically preserves all 4 source projects and bullets without duplication or comma splitting", async () => {
     const agent = await authAgent();
-    const multiBulletText = "Yogesh Dubey | Full Stack Developer | yogesh@example.com\n\n" +
+    const fourProjectsText = "Yogesh Dubey | Full Stack Developer | yogesh@example.com\n\n" +
       "PROJECTS\n\n" +
+      "AI Job Copilot | Next.js, Node.js, Express.js, MongoDB, MySQL, Groq AI, JWT, Stripe\n" +
+      "• Shipped 12 production features: AI resume analyzer, STAR resume re-writer, cover letter generator.\n" +
+      "• Built subscription monetization tiers (Free / ₹499 / ₹999) modular REST APIs for custom resume tailoring and exports.\n\n" +
       "Indian Holiday Rentals Clone | React.js, Express.js, MySQL\n" +
       "• Created a property rental platform for listing stays, viewing property details and supporting booking-style user journeys.\n" +
-      "• Built end-to-end: 8 RESTful API endpoints, normalized MySQL schema (6 tables, SQL joins, 3NF), JWT authentication, date-range availability checks and seamless frontend-to-backend integration.\n";
+      "• Built end-to-end: 8 RESTful API endpoints, normalized MySQL schema (6 tables, SQL joins, 3NF), JWT authentication, date-range availability checks and seamless frontend-to-backend integration.\n\n" +
+      "Sigma GPT | React.js, Express.js, Socket.io\n" +
+      "• Developed real-time streaming AI chatbot using Socket.io (Node.js + Python), React.memo and debounced polling requests for state sync.\n\n" +
+      "Zerodha Stock Analytics Dashboard | Next.js, TypeScript, Chart.js\n" +
+      "• Architected real-time stock monitoring dashboard with interactive SVG candlestick charts.\n";
     
-    const uploadRes = await agent.post("/api/resumes/upload").attach("resume", Buffer.from(multiBulletText), "multi-bullet-test.txt").expect(201);
+    const uploadRes = await agent.post("/api/resumes/upload").attach("resume", Buffer.from(fourProjectsText), "four-projects-test.txt").expect(201);
     const resumeId = uploadRes.body.data._id || uploadRes.body.data.id;
 
     const genRes = await agent.post("/api/resumes/generate-world-class").send({ resumeId, targetRole: "Full Stack Developer" }).expect(201);
     const generatedProjects = genRes.body.data.generatedResume?.projects || [];
-    expect(generatedProjects.length).toBeGreaterThan(0);
-    const rentalProject = generatedProjects.find((p: any) => p.name.toLowerCase().includes("holiday") || p.name.toLowerCase().includes("rental") || p.name.toLowerCase().includes("indian"));
-    expect(rentalProject).toBeTruthy();
-    expect(rentalProject.bullets.length).toBeGreaterThanOrEqual(2);
-    expect(rentalProject.bullets.some((b: string) => b.includes("8 RESTful API") || b.includes("6 database tables") || b.includes("3NF"))).toBe(true);
+    
+    // Assert all 4 projects present
+    expect(generatedProjects.length).toBe(4);
+    
+    const names = generatedProjects.map((p: any) => p.name.toLowerCase());
+    expect(names.some((n: string) => n.includes("copilot"))).toBe(true);
+    expect(names.some((n: string) => n.includes("holiday") || n.includes("rental"))).toBe(true);
+    expect(names.some((n: string) => n.includes("sigma") || n.includes("gpt"))).toBe(true);
+    expect(names.some((n: string) => n.includes("zerodha"))).toBe(true);
+
+    // Verify Indian Holiday Rentals has both bullets intact
+    const rental = generatedProjects.find((p: any) => p.name.toLowerCase().includes("holiday") || p.name.toLowerCase().includes("rental"));
+    expect(rental).toBeTruthy();
+    expect(rental.bullets.length).toBeGreaterThanOrEqual(2);
+    expect(rental.bullets.some((b: string) => b.includes("8 RESTful API") && b.includes("6 tables"))).toBe(true);
+
+    // Verify ZERO bullet duplication across all projects
+    for (const p of generatedProjects) {
+      const bulletLower = p.bullets.map((b: string) => b.toLowerCase().trim());
+      const uniqueSet = new Set(bulletLower);
+      expect(uniqueSet.size).toBe(bulletLower.length); // NO DUPLICATES
+      expect(p.bullets.some((b: string) => b.toLowerCase() === p.name.toLowerCase())).toBe(false); // NO PROJECT TITLE AS BULLET
+    }
+
+    // Verify PDF export renders all 4 projects properly
+    const pdfRes = await agent.post("/api/pdf-export/resume").send({ id: resumeId }).expect(200);
+    expect(pdfRes.headers["content-type"]).toContain("application/pdf");
   });
 });

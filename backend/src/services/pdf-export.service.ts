@@ -34,7 +34,7 @@ function safeSegment(value: string) {
 
 function toArray(value: unknown): unknown[] {
   if (Array.isArray(value)) return value.filter(Boolean);
-  if (typeof value === "string") return value.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(/\r?\n|;/).map((item) => item.trim()).filter(Boolean);
   if (value == null) return [];
   return [value];
 }
@@ -747,7 +747,13 @@ async function buildLegacyBeautifulResumePdfBuffer(userId: string, content: any)
 
           const name = p.name || p.projectName || p.title || "Project";
           const tech = p.technologies || p.techStack || p.tech || "";
-          const bullets = p.bullets || p.bulletPoints || p.description || p.details || [];
+          const rawBulletsList = (Array.isArray(p.bullets) && p.bullets.length > 0)
+            ? p.bullets
+            : (p.bulletPoints || [p.description].filter(Boolean));
+          const bullets = toArray(rawBulletsList).filter((b: any) => {
+            const str = String(b || "").trim();
+            return str.length > 5 && str.toLowerCase() !== name.toLowerCase();
+          });
           
           const currentY = doc.y;
           doc.font("Helvetica-Bold")
