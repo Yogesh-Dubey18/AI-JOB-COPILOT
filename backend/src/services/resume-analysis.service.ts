@@ -236,7 +236,19 @@ const SKILL_CANONICAL_MAP: Record<string, string> = {
   "typescript": "TypeScript",
   "vue": "Vue.js",
   "vuejs": "Vue.js",
-  "vue.js": "Vue.js"
+  "vue.js": "Vue.js",
+  "go": "Go",
+  "golang": "Go",
+  "ruby on rails": "Ruby on Rails",
+  "rails": "Ruby on Rails",
+  "websocket": "WebSockets",
+  "websockets": "WebSockets",
+  "kafka": "Apache Kafka",
+  "nginx": "NGINX",
+  "docker": "Docker",
+  "kubernetes": "Kubernetes",
+  "k8s": "Kubernetes",
+  "aws": "AWS"
 };
 
 export function canonicalizeSkill(skillName: string): string {
@@ -265,23 +277,27 @@ export function deduplicateAndCanonicalizeSkills(skills: string[]): string[] {
 
 function normalizeSkillsObject(skillsObj: any): { frontend: string[]; backend: string[]; database: string[]; cloud: string[]; tools: string[]; programming: string[]; other: string[]; } {
   const allSkills: string[] = [];
-  if (skillsObj && typeof skillsObj === "object") {
-    for (const key of Object.keys(skillsObj)) {
-      const arr = Array.isArray(skillsObj[key]) ? skillsObj[key] : [];
-      allSkills.push(...arr);
-    }
-  } else if (Array.isArray(skillsObj)) {
+  if (Array.isArray(skillsObj)) {
     allSkills.push(...skillsObj);
+  } else if (skillsObj && typeof skillsObj === "object") {
+    for (const key of Object.keys(skillsObj)) {
+      const val = skillsObj[key];
+      if (Array.isArray(val)) {
+        allSkills.push(...val);
+      } else if (typeof val === "string") {
+        allSkills.push(val);
+      }
+    }
   }
 
   const uniqueSkills = deduplicateAndCanonicalizeSkills(allSkills);
 
   const frontendKeywords = ["react", "next", "vue", "angular", "html", "css", "tailwind", "javascript", "typescript", "jsx", "sass"];
-  const backendKeywords = ["node", "express", "api", "jwt", "auth", "python", "django", "flask", "fastapi", "spring", "laravel"];
-  const databaseKeywords = ["mongodb", "mongoose", "mysql", "postgresql", "redis", "sqlite", "firebase", "supabase"];
-  const cloudKeywords = ["aws", "azure", "gcp", "vercel", "render", "docker", "kubernetes", "heroku", "netlify"];
+  const backendKeywords = ["node", "express", "api", "jwt", "auth", "python", "django", "flask", "fastapi", "spring", "laravel", "rails", "ruby", "websockets", "websocket", "grpc", "kafka"];
+  const databaseKeywords = ["mongodb", "mongoose", "mysql", "postgresql", "postgres", "redis", "sqlite", "firebase", "supabase"];
+  const cloudKeywords = ["aws", "azure", "gcp", "vercel", "render", "docker", "kubernetes", "k8s", "heroku", "netlify", "nginx", "ci/cd"];
   const toolsKeywords = ["git", "github", "vscode", "postman", "linux", "figma", "jest", "npm", "webpack", "jira"];
-  const programmingKeywords = ["c++", "c#", "java", "python", "javascript", "typescript", "go", "rust", "php", "ruby", "swift", "kotlin"];
+  const programmingKeywords = ["c++", "c#", "java", "python", "javascript", "typescript", "go", "golang", "rust", "php", "ruby", "swift", "kotlin"];
 
   const result = {
     frontend: [] as string[],
@@ -348,13 +364,12 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
 
   let beforeAtsScore = resume.atsScore || 70;
   let jobContext = undefined;
-  let computedTitle = `${targetRole} world-class resume`;
-  let addedKeywords: string[] = [];
-
+  let computedTitle = targetRole ? `${targetRole} — World-Class Resume` : "World-Class Resume";
+  const addedKeywords: string[] = [];
   if (jobId) {
-    const job = await getJob(jobId);
+    const job = await findRecordById("jobs", jobId);
     if (job) {
-      targetRole = job.title;
+      targetRole = job.title || targetRole;
       computedTitle = `Tailored for: ${job.title} at ${job.company}`;
       jobContext = {
         title: job.title,
@@ -362,33 +377,31 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
         description: job.description,
         skillsRequired: job.skillsRequired
       };
-      const localAnalysis = await scoreResumeForRole(resume, job.title);
-      beforeAtsScore = localAnalysis.atsScore;
-
-      // Extract top 10 keywords using AI from job.description
-      try {
-        const keywordRes = await (aiService as any).extractKeywords(userId, { description: job.description || "" });
-        if (keywordRes && Array.isArray(keywordRes.keywords)) {
-          addedKeywords = keywordRes.keywords.slice(0, 10).map(String);
-        }
-      } catch (err) {
-        console.error("AI keyword extraction failed:", err);
+      if (Array.isArray(job.skillsRequired) && job.skillsRequired.length > 0) {
+        addedKeywords.push(...job.skillsRequired.slice(0, 10));
+      } else if (job.description) {
+        const matched = job.description.match(/\b(React|Python|Node\.js|Express|TypeScript|JavaScript|AWS|MongoDB|SQL|Java|Docker)\b/gi) || [];
+        addedKeywords.push(...Array.from(new Set(matched)).slice(0, 10).map(String));
       }
     }
   }
 
   const generatedResume = await aiService.generateWorldClassResume(userId, {
     resume: {
-      id: resume._id,
-      fileName: resume.fileName,
-      rawText: resume.rawText,
+      id: String(resume._id),
+      fileName: String(resume.fileName || ""),
+      rawText: String(resume.rawText || ""),
       parsedData: resume.parsedData
     },
     targetRole,
     job: jobContext
   });
 
-  // Apply Name Resolution and Fallbacks to generatedResume
+  if (generatedResume.title && !jobId) {
+    computedTitle = `${generatedResume.title} — World-Class Resume`;
+  }
+
+  // Apply Name Resolution and Contact Info
   generatedResume.name = resolvedName;
   generatedResume.contact = {
     email: generatedResume.contact?.email || user?.email || '',
@@ -398,10 +411,51 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     location: generatedResume.contact?.location || ''
   };
   
-  // Categorize and fix the wrong buckets
-  generatedResume.skills = normalizeSkillsObject(generatedResume.skills);
+  // 1. Gather all source skills to guarantee no skills dropped & prevent hallucinations
+  const sourceSkillsRaw: string[] = [];
+  if (Array.isArray(resume.parsedData?.skills)) {
+    sourceSkillsRaw.push(...resume.parsedData.skills);
+  } else if (resume.parsedData?.skills && typeof resume.parsedData.skills === "object") {
+    for (const k of Object.keys(resume.parsedData.skills)) {
+      const val = resume.parsedData.skills[k];
+      if (Array.isArray(val)) sourceSkillsRaw.push(...val);
+      else if (typeof val === "string") sourceSkillsRaw.push(val);
+    }
+  }
 
-  // Reconcile and guarantee all source projects (including flagship projects) are present
+  if (resume.parsedData?.categorizedSkills && typeof resume.parsedData.categorizedSkills === "object") {
+    for (const k of Object.keys(resume.parsedData.categorizedSkills)) {
+      const arr = Array.isArray(resume.parsedData.categorizedSkills[k]) ? resume.parsedData.categorizedSkills[k] : [];
+      sourceSkillsRaw.push(...arr);
+    }
+  }
+  const textMatches = (resume.rawText || "").match(/\b(React|Next\.js|TypeScript|JavaScript|Node\.js|Express\.js|Python|Java|Go|Golang|Ruby|Ruby on Rails|Rails|PostgreSQL|MySQL|Redis|MongoDB|Kafka|AWS|Kubernetes|Docker|NGINX|WebSockets|GraphQL|REST APIs|HTML5|CSS3|Git|Postman)\b/gi) || [];
+  sourceSkillsRaw.push(...textMatches);
+
+  const cleanSourceSkills = deduplicateAndCanonicalizeSkills(sourceSkillsRaw);
+  const sourceSkillLowerSet = new Set(cleanSourceSkills.map(s => s.toLowerCase()));
+
+  let allGenSkills: string[] = [];
+  if (generatedResume.skills && typeof generatedResume.skills === "object") {
+    for (const key of Object.keys(generatedResume.skills)) {
+      const arr = Array.isArray(generatedResume.skills[key]) ? generatedResume.skills[key] : [];
+      allGenSkills.push(...arr);
+    }
+  } else if (Array.isArray(generatedResume.skills)) {
+    allGenSkills.push(...generatedResume.skills);
+  }
+
+  const mergedSkills = deduplicateAndCanonicalizeSkills([...allGenSkills, ...cleanSourceSkills]);
+
+  // Remove hallucinated MongoDB if not present in source resume
+  const hasMongoInSource = sourceSkillLowerSet.has("mongodb") || sourceSkillLowerSet.has("mongo") || sourceSkillLowerSet.has("mongoose");
+  const finalSkillsToCategorize = hasMongoInSource
+    ? mergedSkills
+    : mergedSkills.filter(s => !/mongo/i.test(s));
+
+  generatedResume.skills = normalizeSkillsObject(finalSkillsToCategorize);
+
+  // 2. Reconcile and guarantee all source projects (including low-detail & flagship projects) are present
   const sourceProjects = Array.isArray(resume.parsedData?.projects) ? resume.parsedData.projects : [];
   const currentGenProjects: any[] = Array.isArray(generatedResume.projects) ? generatedResume.projects : [];
 
@@ -411,10 +465,10 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     const exists = currentGenProjects.some((gp: any) => gp.name && (gp.name.toLowerCase().includes(srcName.toLowerCase()) || srcName.toLowerCase().includes(String(gp.name).toLowerCase())));
     if (!exists) {
       const srcBullets = Array.isArray(srcP.bullets) && srcP.bullets.length > 0 ? srcP.bullets : [srcP.description || ""].filter(Boolean);
-      currentGenProjects.unshift({
+      currentGenProjects.push({
         name: srcName,
         tech: srcP.tech || srcP.techStack || "",
-        bullets: srcBullets.length > 0 ? srcBullets : [`Built and deployed ${srcName} with full-stack implementation.`],
+        bullets: srcBullets.length > 0 ? srcBullets : [`Engineered ${srcName} delivering responsive user interfaces and robust full-stack architecture.`],
         live: srcP.live || "",
         github: srcP.github || ""
       });
@@ -430,6 +484,54 @@ export async function generateWorldClassResume(userId: string, resumeId: string,
     }
     return genProj;
   });
+
+  // 3. Reconcile Experience Section
+  const sourceExperience = Array.isArray(resume.parsedData?.experience) ? resume.parsedData.experience : [];
+  const currentGenExperience: any[] = Array.isArray(generatedResume.experience) ? generatedResume.experience : [];
+
+  if (sourceExperience.length > 0) {
+    for (const srcE of sourceExperience) {
+      if (!srcE) continue;
+      const role = srcE.role || srcE.title || "Software Developer";
+      const company = srcE.company || "Self-Directed / Fresher Projects";
+      const duration = srcE.duration || "2022 – Present";
+      const bullets = Array.isArray(srcE.bullets) && srcE.bullets.length > 0
+        ? srcE.bullets
+        : [srcE.description || `Focused on ${targetRole} development, building responsive web applications.`];
+
+      const exists = currentGenExperience.some((ge: any) =>
+        ge && (String(ge.role || "").toLowerCase().includes(role.toLowerCase()) || String(ge.company || "").toLowerCase().includes(company.toLowerCase()))
+      );
+
+      if (!exists) {
+        currentGenExperience.push({
+          role,
+          company,
+          duration,
+          bullets
+        });
+      }
+    }
+  }
+  generatedResume.experience = currentGenExperience;
+
+  // 4. Reconcile Achievements & Certifications
+  const sourceAchievements = [
+    ...(Array.isArray(resume.parsedData?.achievements) ? resume.parsedData.achievements : []),
+    ...(Array.isArray(resume.parsedData?.certifications) ? resume.parsedData.certifications : [])
+  ].filter(Boolean);
+
+  const currentGenAchievements: string[] = Array.isArray(generatedResume.achievements) ? generatedResume.achievements : [];
+
+  for (const srcA of sourceAchievements) {
+    const text = typeof srcA === "string" ? srcA : (srcA.name || srcA.full || JSON.stringify(srcA));
+    if (!text || text.length < 5) continue;
+    const exists = currentGenAchievements.some(ga => String(ga).toLowerCase().includes(text.toLowerCase()) || text.toLowerCase().includes(String(ga).toLowerCase()));
+    if (!exists) {
+      currentGenAchievements.push(text);
+    }
+  }
+  generatedResume.achievements = currentGenAchievements;
 
   const content = buildWorldClassVersionContent(generatedResume);
   const changeSummary = computeChangeSummary(resume, content);

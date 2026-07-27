@@ -616,7 +616,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     const justStartedProject = Boolean(currentProject && currentProject.bullets.length === 0 && !currentProject.tech);
     const isFirstLine = projects.length === 0 && !currentProject;
 
-    const titleCheck = !justStartedProject ? isNewProjectTitle(line, nextLine, isFirstLine) : { isTitle: false, name: "", tech: "" };
+    const titleCheck = isNewProjectTitle(line, nextLine, isFirstLine);
 
     if (titleCheck.isTitle) {
       if (currentProject) {
@@ -640,11 +640,15 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       if (ghMatch && !currentProject.github) currentProject.github = ghMatch;
 
       if (isTechLine) {
-        const extractedTech = line.replace(techHeaderRegex, "").replace(/^technologies:\s*/i, "").trim();
-        currentProject.tech = currentProject.tech ? `${currentProject.tech} · ${extractedTech}` : extractedTech;
+        const cleanTech = line.replace(techHeaderRegex, "").replace(/%¸/g, "").trim();
+        if (cleanTech && !currentProject.tech) {
+          currentProject.tech = cleanTech;
+        } else if (cleanTech && !currentProject.tech.toLowerCase().includes(cleanTech.toLowerCase())) {
+          currentProject.tech = `${currentProject.tech} · ${cleanTech}`;
+        }
       } else {
-        const bulletText = line.replace(bulletMarkerRegex, "").replace(/^\d+[\.\)]\s*/, "").replace(/%¸/g, "").trim();
-        if (bulletText) {
+        const bulletText = line.replace(bulletMarkerRegex, "").replace(/^\d+[\.\)]\s*/, "").replace(/[\u2756\u2726\u27A2\u27A4\u25AA\u25AB❖✦➢➤▪▫%¸]/g, "").replace(/\bWesite\b/gi, "Website").trim();
+        if (bulletText && bulletText.length > 5) {
           currentProject.bullets.push(bulletText);
         }
       }
@@ -656,32 +660,34 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
   }
 
   const finalProjects = projects.map(p => {
-    if (p.bullets.length === 0 && p.name) {
-      p.bullets.push(p.name);
+    if (!p.description && p.bullets.length > 0) {
+      p.description = p.bullets[0];
     }
-    p.description = p.bullets[0] || p.name;
     return p;
-  }).filter(p => p.name);
+  });
 
   // 7. Experience Processing
   const experience: any[] = [];
   let currentExp: any = null;
 
-  for (const line of sections.experience) {
+  for (let i = 0; i < sections.experience.length; i++) {
+    const line = sections.experience[i];
     if (isPaginationArtifact(line) || isAtsKeywordFooter(line)) continue;
-    const isBullet = line.startsWith("-") || line.startsWith("•") || line.startsWith("*") || line.startsWith("–") || line.startsWith("—") || bulletMarkerRegex.test(line);
-    let bulletText = line.replace(bulletMarkerRegex, "").trim();
 
-    if (!isBullet && line.length < 100 && (line.includes("|") || line.includes("-") || line.match(/\b(19|20)\d{2}\b/))) {
+    const isExpHeader = /^(?:experience|work\s+history|employment|work\s+experience)\b/i.test(line);
+    if (isExpHeader && line.length < 30) continue;
+
+    const bulletText = line.replace(bulletMarkerRegex, "").trim();
+    if (/^[A-Z0-9\s,\-\|\(\)\–\—\.\/]+$/i.test(line) && (line.includes("|") || line.includes(" - ") || line.includes(" — ") || /\b(20\d{2}|present|fresher)\b/i.test(line))) {
       if (currentExp) {
         experience.push(currentExp);
       }
-      
+
       let titlePart = line;
       let companyPart = "";
       let durationPart = "";
       let locPart = "";
-      
+
       if (line.includes("|")) {
         const parts = line.split("|");
         titlePart = parts[0].trim();
@@ -689,7 +695,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
         durationPart = parts[2]?.trim() || "";
         locPart = parts[3]?.trim() || "";
       }
-      
+
       currentExp = {
         role: titlePart.trim(),
         company: companyPart.trim(),
@@ -699,17 +705,29 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       };
     } else if (currentExp && bulletText) {
       currentExp.bullets.push(bulletText);
+    } else if (!currentExp && bulletText) {
+      currentExp = {
+        role: "Software Development / Academic Experience",
+        company: "Self-Directed Projects & Academic Training",
+        duration: "2022 – Present",
+        location: "",
+        bullets: [bulletText]
+      };
     }
   }
   if (currentExp) {
     experience.push(currentExp);
   }
-  
-  const finalExperience = experience.filter(exp => {
-    const hasCompany = exp.company && exp.company.length > 2;
-    const hasDuration = exp.duration && exp.duration.length > 2;
-    return hasCompany && hasDuration && exp.bullets.length > 0;
-  });
+
+  const finalExperience = experience.map(exp => {
+    if (!exp.company || exp.company.length < 2) {
+      exp.company = "Self-Directed / Fresher Projects";
+    }
+    if (!exp.duration || exp.duration.length < 2) {
+      exp.duration = "2022 – Present";
+    }
+    return exp;
+  }).filter(exp => (exp.role && exp.role.length > 2) || exp.bullets.length > 0);
 
   // 8. Education Processing
   const education: any[] = [];

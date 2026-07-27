@@ -151,7 +151,9 @@ function cleanBulletText(text: string, projectName: string): string {
   cleaned = cleaned.replace(new RegExp(`^Developed\\s+${escapedName}[^,]*?,\\s*delivering\\s*`, "i"), "");
   cleaned = cleaned.replace(/^Developed\s+[^,]*?,\s*delivering\s*/i, "");
   cleaned = cleaned.replace(/\s*Live\s*·\s*Private\s*Beta\s*·\s*Live\s*Demo\s*·\s*GitHub/gi, "");
-  cleaned = cleaned.replace(/%¸/g, "").replace(/\s+/g, " ").trim();
+  cleaned = cleaned.replace(/[\u2756\u2726\u27A2\u27A4\u25AA\u25AB❖✦➢➤▪▫%¸]/g, "");
+  cleaned = cleaned.replace(/\bWesite\b/gi, "Website");
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
   if (cleaned.length > 0) {
     cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
