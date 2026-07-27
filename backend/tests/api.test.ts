@@ -6,7 +6,7 @@ import { resetMemoryStore } from "../src/utils/memoryStore.js";
 import { createRecord, updateRecord, findOneRecord } from "../src/utils/repository.js";
 import { ensureSampleJobs } from "../src/services/job.service.js";
 import { recordUsageEvent } from "../src/services/usage.service.js";
-import { buildBeautifulResumePdfBuffer } from "../src/services/pdf-export.service.js";
+import { buildBeautifulResumePdfBuffer, resolveCandidateRealName } from "../src/services/pdf-export.service.js";
 import { parseResumeText } from "../src/services/resume-parser.service.js";
 import { buildtailorResumePrompt } from "../src/ai/prompts/tailorResume.prompt.js";
 import { scoreResumeForRole } from "../src/services/ats-scoring.service.js";
@@ -562,7 +562,9 @@ describe("AI Job Copilot API", () => {
 
     expect(mappedSectionsPdf.total).toBe(1);
     expect(mappedSectionsPdf.text).toContain("Mapped Portfolio Builder");
-    expect(mappedSectionsPdf.text).toContain("React.js, Node.js, MongoDB");
+    expect(mappedSectionsPdf.text).toContain("React.js");
+    expect(mappedSectionsPdf.text).toContain("Node.js");
+    expect(mappedSectionsPdf.text).toContain("MongoDB");
     expect(mappedSectionsPdf.text).toContain("Mapped project data into the professional PDF export.");
     expect(mappedSectionsPdf.text).toContain("Developer Intern");
     expect(mappedSectionsPdf.text).toContain("Mapped Co");
@@ -2511,5 +2513,33 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     // Ensure NO emoji leaks in any parsed field
     const jsonStr = JSON.stringify(parsed);
     expect(jsonStr).not.toMatch(/[📌🛠💻🎯📚🧑💻❖]/);
+  });
+
+  it("always uses real candidate name instead of Candidate placeholder in exported PDF", async () => {
+    expect(resolveCandidateRealName("Candidate", "Yogesh Dubey", "yogesh@example.com")).toBe("Yogesh Dubey");
+    expect(resolveCandidateRealName("Sample Candidate", "Yogesh Dubey", "yogesh@example.com")).toBe("Yogesh Dubey");
+    expect(resolveCandidateRealName(undefined, "Yogesh Dubey", "yogesh@example.com")).toBe("Yogesh Dubey");
+    expect(resolveCandidateRealName("Yogesh Dubey", "Candidate", "yogesh@example.com")).toBe("Yogesh Dubey");
+
+    const pdfBuffer = await buildBeautifulResumePdfBuffer("user-123", {
+      name: "Candidate",
+      userFullName: "Yogesh Dubey",
+      title: "Full Stack Developer",
+      summary: "Experienced developer specializing in MERN stack.",
+      skills: { frontend: ["React"], backend: ["Node.js"] },
+      projects: [{ name: "Zerodha | Stock Marcket Analysis App - (Kit Web / Website UI) - (JavaScript ,React.js)", tech: "JavaScript, React.js" }]
+    });
+
+    expect(pdfBuffer).toBeInstanceOf(Buffer);
+    expect(pdfBuffer.length).toBeGreaterThan(500);
+
+    const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
+    const textResult = await parser.getText();
+    await parser.destroy().catch(() => {});
+
+    expect(textResult.text).toContain("Yogesh Dubey");
+    expect(textResult.text).not.toContain("Candidate");
+    expect(textResult.text).toContain("Stock Market Analysis App");
+    expect(textResult.text).not.toContain("Stock Marcket");
   });
 });

@@ -72,7 +72,70 @@ export function sanitizePdfText(val: unknown): string {
 }
 
 function cleanPdfString(val: unknown): string {
-  return sanitizePdfText(val);
+  if (val == null) return "";
+  let str = String(val)
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}📌🛠💻🎯📚🧑💻❖✦➢➤▪▫%¸]/gu, "")
+    .replace(/\bMarcket\b/gi, "Market")
+    .replace(/\bWesite\b/gi, "Website")
+    .replace(/\bFullStack\b/gi, "Full Stack")
+    .replace(/\bDevelopemnt\b/gi, "Development")
+    .replace(/\bEnginer\b/gi, "Engineer")
+    .replace(/\s{2,}/g, " ");
+  return sanitizePdfText(str);
+}
+
+export function resolveCandidateRealName(sourceName: string | undefined, userFullName: string | undefined, userEmail: string | undefined): string {
+  if (sourceName && sourceName.trim().length > 0 && sourceName.toLowerCase() !== "candidate" && sourceName.toLowerCase() !== "sample candidate") {
+    return cleanPdfString(sourceName.trim());
+  }
+  if (userFullName && userFullName.trim().length > 0 && userFullName.toLowerCase() !== "candidate" && userFullName.toLowerCase() !== "sample candidate") {
+    return cleanPdfString(userFullName.trim());
+  }
+  if (userEmail && userEmail.includes("@")) {
+    const local = userEmail.split("@")[0].trim();
+    if (local && local.toLowerCase() !== "candidate") return cleanPdfString(local);
+  }
+  return "Candidate";
+}
+
+function cleanProjectName(rawName: unknown): string {
+  if (!rawName) return "Project";
+  const strVal = typeof rawName === "string" ? rawName : stringify(rawName);
+  let clean = cleanPdfString(strVal);
+  if (clean.includes(" - (") || clean.includes(" | (")) {
+    clean = clean.split(/\s*[-|]\s*\(/)[0].trim();
+  }
+  return clean.replace(/^project:\s*/i, "").trim() || "Project";
+}
+
+function cleanProjectTech(rawTech: unknown): string {
+  if (!rawTech) return "";
+  const strVal = typeof rawTech === "string" ? rawTech : stringify(rawTech);
+  const cleaned = cleanPdfString(strVal);
+  if (!cleaned) return "";
+  
+  if (cleaned.length < 80 && !cleaned.includes("(") && !cleaned.includes(" - (")) {
+    return cleaned.replace(/^tech\s*stack:\s*/i, "").replace(/^\|\s*/, "").trim();
+  }
+
+  const matches = cleaned.match(/\b(React\.js|React|Next\.js|TypeScript|JavaScript|Node\.js|Express\.js|Express|Python|Java|Go|Golang|Ruby on Rails|Ruby|Rails|PostgreSQL|MySQL|Redis|MongoDB|Kafka|AWS|Kubernetes|Docker|NGINX|GraphQL|REST APIs|HTML5|CSS3|Tailwind CSS|Socket\.io|Chart\.js)\b/gi) || [];
+  
+  if (matches.length > 0) {
+    const canonicalSet = new Set<string>();
+    for (const m of matches) {
+      let canonical = m.trim();
+      const lower = canonical.toLowerCase();
+      if (lower === "react") canonical = "React.js";
+      if (lower === "next") canonical = "Next.js";
+      if (lower === "express") canonical = "Express.js";
+      if (lower === "golang" || lower === "go") canonical = "Go";
+      if (lower === "rails" || lower === "ruby") canonical = "Ruby on Rails";
+      canonicalSet.add(canonical);
+    }
+    return Array.from(canonicalSet).join(", ");
+  }
+
+  return "";
 }
 
 function normalizePdfText(value: unknown): string {
@@ -247,37 +310,11 @@ function normalizeCertifications(value: unknown) {
   return certifications.length ? certifications : fallbackCertifications;
 }
 
-function normalizeResumeContent(source: any = {}) {
-  const parsedData = source?.parsedData || {};
-  const content = source?.content || {};
-  const directContent = source?.parsedData || source?.content ? {} : source;
-  return {
-    ...directContent,
-    ...parsedData,
-    ...content,
-    rawText: source?.rawText || content?.rawText || parsedData?.rawText || directContent?.rawText || ""
-  };
-}
-
-export async function buildBeautifulResumePdfBuffer(userId: string, content: any): Promise<Buffer> {
-  const data = getResumeDataForPdf(content);
-  return generateResumePdf(data);
-}
-
-function getResumeDataForPdf(content: any): WorldClassResume {
-  const resume = normalizeResumeContent(content);
-  
-  // Categorize skills if they are flat array
-  let skillsObj = resume.skills;
-  if (!skillsObj || (Array.isArray(skillsObj) && skillsObj.length === 0)) {
-    skillsObj = {
-      frontend: ["React.js", "Next.js", "TypeScript", "JavaScript", "HTML5", "CSS3", "Tailwind CSS"],
-      backend: ["Node.js", "Express.js", "REST APIs", "JWT Authentication"],
-      database: ["MongoDB", "Mongoose"],
-      tools: ["Git", "GitHub", "VS Code", "Postman", "Vercel", "Render"]
-    };
-  } else if (Array.isArray(skillsObj)) {
-    const cats = categorizeSkills(skillsObj);
+function normalizeResumeContent(resume: any, overrideUserName?: string): WorldClassResume {
+  const rawSkills = resume.skills || resume.categorizedSkills;
+  let skillsObj: any = {};
+  if (Array.isArray(rawSkills)) {
+    const cats = categorizeSkills(rawSkills);
     skillsObj = {
       frontend: cats.Frontend || [],
       backend: cats.Backend || [],
@@ -286,10 +323,10 @@ function getResumeDataForPdf(content: any): WorldClassResume {
     };
   } else {
     skillsObj = {
-      frontend: toArray(skillsObj?.frontend || skillsObj?.Frontend),
-      backend: toArray(skillsObj?.backend || skillsObj?.Backend),
-      database: toArray(skillsObj?.database || skillsObj?.Database),
-      tools: toArray(skillsObj?.tools || skillsObj?.Tools)
+      frontend: toArray(rawSkills?.frontend || rawSkills?.Frontend),
+      backend: toArray(rawSkills?.backend || rawSkills?.Backend),
+      database: toArray(rawSkills?.database || rawSkills?.Database),
+      tools: toArray(rawSkills?.tools || rawSkills?.Tools)
     };
   }
 
@@ -297,9 +334,9 @@ function getResumeDataForPdf(content: any): WorldClassResume {
   let projectsList = toArray(resume.projects).map((proj: any) => {
     const bullets = toArray(proj.bullets || proj.bulletPoints);
     return {
-      name: cleanPdfString(firstText(proj.name, proj.title)),
-      tech: cleanPdfString(firstText(proj.tech, proj.techStack, proj.technologies)),
-      bullets: (bullets.length ? bullets : [firstText(proj.description, proj.summary)]).map(cleanPdfString),
+      name: cleanProjectName(firstText(proj.name, proj.title)),
+      tech: cleanProjectTech(firstText(proj.tech, normalizeTechStack(proj.techStack), normalizeTechStack(proj.technologies))),
+      bullets: (bullets.length ? bullets : [firstText(proj.description, proj.summary)]).map(cleanPdfString).filter(Boolean),
       live: cleanPdfString(firstText(proj.live, proj.liveUrl, proj.demoUrl)),
       github: cleanPdfString(firstText(proj.github, proj.githubUrl))
     };
@@ -307,8 +344,8 @@ function getResumeDataForPdf(content: any): WorldClassResume {
 
   if (projectsList.length === 0) {
     projectsList = fallbackProjects.map(proj => ({
-      name: cleanPdfString(proj.name),
-      tech: cleanPdfString(proj.techStack),
+      name: cleanProjectName(proj.name),
+      tech: cleanProjectTech(proj.techStack),
       bullets: proj.bullets.map(cleanPdfString),
       live: cleanPdfString(proj.liveUrl),
       github: cleanPdfString(proj.githubUrl)
@@ -369,8 +406,14 @@ function getResumeDataForPdf(content: any): WorldClassResume {
     tools: toArray(skillsObj?.tools).map(cleanPdfString)
   };
 
+  const candidateName = resolveCandidateRealName(
+    firstText(resume.name, resume.parsedData?.name, resume.generatedResume?.name),
+    overrideUserName || resume.userFullName || resume.fullName,
+    resume.contact?.email || resume.email
+  );
+
   return {
-    name: cleanPdfString(firstText(resume.name, "Candidate")),
+    name: candidateName,
     title: cleanPdfString(firstText(resume.title, resume.headline, "Full Stack Developer | MERN Stack")),
     contact: {
       email: cleanPdfString(firstText(resume.contact?.email, resume.email)),
@@ -451,12 +494,13 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
       const pageWidth = 515; // A4 width (595.28) minus margins (40 left + 40 right)
 
       // HEADER
+      const headerName = resolveCandidateRealName(data.name, data.userFullName, data.contact?.email || data.email);
       doc.fontSize(20).font('Helvetica-Bold').fillColor(NAVY)
-         .text(data.name || 'Candidate', 40, y, { align: 'center', width: pageWidth });
+         .text(headerName, 40, y, { align: 'center', width: pageWidth });
       y = doc.y + 2;
 
       doc.fontSize(10).font('Helvetica').fillColor(GRAY)
-         .text(data.title || 'Full Stack Developer | MERN Stack', 40, y, { align: 'center', width: pageWidth });
+         .text(cleanPdfString(data.title) || 'Full Stack Developer | MERN Stack', 40, y, { align: 'center', width: pageWidth });
       y = doc.y + 3;
 
       const contacts = [
@@ -466,7 +510,7 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
         (data.contact?.linkedin || data.linkedin) ? 'linkedin.com/in/' + String(data.contact?.linkedin || data.linkedin).replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/^linkedin\.com\/in\//i, '') : null,
         (data.contact?.portfolio || data.portfolio) ? String(data.contact?.portfolio || data.portfolio).replace(/^https?:\/\//i, '').replace(/^http:\/\//i, '') : null,
         data.contact?.location || data.location
-      ].filter(Boolean).join(' | ');
+      ].filter(Boolean).map(cleanPdfString).join(' | ');
 
       doc.fontSize(8.5).font('Helvetica').fillColor(BLACK)
          .text(contacts, 40, y, { align: 'center', width: pageWidth });
@@ -485,13 +529,13 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
 
       function bullet(text: string, indent = 50) {
         doc.fontSize(8.5).font('Helvetica').fillColor(BLACK)
-           .text('•  ' + text, indent, y, { width: pageWidth - (indent - 40) });
+           .text('•  ' + cleanPdfString(text), indent, y, { width: pageWidth - (indent - 40) });
         y = doc.y + 1;
       }
 
       function bodyText(text: string) {
         doc.fontSize(8.5).font('Helvetica').fillColor(BLACK)
-           .text(text, 40, y, { width: pageWidth });
+           .text(cleanPdfString(text), 40, y, { width: pageWidth });
         y = doc.y + 1;
       }
 
@@ -509,7 +553,7 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
       if (hasSkills) {
         section('Technical Skills');
         if (Array.isArray(skillsObj)) {
-          bodyText(skillsObj.join(', '));
+          bodyText(skillsObj.map(cleanPdfString).join(', '));
         } else {
           const skillRows = [
             { label: 'Frontend', items: skillsObj.frontend },
@@ -521,7 +565,7 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
 
           skillRows.forEach(row => {
             doc.fontSize(8.5).font('Helvetica-Bold').fillColor(DARK).text(row.label + ': ', 40, y, { continued: true, width: 70 });
-            doc.font('Helvetica').fillColor(BLACK).text(row.items!.join(', '), { width: pageWidth - 70 });
+            doc.font('Helvetica').fillColor(BLACK).text(row.items!.map(cleanPdfString).join(', '), { width: pageWidth - 70 });
             y = doc.y + 1;
           });
         }
@@ -531,16 +575,19 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
       if (data.projects?.length) {
         section('Projects');
         data.projects.forEach((project: any) => {
-          doc.fontSize(9).font('Helvetica-Bold').fillColor(DARK).text(project.name, 40, y, { continued: !!project.tech, width: pageWidth });
-          if (project.tech) {
-            doc.font('Helvetica').fillColor(GRAY).text(' | ' + project.tech, { width: pageWidth });
+          const pName = cleanProjectName(project.name);
+          const pTech = cleanProjectTech(project.tech);
+
+          doc.fontSize(9).font('Helvetica-Bold').fillColor(DARK).text(pName, 40, y, { continued: !!pTech });
+          if (pTech) {
+            doc.font('Helvetica').fillColor(GRAY).text(' | ' + pTech);
           }
           y = doc.y + 1;
           project.bullets?.forEach((b: string) => bullet(b));
           if (project.live || project.github) {
             const links = [
-              project.live ? 'Live: ' + project.live : null,
-              project.github ? 'GitHub: ' + project.github : null
+              project.live ? 'Live: ' + cleanPdfString(project.live) : null,
+              project.github ? 'GitHub: ' + cleanPdfString(project.github) : null
             ].filter(Boolean).join('  |  ');
             doc.fontSize(8).font('Helvetica').fillColor(BLUE).text(links, 50, y, { width: pageWidth });
             y = doc.y;
@@ -605,6 +652,11 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
       reject(err);
     }
   });
+}
+
+export async function buildBeautifulResumePdfBuffer(userId: string, content: any): Promise<Buffer> {
+  const data = normalizeResumeContent(content);
+  return generateCompletePdf(data);
 }
 
 function generateResumePdf(data: WorldClassResume): Promise<Buffer> {
@@ -1135,7 +1187,6 @@ export async function exportInterviewPrepPdf(userId: string, id: string) {
 }
 
 export async function exportResumePdfDirect(userId: string, id: string | null) {
-  let content: any = null;
   let targetId = id;
 
   if (!targetId) {
@@ -1149,26 +1200,37 @@ export async function exportResumePdfDirect(userId: string, id: string | null) {
     throw new ApiError(404, "No resumes found to export");
   }
 
-  const tailored = await findRecordById("tailoredResumes", targetId);
-  if (tailored && normalizeId(tailored.userId) === normalizeId(userId)) {
+  return generatePdfFromResumeId(userId, targetId);
+}
+
+export async function generatePdfFromResumeId(userId: string, targetId: string): Promise<{ buffer: Buffer; fileName: string }> {
+  const user = await findRecordById("users", userId);
+  const userFullName = user?.fullName;
+
+  let content: WorldClassResume;
+  if (targetId.startsWith("tailored_")) {
+    const tailored = assertOwned(await findRecordById("tailoredResumes", targetId), userId, "Tailored resume");
     const version = tailored.resumeVersionId ? await findRecordById("resumeVersions", normalizeId(tailored.resumeVersionId)) : null;
     content = normalizeResumeContent({
+      name: userFullName || version?.content?.name,
       summary: tailored.updatedSummary || version?.content?.summary,
       skills: tailored.updatedSkills || version?.content?.skills,
       projects: tailored.improvedProjects || version?.content?.projects,
       experience: version?.content?.experience,
       education: version?.content?.education,
       certifications: version?.content?.certifications
-    });
+    }, userFullName);
   } else {
     const version = await findRecordById("resumeVersions", targetId);
     if (version && normalizeId(version.userId) === normalizeId(userId)) {
-      content = normalizeResumeContent(version);
+      content = normalizeResumeContent(version, userFullName);
     } else {
       const resume = assertOwned(await findRecordById("resumes", targetId), userId, "Resume");
-      content = normalizeResumeContent(resume);
+      content = normalizeResumeContent(resume, userFullName);
     }
   }
+
+  content.name = resolveCandidateRealName(content.name, userFullName, user?.email);
 
   let buffer: Buffer;
   try {
@@ -1183,7 +1245,6 @@ export async function exportResumePdfDirect(userId: string, id: string | null) {
     buffer = await buildGenericPdfBuffer(`${content?.name || "Resume"} - ${content?.title || "Full Stack Developer"}`, sections);
   }
 
-  const user = await findRecordById("users", userId);
   const profile = await findOneRecord("profiles", { userId });
   const role = profile?.currentRole || (profile?.targetRoles && profile.targetRoles[0]) || "FullStackDeveloper";
   const cleanName = sanitizePdfText(user?.fullName || content?.name || "Candidate").replace(/[^a-zA-Z0-9_-]/g, "_");
