@@ -554,6 +554,19 @@ function ApplyAssistantForm() {
                     </div>
                   )}
 
+                  {/* Answer Vault usage indicator */}
+                  {generatedKit.usedSavedAnswers && (
+                    <div className="flex items-center gap-2 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-200">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>
+                        <strong>Using your Answer Vault:</strong> {generatedKit.savedAnswersCount} saved answer
+                        {generatedKit.savedAnswersCount === 1 ? "" : "s"} from your Answer Vault were referenced
+                        while drafting these responses. Review each answer below to confirm it reflects your real
+                        experience accurately.
+                      </span>
+                    </div>
+                  )}
+
                   {/* Missing information warnings */}
                   {generatedKit.missingInfo && generatedKit.missingInfo.length > 0 && (
                     <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-950 dark:border-red-900 dark:bg-red-950/20 dark:text-red-200 space-y-1">
