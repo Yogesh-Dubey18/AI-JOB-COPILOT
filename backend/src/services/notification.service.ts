@@ -1,8 +1,36 @@
 import { createRecord, findOneRecord, findRecords, updateRecord } from "../utils/repository.js";
 import { sendEmail } from "./email.service.js";
 
-export async function listNotifications(userId: string) {
-  return findRecords("notifications", { userId }, { sort: { createdAt: -1 } });
+/**
+ * Lists a user's notifications with pagination. Notifications accumulate
+ * unbounded over time (job alerts, application updates, etc.), so this
+ * MUST be paginated at the database level rather than fetching every
+ * notification a user has ever received.
+ *
+ * Backward compatible: calling listNotifications(userId) with no options
+ * still works and returns the same shape as before (an array) for any
+ * existing callers, but internally now caps at a sane default limit.
+ * New callers can pass { page, limit } to get paginated results with
+ * metadata via listNotificationsPaginated below.
+ */
+export async function listNotifications(userId: string, options: { page?: number; limit?: number } = {}) {
+  const limit = Math.max(1, Math.min(options.limit || 50, 100));
+  const page = Math.max(1, options.page || 1);
+  return findRecords("notifications", { userId }, { sort: { createdAt: -1 }, limit, skip: (page - 1) * limit });
+}
+
+/**
+ * Same as listNotifications, but also returns pagination metadata
+ * (page, limit, hasMore) so the frontend can implement "load more" /
+ * infinite scroll instead of loading the entire notification history
+ * on every page visit.
+ */
+export async function listNotificationsPaginated(userId: string, options: { page?: number; limit?: number } = {}) {
+  const limit = Math.max(1, Math.min(options.limit || 50, 100));
+  const page = Math.max(1, options.page || 1);
+  const items = await findRecords("notifications", { userId }, { sort: { createdAt: -1 }, limit: limit + 1, skip: (page - 1) * limit });
+  const hasMore = items.length > limit;
+  return { items: items.slice(0, limit), page, limit, hasMore };
 }
 
 export async function createNotification(userId: string, input: any) {

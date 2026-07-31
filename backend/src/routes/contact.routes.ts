@@ -9,7 +9,13 @@ const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : v
 router.use(requireAuth);
 
 router.get("/", asyncHandler(async (req, res) => {
-  res.json({ success: true, data: await listContacts(req.user!.id) });
+  res.json({
+    success: true,
+    data: await listContacts(req.user!.id, {
+      page: req.query.page ? Number(req.query.page) : undefined,
+      limit: req.query.limit ? Number(req.query.limit) : undefined
+    })
+  });
 }));
 
 router.post("/", asyncHandler(async (req, res) => {

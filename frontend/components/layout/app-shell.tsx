@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
-import { Archive, BarChart3, Bell, Bot, BriefcaseBusiness, Building2, Download, FileText, Gauge, GitCompare, Github, Globe2, Home, Layers, LayoutTemplate, Linkedin, MessageSquare, MessageSquarePlus, Route, Settings, ShieldAlert, UserRound, Users2, Wrench } from "lucide-react";
+import { Archive, BarChart3, Bell, Bot, BriefcaseBusiness, Building2, FileText, Gauge, Github, Globe2, Home, Layers, Linkedin, MessageSquare, MessageSquarePlus, Route, Settings, ShieldAlert, UserRound, Users2, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { clearAuthSession } from "@/lib/auth-session";
 import { api } from "@/lib/api";
 
+// NOTE: /compare, /resume-examples, and /pdf-export are intentionally
+// NOT listed here - they live in the Resume section's own sub-navigation
+// (frontend/app/resume/layout.tsx) since they're resume-specific tools.
+// Listing them here too would duplicate the same links in two places.
 const nav = [
   ["/dashboard", Home, "Dashboard"],
   ["/guided-workflow", Route, "Workflow"],
   ["/resume/analyzer", FileText, "Resume"],
-  ["/compare", GitCompare, "Compare"],
-  ["/resume-examples", LayoutTemplate, "Examples"],
   ["/jobs", BriefcaseBusiness, "Jobs"],
   ["/applications", Layers, "Applications"],
   ["/interviews", MessageSquare, "Interviews"],
@@ -24,7 +26,6 @@ const nav = [
   ["/portfolio-generator", Globe2, "Portfolio"],
   ["/linkedin-optimizer", Linkedin, "LinkedIn"],
   ["/github-analyzer", Github, "GitHub"],
-  ["/pdf-export", Download, "Exports"],
   ["/skill-roadmap", Wrench, "Skills"],
   ["/career-mentor-chat", Bot, "Mentor"],
   ["/analytics", BarChart3, "Analytics"],

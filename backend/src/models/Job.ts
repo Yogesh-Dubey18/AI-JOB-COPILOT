@@ -34,7 +34,12 @@ const JobSchema = new Schema(
     expiresAt: Date,
     importedAt: Date,
     lastSeenAt: Date,
-    lastSeenInSyncAt: Date
+    lastSeenInSyncAt: Date,
+    // Cached semantic embedding vector for this job's title+description+skills.
+    // Computed once (lazily, on first match request) and reused thereafter to
+    // avoid recomputing an embedding API call on every match. Null/absent
+    // means semantic matching falls back to keyword-only scoring for this job.
+    embedding: { type: [Number], default: undefined }
   },
   { timestamps: true }
 );

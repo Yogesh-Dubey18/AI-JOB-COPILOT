@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Bookmark, Briefcase, FileText, MapPin, ShieldAlert, Sparkles, Wallet } from "lucide-react";
+import { Bookmark, Braces, Briefcase, FileText, MapPin, ShieldAlert, Sparkles, Wallet } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,6 +88,9 @@ export function JobDetailClient({ jobId }: { jobId: string }) {
                 <FitRow icon={MapPin} label="Location fit" fit={matchData.locationFit} />
                 <FitRow icon={Wallet} label="Salary fit" fit={matchData.salaryFit} />
                 <FitRow icon={Briefcase} label="Experience fit" fit={matchData.experienceFit} />
+                {matchData.semanticFit?.available && (
+                  <FitRow icon={Braces} label="Conceptual skill fit" fit={matchData.semanticFit} />
+                )}
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">

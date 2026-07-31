@@ -310,3 +310,48 @@ export async function callJsonModel<T>(prompt: string, fallback: T, schema?: Zod
   const result = await callJsonModelWithMeta(prompt, fallback, schema);
   return result.data;
 }
+
+/**
+ * Generates a semantic embedding vector for the given text using OpenAI's
+ * text-embedding-3-small model. This powers semantic (meaning-based) job
+ * matching in addition to plain keyword overlap - so e.g. "financial
+ * modeling" and "financial analysis" are recognized as related even
+ * without an exact keyword match.
+ *
+ * Returns null (never throws) when:
+ * - No OPENAI_API_KEY is configured (feature gracefully degrades to
+ *   keyword-only matching elsewhere in the app)
+ * - The embedding request fails or times out for any reason
+ *
+ * Callers MUST treat a null result as "semantic matching unavailable for
+ * this call" and fall back to their existing keyword-based logic - this
+ * is intentional graceful degradation, not an error to surface to users.
+ */
+export async function getEmbedding(text: string): Promise<number[] | null> {
+  if (!env.OPENAI_API_KEY) return null;
+  const trimmed = (text || "").trim();
+  if (!trimmed) return null;
+
+  try {
+    const data = await fetchJsonWithTimeout(
+      "https://api.openai.com/v1/embeddings",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + env.OPENAI_API_KEY
+        },
+        body: JSON.stringify({
+          model: "text-embedding-3-small",
+          input: trimmed.slice(0, 8000)
+        })
+      },
+      Math.max(env.AI_TIMEOUT_MS, 8_000)
+    );
+    const vector = data?.data?.[0]?.embedding;
+    return Array.isArray(vector) ? vector : null;
+  } catch {
+    return null;
+  }
+}
+

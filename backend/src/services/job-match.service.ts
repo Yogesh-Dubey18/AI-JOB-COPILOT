@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findOneRecord, findRecordById, findRecords } from "../utils/repository.js";
 import { getJob } from "./job.service.js";
 import { scoreResumeForRole } from "./ats-scoring.service.js";
+import { computeSemanticFit } from "./semantic-match.service.js";
 
 /**
  * Compute a deterministic 0-100 location fit score by comparing the
@@ -116,6 +117,12 @@ export async function matchJob(userId: string, jobId: string, resumeId?: string)
   const salaryFit = computeSalaryFit(profile, job);
   const experienceFit = computeExperienceFit(profile, job);
 
+  // Semantic fit catches conceptually related skills/experience that plain
+  // keyword matching would miss (e.g. "financial modeling" vs "financial
+  // analysis"). Gracefully degrades to unavailable if no embeddings
+  // provider is configured - the blend below accounts for that.
+  const semanticFit = await computeSemanticFit(resume, job);
+
   const result = await aiService.matchJob(userId, {
     job,
     resume,
@@ -128,21 +135,28 @@ export async function matchJob(userId: string, jobId: string, resumeId?: string)
       totalExperienceYears: profile.totalExperienceYears,
       noticePeriod: profile.noticePeriod
     } : null,
-    computedFit: { locationFit, salaryFit, experienceFit },
+    computedFit: { locationFit, salaryFit, experienceFit, semanticFit },
     formula: { skill: 35, project: 15, experience: 15, location: 15, salary: 10, keyword: 10 }
   });
 
-  // Blend the AI's skill/keyword-based matchScore with the deterministic
-  // location/salary/experience fit scores computed above, so profile
-  // preferences always have real, guaranteed weight in the final score -
-  // even if the AI response ignores them or falls back to a default.
-  const skillWeight = 0.6;
+  // Blend the AI's keyword-based matchScore with the deterministic
+  // location/salary/experience fit scores AND the semantic (meaning-based)
+  // fit score, so profile preferences and conceptual skill overlap always
+  // have real, guaranteed weight in the final score - even if the AI
+  // response ignores them or falls back to a default.
+  //
+  // When semantic matching is unavailable (no embeddings provider
+  // configured), its weight is redistributed to the AI skill-match score
+  // so the formula still sums to 1.0 and nothing is silently under-weighted.
+  const semanticWeight = semanticFit.available ? 0.25 : 0;
+  const skillWeight = semanticFit.available ? 0.35 : 0.6;
   const locationWeight = 0.15;
   const salaryWeight = 0.1;
   const experienceWeight = 0.15;
 
   const blendedMatchScore = Math.round(
     (Number(result.matchScore) || 0) * skillWeight +
+    (semanticFit.available ? semanticFit.score * semanticWeight : 0) +
     locationFit.score * locationWeight +
     salaryFit.score * salaryWeight +
     experienceFit.score * experienceWeight
@@ -168,6 +182,7 @@ export async function matchJob(userId: string, jobId: string, resumeId?: string)
     locationFit,
     salaryFit,
     experienceFit,
+    semanticFit,
     applyReadinessScore
   });
 }

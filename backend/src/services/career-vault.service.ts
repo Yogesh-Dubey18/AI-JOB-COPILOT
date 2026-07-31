@@ -32,8 +32,15 @@ export async function createCareerVault(userId: string, input: CareerVaultInput)
   });
 }
 
-export async function listCareerVault(userId: string) {
-  return findRecords("careerVault", { userId }, { sort: { createdAt: -1 } });
+/**
+ * Lists a user's Career Vault entries (verified projects, achievements,
+ * education, certifications), paginated. Backward compatible -
+ * listCareerVault(userId) with no options still returns the first page.
+ */
+export async function listCareerVault(userId: string, options: { page?: number; limit?: number } = {}) {
+  const limit = Math.max(1, Math.min(options.limit || 100, 200));
+  const page = Math.max(1, options.page || 1);
+  return findRecords("careerVault", { userId }, { sort: { createdAt: -1 }, limit, skip: (page - 1) * limit });
 }
 
 export async function deleteCareerVault(userId: string, id: string) {

@@ -27,8 +27,19 @@ export async function createContact(userId: string, input: ContactInput) {
   });
 }
 
-export async function listContacts(userId: string) {
-  return findRecords("contacts", { userId }, { sort: { name: 1 } });
+/**
+ * Lists a user's saved recruiter/networking contacts, paginated. A user
+ * building a large professional network over time could accumulate
+ * hundreds of contacts, so this is capped and paginated at the database
+ * level rather than always fetching every contact ever saved.
+ *
+ * Backward compatible: listContacts(userId) with no options still works
+ * and behaves sensibly (returns the first page, default 100 per page).
+ */
+export async function listContacts(userId: string, options: { page?: number; limit?: number } = {}) {
+  const limit = Math.max(1, Math.min(options.limit || 100, 200));
+  const page = Math.max(1, options.page || 1);
+  return findRecords("contacts", { userId }, { sort: { name: 1 }, limit, skip: (page - 1) * limit });
 }
 
 export async function getContact(userId: string, id: string) {

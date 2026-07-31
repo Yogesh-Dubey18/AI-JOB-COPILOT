@@ -7,7 +7,13 @@ import { runApplicationReminderScan } from "../services/reminder-scheduler.servi
 const router = Router();
 const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : value);
 router.use(requireAuth);
-router.get("/", asyncHandler(async (req, res) => res.json({ success: true, data: await listNotifications(req.user!.id) })));
+router.get("/", asyncHandler(async (req, res) => res.json({
+  success: true,
+  data: await listNotifications(req.user!.id, {
+    page: req.query.page ? Number(req.query.page) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined
+  })
+})));
 router.get("/preferences", asyncHandler(async (req, res) => res.json({ success: true, data: await getNotificationPreferences(req.user!.id) })));
 router.patch("/preferences", asyncHandler(async (req, res) => res.json({ success: true, data: await updateNotificationPreferences(req.user!.id, req.body) })));
 router.post("/reminders/applications", asyncHandler(async (req, res) => res.json({ success: true, data: await runApplicationReminderScan(req.user!.id) })));
