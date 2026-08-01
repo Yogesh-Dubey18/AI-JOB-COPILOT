@@ -936,10 +936,15 @@ export default function ResumeBuilderPage() {
                 }`}>
                   {liveScore}
                 </span>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-1">Live ATS Score</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-1">Live Draft Estimate</p>
                 {scoreMutation.isPending && (
                   <p className="text-[10px] text-muted-foreground animate-pulse mt-0.5">Recalculating score...</p>
                 )}
+                <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+                  This is a fast, rule-based estimate that updates as you type here in the builder.
+                  Your official ATS Analyzer score (on the Resume Analyzer page) may differ slightly -
+                  it also factors in an AI review of your saved resume for a more complete picture.
+                </p>
               </div>
 
               {/* 5-Category Breakdown */}

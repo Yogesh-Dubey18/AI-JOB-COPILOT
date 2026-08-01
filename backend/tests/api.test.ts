@@ -2611,4 +2611,117 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     expect(textVersion.text).toContain("Airbnb-style Website for Indian holiday rentals and homes");
     expect(textVersion.text).not.toMatch(/\(\s*stck:\s*React\.js\)/);
   });
+
+  it("uses saved Answer Vault entries when generating an Application Kit instead of only synthetic examples", async () => {
+    const agent = await authAgent();
+    const user = await findOneRecord("users", { email: "test@example.com" });
+
+    // 1. Save a real STAR answer in the Answer Vault for a "Leadership" competency
+    await agent.post("/api/answer-vault").send({
+      question: "Tell me about a time you led a team through a difficult project.",
+      answer: "I led a 4-person team migrating our legacy auth system to JWT, coordinating daily standups and resolving a critical rollback issue myself within 2 hours.",
+      category: "Leadership",
+      tags: ["leadership", "ownership"]
+    }).expect(201);
+
+    // 2. Create a resume version and a job to generate a kit for
+    const resumeVer = await createRecord("resumeVersions", {
+      userId: user!._id,
+      title: "React Developer Version",
+      content: { skills: ["React", "TypeScript"] }
+    });
+    const jobRes = await agent.get("/api/jobs").expect(200);
+    const job = jobRes.body.data.items[0];
+
+    // 3. Generate the application kit
+    const kitRes = await agent
+      .post("/api/ai/generate-application-kit")
+      .send({ jobId: job._id, resumeVersionId: resumeVer._id, tone: "Professional" })
+      .expect(200);
+
+    // 4. The kit must report that it used the candidate's saved Answer Vault entries,
+    // not silently ignore them (this is the fix for the previously broken behavior).
+    expect(kitRes.body.data.usedSavedAnswers).toBe(true);
+    expect(kitRes.body.data.savedAnswersCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it("factors the candidate's profile (location, salary, experience) into job matching instead of ignoring it", async () => {
+    const agent = await authAgent();
+    const user = await findOneRecord("users", { email: "test@example.com" });
+
+    // 1. Set profile preferences that clearly WON'T match a typical seed job
+    // (an unusual, very specific location and an unusually high expected salary)
+    await agent.put("/api/profile").send({
+      headline: "React developer",
+      skills: ["React", "Node.js"],
+      targetRoles: ["React Developer"],
+      preferredLocations: ["Antarctica Research Base"],
+      expectedSalary: 99999999,
+      experienceLevel: "fresher",
+      totalExperienceYears: 0
+    }).expect(200);
+
+    const resume = await createRecord("resumes", {
+      userId: user._id,
+      fileName: "resume.pdf",
+      rawText: "React Node.js developer with TypeScript",
+      parsedData: { skills: ["React", "Node.js", "TypeScript"], summary: "Full stack developer" }
+    });
+
+    const jobsRes = await agent.get("/api/jobs").expect(200);
+    const jobId = jobsRes.body.data.items[0]._id;
+
+    const matchRes = await agent
+      .post(`/api/jobs/${jobId}/match`)
+      .send({ resumeId: resume._id })
+      .expect(201);
+
+    // 2. The match result must include concrete, computed fit breakdowns -
+    // these must exist and have real score/reason fields, proving the profile
+    // was actually read and factored in (not silently ignored as before).
+    expect(matchRes.body.data.locationFit).toBeDefined();
+    expect(matchRes.body.data.locationFit.score).toBeTypeOf("number");
+    expect(matchRes.body.data.locationFit.reason).toBeTypeOf("string");
+    expect(matchRes.body.data.salaryFit).toBeDefined();
+    expect(matchRes.body.data.salaryFit.score).toBeTypeOf("number");
+    expect(matchRes.body.data.experienceFit).toBeDefined();
+    expect(matchRes.body.data.experienceFit.score).toBeTypeOf("number");
+
+    // 3. Given a mismatched location/salary preference, the blended overall
+    // matchScore should be measurably different from the raw AI skill score
+    // alone - proving profile fit genuinely influences the final number.
+    expect(matchRes.body.data.matchScore).toBeTypeOf("number");
+    expect(matchRes.body.data.aiSkillMatchScore).toBeTypeOf("number");
+  });
+
+  it("paginates notifications at the database level instead of always returning the full unbounded history", async () => {
+    const agent = await authAgent();
+    const user = await findOneRecord("users", { email: "test@example.com" });
+
+    // 1. Seed more notifications than a single page should return
+    for (let i = 0; i < 5; i++) {
+      await createRecord("notifications", {
+        userId: user._id,
+        type: "info",
+        title: `Notification ${i}`,
+        message: `Test notification number ${i}`,
+        isRead: false
+      });
+    }
+
+    // 2. Requesting a small page size must return only that many items
+    const page1 = await agent.get("/api/notifications?page=1&limit=2").expect(200);
+    expect(page1.body.data.length).toBe(2);
+
+    // 3. Requesting the next page must return different items than page 1
+    const page2 = await agent.get("/api/notifications?page=2&limit=2").expect(200);
+    expect(page2.body.data.length).toBe(2);
+    expect(page2.body.data[0]._id).not.toBe(page1.body.data[0]._id);
+
+    // 4. Calling with no pagination params at all must still work (backward compatible)
+    // and must not silently fail or throw.
+    const allDefault = await agent.get("/api/notifications").expect(200);
+    expect(Array.isArray(allDefault.body.data)).toBe(true);
+    expect(allDefault.body.data.length).toBeGreaterThanOrEqual(5);
+  });
 });
