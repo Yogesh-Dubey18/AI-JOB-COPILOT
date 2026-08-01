@@ -1,28 +1,53 @@
-import { Router } from "express";
-import { requireAuth } from "../middlewares/auth.middleware.js";
-import { validateBody } from "../middlewares/validate.js";
-import { createCompanyResearchSchema } from "../validators/company-research.validator.js";
-import { createCompanyResearch, deleteCompanyResearch, listCompanyResearch } from "../services/company-research.service.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { createRecord, findRecordById, findRecords, deleteRecord } from "../utils/repository.js";
 
-const router = Router();
-const param = (value: string | string[]) => (Array.isArray(value) ? value[0] : value);
+type CompanyResearchInput = {
+  companyName: string;
+  industry?: string;
+  techStack?: string[];
+  culture?: string;
+  glassdoorRating?: number;
+  salaryRangeMin?: number;
+  salaryRangeMax?: number;
+  careerPageUrl?: string;
+  interviewProcess?: string;
+  notes?: string;
+};
 
-router.use(requireAuth);
+export async function createCompanyResearch(userId: string, input: CompanyResearchInput) {
+  if (!input.companyName) {
+    throw new ApiError(400, "Company name is required");
+  }
+  return createRecord("companyResearch", {
+    userId,
+    companyName: input.companyName,
+    industry: input.industry,
+    techStack: input.techStack || [],
+    culture: input.culture,
+    glassdoorRating: input.glassdoorRating,
+    salaryRangeMin: input.salaryRangeMin,
+    salaryRangeMax: input.salaryRangeMax,
+    careerPageUrl: input.careerPageUrl,
+    interviewProcess: input.interviewProcess,
+    notes: input.notes
+  });
+}
 
-router.get("/", asyncHandler(async (req, res) => {
-  res.json({ success: true, data: await listCompanyResearch(req.user!.id, {
-    page: req.query.page ? Number(req.query.page) : undefined,
-    limit: req.query.limit ? Number(req.query.limit) : undefined
-  }) });
-}));
+/**
+ * Lists a user's saved company research notes, paginated. Backward
+ * compatible - listCompanyResearch(userId) with no options still
+ * returns the first page (default 100 entries).
+ */
+export async function listCompanyResearch(userId: string, options: { page?: number; limit?: number } = {}) {
+  const limit = Math.max(1, Math.min(options.limit || 100, 200));
+  const page = Math.max(1, options.page || 1);
+  return findRecords("companyResearch", { userId }, { sort: { createdAt: -1 }, limit, skip: (page - 1) * limit });
+}
 
-router.post("/", validateBody(createCompanyResearchSchema), asyncHandler(async (req, res) => {
-  res.status(201).json({ success: true, data: await createCompanyResearch(req.user!.id, req.body) });
-}));
-
-router.delete("/:id", asyncHandler(async (req, res) => {
-  res.json({ success: true, data: await deleteCompanyResearch(req.user!.id, param(req.params.id)) });
-}));
-
-export default router;
+export async function deleteCompanyResearch(userId: string, id: string) {
+  const existing = await findRecordById("companyResearch", id);
+  if (!existing || String(existing.userId) !== userId) {
+    throw new ApiError(404, "Company research record not found");
+  }
+  return deleteRecord("companyResearch", id);
+}
