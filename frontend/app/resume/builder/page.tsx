@@ -637,6 +637,7 @@ export default function ResumeBuilderPage() {
                                 variant="ghost"
                                 className="text-destructive h-8 w-8 p-0"
                                 onClick={() => removeExperience(idx)}
+                                aria-label={`Remove experience entry ${idx + 1}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -693,6 +694,7 @@ export default function ResumeBuilderPage() {
                                         type="button"
                                         disabled={exp.bullets.length <= 1}
                                         onClick={() => removeExpBullet(idx, bIdx)}
+                                        aria-label={`Remove bullet point ${bIdx + 1}`}
                                         className="text-muted-foreground hover:text-destructive disabled:opacity-30"
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
@@ -734,6 +736,7 @@ export default function ResumeBuilderPage() {
                                 variant="ghost"
                                 className="text-destructive h-8 w-8 p-0"
                                 onClick={() => removeProject(idx)}
+                                aria-label={`Remove project entry ${idx + 1}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -782,6 +785,7 @@ export default function ResumeBuilderPage() {
                                         type="button"
                                         disabled={proj.bullets.length <= 1}
                                         onClick={() => removeProjBullet(idx, bIdx)}
+                                        aria-label={`Remove bullet point ${bIdx + 1}`}
                                         className="text-muted-foreground hover:text-destructive disabled:opacity-30"
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
@@ -823,6 +827,7 @@ export default function ResumeBuilderPage() {
                                 variant="ghost"
                                 className="text-destructive h-8 w-8 p-0"
                                 onClick={() => removeEducation(idx)}
+                                aria-label={`Remove education entry ${idx + 1}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

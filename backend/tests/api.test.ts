@@ -2724,4 +2724,62 @@ Quick learner | Adaptable | Good listener | Problem solver | Consistent coding p
     expect(Array.isArray(allDefault.body.data)).toBe(true);
     expect(allDefault.body.data.length).toBeGreaterThanOrEqual(5);
   });
+
+  it("correctly extracts project title even when its tech-stack line wraps across multiple physical PDF lines", async () => {
+    // This exact raw text pattern previously caused the parser to lose the
+    // "Zerodha" project title entirely (it got replaced by an orphaned
+    // tail fragment "AWS ,Kubernetes & Docker ,NGINX)"), and caused
+    // "Airbnb Website" to be silently swallowed into "Zoom App"'s bullets.
+    const rawText = `Candidate
+Full Stack Developer | MERN Stack
+PROFESSIONAL SUMMARY
+Full Stack Developer with expertise in MERN Stack and experience in building scalable web applications.
+TECHNICAL SKILLS
+Frontend: React.js, HTML5, TypeScript, JavaScript, Node.js, WebSockets
+Backend: Python, Ruby, Java, Go, GraphQL
+Database: MongoDB, MySQL, PostgreSQL, Redis
+Tools: AWS, Docker, Kubernetes, NGINX, Apache Kafka
+PROJECTS
+Zerodha | Stock Marcket Analysis App - (Kit Web / Website UI ) - (JavaScript ,React.js , TypeScript ,HTML5 & CSS 
+3 ,WebSockets) - (Trading & Core Systems) - (Python, Node.js, Java, Go(Golang), - - (PostgreSQL, Redis, Kafka , 
+AWS ,Kubernetes & Docker ,NGINX)
+• Built a stock market analysis app using JavaScript, React.js, and TypeScript.
+• Developed a trading and core system using Python, Node.js, Java, and Go(Golang).
+Zoom App | Wesite
+• Developed a website for Zoom App using JavaScript and React.js.
+• Implemented a server-side system using Ruby on Rail, Java, Node.js, and Python.
+Airbnb Website | Indian Holiday Rents & Homes - (UI) (JavaScript ,React.js , TypeScript ,HTML5 & CSS 3 ,GraphQL/ RestAPI's 
+- (Server Side) - (Ruby on Rail , Java ,Node.js , Python ) - ( MySQL )
+• Designed a user interface for an Airbnb website using JavaScript, React.js, and TypeScript.
+• Developed a server-side system using Ruby on Rail, Java, Node.js, and Python.
+EXPERIENCE
+Fresher (2025) | Self-Directed / Fresher Projects
+2022 - Present
+• Developed Java DSA and full-stack web development skills.
+EDUCATION
+BCA - Bachelor of Computer Applications
+Jhunjhunwala Pg College Ayodhya | 2025 | CGPA: 7.68
+X & XII (UP)
+LPCP School Ahiraula(Phoolpur)Basti,UP Passed | 2022`;
+
+    const parsed = parseResumeText(rawText, "Yogesh Dubey", { email: "yogeshdubey8924@gmail.com" });
+
+    expect(parsed.projects.length).toBe(3);
+    const projectNames = parsed.projects.map((p: any) => p.name);
+    expect(projectNames).toContain("Zerodha");
+    expect(projectNames).toContain("Zoom App");
+    expect(projectNames).toContain("Airbnb Website");
+
+    // The real title must never be silently replaced by an orphaned
+    // tail fragment of its own wrapped tech-stack line.
+    expect(projectNames.join(" ")).not.toContain("NGINX)");
+
+    // Zerodha's full tech stack (spread across 3 wrapped physical lines)
+    // must all be captured, not truncated at the wrap point.
+    const zerodha = parsed.projects.find((p: any) => p.name === "Zerodha");
+    expect(zerodha.tech).toContain("React.js");
+    expect(zerodha.tech).toContain("Kubernetes");
+    expect(zerodha.tech).toContain("NGINX");
+    expect(zerodha.bullets.length).toBeGreaterThanOrEqual(2);
+  });
 });

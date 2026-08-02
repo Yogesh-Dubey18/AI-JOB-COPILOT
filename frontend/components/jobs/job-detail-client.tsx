@@ -54,7 +54,7 @@ export function JobDetailClient({ jobId }: { jobId: string }) {
         <div className="flex flex-wrap gap-2">
           <Link href={"/jobs/" + jobId + "/tailor-resume"}><Button><FileText className="h-4 w-4" /> Tailor resume</Button></Link>
           <Button variant="outline" onClick={() => match.mutate()}><Sparkles className="h-4 w-4" /> Match</Button>
-          <Button title="Save job" variant="outline" className="w-10 px-0"><Bookmark className="h-4 w-4" /></Button>
+          <Button title="Save job" aria-label="Save this job" variant="outline" className="w-10 px-0"><Bookmark className="h-4 w-4" /></Button>
         </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-[1.4fr_.8fr]">

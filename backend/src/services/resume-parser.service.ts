@@ -318,6 +318,17 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
 
   if (strongActionVerbs.test(clean)) return { isTitle: false, name: "", tech: "" };
 
+  // A line with more closing parentheses than opening ones is almost
+  // certainly an orphaned tail fragment left over when a long, multi-line
+  // wrapped tech-stack blob got split across preprocessProjectLines'
+  // merge boundary (e.g. "AWS ,Kubernetes & Docker ,NGINX)" - the opening
+  // "(" was consumed by an earlier merged line). Such fragments must never
+  // be treated as a new project title; they belong as tech-continuation
+  // content on whatever project is currently being built.
+  const openParenCount = (clean.match(/\(/g) || []).length;
+  const closeParenCount = (clean.match(/\)/g) || []).length;
+  if (closeParenCount > openParenCount) return { isTitle: false, name: "", tech: "" };
+
   // Check parenthesized project title format like "Zerodha Stock Market Analysis App (PostgreSQL, Redis, Kafka, AWS, Kubernetes, Docker, NGINX)"
   const parenMatch = clean.match(/^([^(]+)\(([^()]+)\)$/);
   if (parenMatch) {
@@ -328,14 +339,31 @@ function isNewProjectTitle(line: string, nextLine: string | undefined, isFirstLi
     }
   }
 
+  // Pipe-separated titles ("Project Name | tech stuff...") are unambiguous,
+  // so extract the name BEFORE the overall-length check below. The tech
+  // portion after "|" can legitimately be very long - e.g. when a PDF's
+  // long tech-stack line wraps across multiple physical lines and gets
+  // merged by preprocessProjectLines() - without that making the actual
+  // project NAME (before the pipe) invalid. Checking this first prevents
+  // the real title from being silently dropped just because its merged
+  // tech tail pushed the overall line past the length threshold.
+  if (clean.includes("|")) {
+    const pipeParts = clean.split("|");
+    const pipeName = pipeParts[0].trim();
+    const pipeTech = pipeParts.slice(1).join("|").trim();
+    if (pipeName.length > 2 && pipeName.length < 75 && !strongActionVerbs.test(pipeName)) {
+      return { isTitle: true, name: pipeName, tech: pipeTech };
+    }
+  }
+
   const wordCount = clean.split(/\s+/).filter(Boolean).length;
   if (wordCount > 14 || clean.length > 85) return { isTitle: false, name: "", tech: "" };
 
   let namePart = clean;
   let techPart = "";
 
-  if (clean.includes("|") || clean.includes(" — ") || clean.includes(" - ") || (clean.includes(" - ") && !clean.startsWith("-"))) {
-    const sep = clean.includes("|") ? "|" : (clean.includes(" — ") ? " — " : " - ");
+  if (clean.includes(" — ") || (clean.includes(" - ") && !clean.startsWith("-"))) {
+    const sep = clean.includes(" — ") ? " — " : " - ";
     const parts = clean.split(sep);
     namePart = parts[0].trim();
     techPart = parts.slice(1).join(sep).trim();
