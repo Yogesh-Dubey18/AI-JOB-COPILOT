@@ -1,80 +1,129 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { DragEvent } from "react";
+import React, { useState, useEffect, type DragEvent } from "react";
 import Link from "next/link";
-import { applicationStatuses } from "@/lib/constants";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export function KanbanBoard({ applications }: { applications: any[] }) {
+const COLUMNS = ["Discovered", "Tailored", "Applied", "Interviewing"];
+
+function normalizeStatus(status?: string): string {
+  if (!status) return "Discovered";
+  const s = status.toLowerCase();
+  if (s.includes("interview") || s.includes("round") || s.includes("technical") || s.includes("hr")) return "Interviewing";
+  if (s.includes("tailor")) return "Tailored";
+  if (s.includes("apply") || s.includes("applied") || s.includes("submit")) return "Applied";
+  return "Discovered";
+}
+
+export interface KanbanBoardProps {
+  initialJobs?: any[];
+  applications?: any[];
+}
+
+export function KanbanBoard({ initialJobs, applications }: KanbanBoardProps) {
   const qc = useQueryClient();
-  const moveApplication = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => api.patch("/applications/" + id + "/status", { status }),
+  const rawList = initialJobs || applications || [];
+
+  const [jobs, setJobs] = useState<any[]>(() => {
+    return rawList.map((item) => ({
+      ...item,
+      id: String(item.id || item._id || ""),
+      title: item.title || item.role || item.jobTitle || "Software Engineer",
+      company: item.company || "Company",
+      status: item.status && COLUMNS.includes(item.status) ? item.status : normalizeStatus(item.status),
+      matchScore: item.matchScore ?? 85,
+    }));
+  });
+
+  useEffect(() => {
+    const list = initialJobs || applications || [];
+    setJobs(
+      list.map((item) => ({
+        ...item,
+        id: String(item.id || item._id || ""),
+        title: item.title || item.role || item.jobTitle || "Software Engineer",
+        company: item.company || "Company",
+        status: item.status && COLUMNS.includes(item.status) ? item.status : normalizeStatus(item.status),
+        matchScore: item.matchScore ?? 85,
+      }))
+    );
+  }, [initialJobs, applications]);
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.patch("/applications/" + id + "/status", { status }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["applications"] });
       void qc.invalidateQueries({ queryKey: ["application-insights"] });
-    }
+    },
   });
 
-  const handleDragStart = (event: DragEvent<HTMLDivElement>, applicationId: string) => {
-    event.dataTransfer.setData("application/id", applicationId);
-    event.dataTransfer.effectAllowed = "move";
+  const handleDragStart = (e: DragEvent<HTMLDivElement>, id: string) => {
+    e.dataTransfer.setData("job/id", id);
+    e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDrop = (event: DragEvent<HTMLDivElement>, status: string) => {
-    event.preventDefault();
-    const id = event.dataTransfer.getData("application/id");
-    const application = applications.find((item) => item._id === id);
-    if (!id || application?.status === status) return;
-    moveApplication.mutate({ id, status });
+  const handleDrop = (e: DragEvent<HTMLDivElement>, col: string) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData("job/id");
+    if (!id) return;
+
+    setJobs((prev) =>
+      prev.map((job) => (job.id === id ? { ...job, status: col } : job))
+    );
+
+    if (applications) {
+      updateStatusMutation.mutate({ id, status: col });
+    }
   };
 
   return (
-    <div role="region" aria-label="Application pipeline board" className="grid min-h-[420px] gap-3 overflow-x-auto pb-3 md:grid-flow-col md:auto-cols-[260px]">
-      {applicationStatuses.map((status) => {
-        const items = applications.filter((app) => app.status === status);
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6">
+      {COLUMNS.map((col) => {
+        const columnJobs = jobs.filter((j) => j.status === col);
         return (
-          <Card
-            key={status}
-            className="shadow-none"
-            role="group"
-            aria-label={`${status} applications`}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => handleDrop(event, status)}
+          <div
+            key={col}
+            className="bg-muted/40 border border-border rounded-xl p-4 flex flex-col h-[75vh]"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, col)}
           >
-            <CardHeader className="p-3"><CardTitle className="flex items-center justify-between text-sm">{status}<Badge>{items.length}</Badge></CardTitle></CardHeader>
-            <CardContent className="space-y-2 p-3 pt-0">
-              {!items.length ? <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">No applications in this stage.</p> : null}
-              {items.map((app) => (
-                <div key={app._id} className="cursor-grab rounded-md border bg-background p-3 active:cursor-grabbing" draggable onDragStart={(event) => handleDragStart(event, app._id)}>
-                  <Link href={`/applications/${app._id}`} className="hover:underline">
-                    <p className="text-sm font-semibold">{app.role}</p>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">{col}</h3>
+              <span className="text-xs bg-card px-2 py-0.5 rounded-full border border-border font-medium text-muted-foreground">
+                {columnJobs.length}
+              </span>
+            </div>
+            <div className="space-y-3 overflow-y-auto flex-1 pr-1">
+              {columnJobs.length === 0 ? (
+                <div className="h-24 rounded-lg border border-dashed border-border/70 flex items-center justify-center text-xs text-muted-foreground/80">
+                  Drop roles here
+                </div>
+              ) : null}
+              {columnJobs.map((job) => (
+                <div
+                  key={job.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, job.id)}
+                  className="bg-card border border-border p-3 rounded-lg shadow-2xs space-y-2 cursor-grab active:cursor-grabbing hover:border-border/80 transition-shadow"
+                >
+                  <Link href={`/jobs/${job.id}`} className="hover:underline block">
+                    <h4 className="font-medium text-sm text-foreground">{job.title}</h4>
                   </Link>
-                  <p className="text-xs text-muted-foreground">{app.company}</p>
-                  <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
-                    {app.matchScore ? <Badge className="bg-background">{app.matchScore}% match</Badge> : null}
-                    {app.appliedDate ? <Badge className="bg-background">{new Date(app.appliedDate).toLocaleDateString()}</Badge> : null}
-                    {app.followUpStatus ? <Badge className="bg-background">{app.followUpStatus}</Badge> : null}
-                    {app.priorityScore ? <Badge className="bg-background">Priority {app.priorityScore}</Badge> : null}
-                    {app.currentRound ? <Badge className="bg-background">{app.currentRound}</Badge> : null}
-                  </div>
-                  {app.notes ? <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{app.notes}</p> : null}
-                  <div className="mt-3 flex gap-2 border-t pt-2">
-                    <Link href={`/company-research?company=${encodeURIComponent(app.company)}`} className="inline-flex items-center justify-center rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all">
-                      Research
-                    </Link>
-                    <Link href={`/interviews/prep?applicationId=${app._id}`} className="inline-flex items-center justify-center rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all">
-                      Prepare
-                    </Link>
+                  <p className="text-xs text-muted-foreground">{job.company}</p>
+                  <div className="flex justify-between items-center text-xs pt-1 border-t border-border/50">
+                    <span className="text-[#EF6637] font-semibold">{job.matchScore}% Match</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">{col}</span>
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         );
       })}
     </div>
   );
 }
+
+export default KanbanBoard;

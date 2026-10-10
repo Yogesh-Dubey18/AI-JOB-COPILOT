@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { DashboardJobFeed } from "@/components/jobs/JobFeed";
 
 export default function DashboardPage() {
   const profile = useQuery({ queryKey: ["profile"], queryFn: () => api.get<any>("/profile"), retry: false });
@@ -67,6 +68,9 @@ export default function DashboardPage() {
         <MetricCard label="Response rate" value={(data.responseRate || 0) + "%"} icon={<TrendingUp className="h-5 w-5" />} />
         <MetricCard label="Shortlisted" value={data.totalShortlisted || 0} icon={<BriefcaseBusiness className="h-5 w-5" />} />
         <MetricCard label="Missing skills" value={missingSkills} icon={<Wrench className="h-5 w-5" />} />
+      </div>
+      <div className="mt-8">
+        <DashboardJobFeed />
       </div>
     </AppShell>
   );

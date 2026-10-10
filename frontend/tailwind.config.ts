@@ -19,10 +19,12 @@ const config: Config = {
         "accent-foreground": "hsl(var(--accent-foreground))",
         success: "#16865a",
         warning: "#c87912",
-        danger: "#c2413d"
+        danger: "#c2413d",
+        "brand-orange": "#EF6637"
       },
       boxShadow: {
-        soft: "0 12px 40px rgba(15, 23, 42, 0.08)"
+        soft: "0 12px 40px rgba(15, 23, 42, 0.08)",
+        "2xs": "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
       }
     }
   },
