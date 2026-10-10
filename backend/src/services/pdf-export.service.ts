@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { Writable } from "node:stream";
 import PDFDocument from "pdfkit";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findRecordById, findRecords, findOneRecord } from "../utils/repository.js";
@@ -1320,4 +1321,82 @@ export async function generatePdfFromResumeId(userId: string, targetId: string):
   }
 
   return { buffer, fileName };
+}
+
+export interface TailoredResumeData {
+  fullName: string;
+  email: string;
+  phone: string;
+  githubUrl: string;
+  summary: string;
+  experienceBullets: string[];
+  skills: string[];
+}
+
+export async function generateAtsCompliantPdfResume(
+  data: TailoredResumeData
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+    });
+
+    const buffers: Buffer[] = [];
+    const stream = new Writable({
+      write(chunk, encoding, callback) {
+        buffers.push(Buffer.from(chunk));
+        callback();
+      },
+    });
+
+    doc.pipe(stream);
+
+    stream.on("finish", () => {
+      resolve(Buffer.concat(buffers));
+    });
+
+    stream.on("error", (err) => {
+      reject(err);
+    });
+
+    // --- Header Section ---
+    doc.fontSize(20).font("Helvetica-Bold").text(data.fullName || "Candidate", { align: "center" });
+    doc.moveDown(0.3);
+    doc.fontSize(10).font("Helvetica").text(
+      `Email: ${data.email || ""} | Phone: ${data.phone || ""} | GitHub: ${data.githubUrl || ""}`,
+      { align: "center" }
+    );
+    doc.moveDown(1);
+
+    // --- Professional Summary ---
+    doc.fontSize(14).font("Helvetica-Bold").text("PROFESSIONAL SUMMARY");
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.5);
+    doc.fontSize(10).font("Helvetica").text(data.summary || "", { align: "justify" });
+    doc.moveDown(1);
+
+    // --- Key Technical Skills ---
+    doc.fontSize(14).font("Helvetica-Bold").text("TECHNICAL SKILLS");
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.5);
+    const skillsList = Array.isArray(data.skills) ? data.skills.join(", ") : String(data.skills || "");
+    doc.fontSize(10).font("Helvetica").text(skillsList);
+    doc.moveDown(1);
+
+    // --- Tailored Experience Bullets ---
+    doc.fontSize(14).font("Helvetica-Bold").text("EXPERIENCE & PROJECTS");
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    const bullets = Array.isArray(data.experienceBullets) ? data.experienceBullets : [];
+    bullets.forEach((bullet) => {
+      doc.fontSize(10).font("Helvetica").text(`• ${bullet}`, {
+        align: "left",
+        paragraphGap: 5,
+      });
+    });
+
+    doc.end();
+  });
 }

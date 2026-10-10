@@ -187,3 +187,6 @@ export async function matchJob(userId: string, jobId: string, resumeId?: string)
   });
 }
 
+export { evaluateJobMatchWithAI, JobMatchSchema, type JobMatchResult } from "./ai.service.js";
+
+
