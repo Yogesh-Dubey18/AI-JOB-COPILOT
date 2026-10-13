@@ -38,6 +38,7 @@ import { CareerVaultModel } from "../models/CareerVault.js";
 import { ContactModel } from "../models/Contact.js";
 import { EmailVerificationTokenModel } from "../models/EmailVerificationToken.js";
 import { PasswordResetTokenModel } from "../models/PasswordResetToken.js";
+import { OAuthHandoffModel } from "../models/OAuthHandoff.js";
 import { CollectionName, StoredRecord, makeId, memory } from "./memoryStore.js";
 
 const modelMap: Record<CollectionName, Model<any>> = {
@@ -78,8 +79,18 @@ const modelMap: Record<CollectionName, Model<any>> = {
   careerVault: CareerVaultModel,
   contacts: ContactModel,
   emailVerificationTokens: EmailVerificationTokenModel,
+  oauthHandoffs: OAuthHandoffModel,
   passwordResetTokens: PasswordResetTokenModel
 };
+
+export async function consumeOAuthHandoff(tokenHash: string, now = new Date()): Promise<StoredRecord | null> {
+  if (isDbReady()) {
+    return await OAuthHandoffModel.findOneAndDelete({ tokenHash, expiresAt: { $gt: now } }).lean() as unknown as StoredRecord | null;
+  }
+  const index = memory.oauthHandoffs.findIndex((item) => item.tokenHash === tokenHash && new Date(item.expiresAt).getTime() > now.getTime());
+  if (index < 0) return null;
+  return memory.oauthHandoffs.splice(index, 1)[0] || null;
+}
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));

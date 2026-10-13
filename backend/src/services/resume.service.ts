@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { createRecord, deleteRecord, deleteRecords, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { anonymizeParsedResume, extractResumeTextDetailed, parseResumeText } from "./resume-parser.service.js";
 import { validateResumeBuffer } from "./file-validation.service.js";
-import { uploadFile, deleteFile, getSignedUrl } from "./storage.service.js";
+import { uploadFile, deleteFile, getProvider, getSignedUrl } from "./storage.service.js";
 
 export async function resolveResumeUrl(resume: any) {
   if (!resume) return resume;
@@ -13,7 +13,7 @@ export async function resolveResumeUrl(resume: any) {
   if (key.startsWith("/uploads/")) {
     key = key.replace("/uploads/", "");
   }
-  doc.fileUrl = await getSignedUrl(key);
+  doc.fileUrl = await getSignedUrl(key, String(doc.userId));
   return doc;
 }
 
@@ -25,7 +25,7 @@ export async function resolveResumeVersionUrl(version: any) {
     if (key.startsWith("/uploads/")) {
       key = key.replace("/uploads/", "");
     }
-    doc.pdfUrl = await getSignedUrl(key);
+    doc.pdfUrl = await getSignedUrl(key, String(doc.userId));
   }
   return doc;
 }
@@ -33,61 +33,53 @@ export async function resolveResumeVersionUrl(version: any) {
 export async function uploadResume(userId: string, file: Express.Multer.File, isBaseResume = true, options: { anonymizePreview?: boolean } = {}) {
   if (!file) throw new ApiError(400, "Resume file is required");
 
-  // Read file buffer for validation
-  let buffer: Buffer;
   try {
-    buffer = await fs.readFile(file.path);
-  } catch (err) {
-    throw new ApiError(500, "Failed to read uploaded file");
-  }
-
-  // Validate the file buffer (magic numbers, sizes, executables)
-  try {
+    const buffer = await fs.readFile(file.path);
     validateResumeBuffer(buffer, file.originalname, file.mimetype);
-  } catch (err) {
-    // Delete file from disk if validation fails
+
+    const user = await findOneRecord("users", { _id: userId });
+    const userFullName = user?.fullName;
+    const userProfile = user ? { email: user.email, phone: user.phone } : undefined;
+
+    const parsed = await extractResumeTextDetailed(file.path, file.mimetype);
+    const parsedData = parseResumeText(parsed.text, userFullName, userProfile);
+    const anonymizedPreview = options.anonymizePreview ? anonymizeParsedResume(parsedData, parsed.text) : null;
+
+    const fileKey = `resumes/${userId}/${Date.now()}-${path.basename(file.path)}`;
+    await uploadFile(fileKey, buffer, file.mimetype);
+
+    let savedResume: any;
     try {
-      await fs.unlink(file.path);
-    } catch (_) {}
-    throw err;
+      savedResume = await createRecord("resumes", {
+        userId,
+        fileName: file.originalname,
+        fileUrl: fileKey,
+        fileType: file.mimetype,
+        storageProvider: getProvider(),
+        rawText: parsed.text,
+        parsedData: {
+          ...parsedData,
+          parser: parsed.parser,
+          parserQuality: parsed.quality,
+          parserWarnings: parsed.warnings,
+          parserWordCount: parsed.wordCount,
+          redactedPreview: anonymizedPreview?.parsedData,
+          redactedFields: anonymizedPreview?.redactedFields || []
+        },
+        isBaseResume
+      });
+      return await resolveResumeUrl(savedResume);
+    } catch (error) {
+      if (savedResume?._id) await deleteRecord("resumes", String(savedResume._id)).catch(() => {});
+      await deleteFile(fileKey).catch(() => {});
+      throw error;
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, "Resume upload could not be completed");
+  } finally {
+    await fs.unlink(file.path).catch(() => {});
   }
-
-  const user = await findOneRecord("users", { _id: userId });
-  const userFullName = user?.fullName;
-  const userProfile = user ? { email: user.email, phone: user.phone } : undefined;
-
-  const parsed = await extractResumeTextDetailed(file.path, file.mimetype);
-  const parsedData = parseResumeText(parsed.text, userFullName, userProfile);
-  const anonymizedPreview = options.anonymizePreview ? anonymizeParsedResume(parsedData, parsed.text) : null;
-
-  // Generate unique user-specific key for S3/R2 storage partition
-  const fileKey = `resumes/${userId}/${Date.now()}-${path.basename(file.path)}`;
-
-  // Upload to configured storage
-  await uploadFile(fileKey, buffer, file.mimetype);
-
-  // Remove local temp multer upload
-  await fs.unlink(file.path).catch(() => {});
-
-  const resume = await createRecord("resumes", {
-    userId,
-    fileName: file.originalname,
-    fileUrl: fileKey,
-    fileType: file.mimetype,
-    rawText: parsed.text,
-    parsedData: {
-      ...parsedData,
-      parser: parsed.parser,
-      parserQuality: parsed.quality,
-      parserWarnings: parsed.warnings,
-      parserWordCount: parsed.wordCount,
-      redactedPreview: anonymizedPreview?.parsedData,
-      redactedFields: anonymizedPreview?.redactedFields || []
-    },
-    isBaseResume
-  });
-
-  return resolveResumeUrl(resume);
 }
 
 export async function listResumes(userId: string) {
@@ -135,8 +127,9 @@ export async function deleteResume(userId: string, id: string) {
   if (resume.fileUrl) {
     try {
       await deleteFile(resume.fileUrl);
-    } catch (err) {
-      console.warn(`Non-fatal storage file deletion warning for resume ${id}:`, err);
+    } catch {
+      console.error("Resume object deletion failed; preserving the owning record for retry.");
+      throw new ApiError(503, "Resume file could not be securely deleted. Please retry shortly.");
     }
   }
 

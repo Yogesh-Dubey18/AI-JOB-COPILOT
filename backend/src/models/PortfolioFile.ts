@@ -15,7 +15,7 @@ const PortfolioFileSchema = new Schema(
     },
     storageProvider: {
       type: String,
-      enum: ["local", "s3", "r2"],
+      enum: ["local", "s3", "r2", "cloudinary"],
       default: "local",
       index: true
     },

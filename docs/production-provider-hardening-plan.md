@@ -16,7 +16,7 @@ AI Job Copilot abstracts resume uploads and generated PDFs using a unified stora
 2. **S3/R2 provider-ready Mode (`STORAGE_PROVIDER=s3` or `r2`)**:
    - Files are sent directly to AWS S3 or Cloudflare R2 bucket destinations.
    - Public access to the bucket must remain **blocked**. All downloads require candidate authentication and signed URLs.
-   - Temporary signed URLs are generated dynamically on-the-fly with a default 15-minute TTL (Time To Live).
+   - The backend streams files after validating an owner-bound short-lived URL and current record permission; provider URLs are not returned to the browser.
 
 ### Configuration Variables
 Set the following keys in your backend environment to enable cloud storage:
@@ -27,6 +27,7 @@ STORAGE_REGION=us-east-1
 STORAGE_ENDPOINT=https://your-r2-endpoint.cloudflarestorage.com  # Required for R2
 STORAGE_ACCESS_KEY_ID=
 STORAGE_SECRET_ACCESS_KEY=
+STORAGE_SIGNING_SECRET=<unique-32+-character-random-secret>
 STORAGE_SIGNED_URL_TTL_SECONDS=900
 ```
 
@@ -83,7 +84,7 @@ SMTP_PASS=your-smtp-password
 1. **Status Checking**: The backend `/api/auth/providers/status` exposes Google OAuth status as `Live` (configured with credentials), `Provider-ready` (placeholders exist in environment but empty), or `Not configured` (keys absent).
 2. **Dynamic UI Rendering**: If the backend reports Google as unconfigured, the frontend disables the "Continue with Google" button and shows a "coming soon" helper notice. If backend returns configured, the button is enabled and redirects the user to the backend auth start route.
 3. **Safe Fallback Redirection**: If a user hits the backend `/api/auth/google` start URL or callback directly when unconfigured, the backend performs a safe `302` redirect to `/login?error=Google OAuth credentials not configured` instead of crashing or returning raw JSON.
-4. **Token Exposure Risk (P0 Follow-up)**: The backend redirect handoff currently exposes the 15-minute short-lived access token in the query string (`/login?googleToken=...`). A P0 security improvement is registered to transition this handoff to HTTP-only cookies and call `/api/auth/me` on redirect.
+4. **OAuth redirect hardening**: Implemented a short-lived single-use opaque code in the URL fragment, backed by an HttpOnly state cookie and a no-store exchange endpoint. The access token is not in the redirect URL. Live Google credentials and staging verification remain outstanding.
 
 ### Configuration Variables
 ```ini

@@ -21,3 +21,4 @@ export const loginSchema = z.object({
 
 export const forgotPasswordSchema = z.object({ email: z.string().email() });
 export const resetPasswordSchema = z.object({ token: z.string().min(8), password: passwordSchema });
+export const oauthHandoffSchema = z.object({ code: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });

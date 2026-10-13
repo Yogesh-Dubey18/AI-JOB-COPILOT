@@ -634,11 +634,11 @@ export async function getPublicPortfolio(slug: string) {
   const [resolvedCaseStudies, resolvedProofMappings] = await Promise.all([
     Promise.all(caseStudies.map(async (project: any) => ({
       ...project,
-      proofFiles: await resolvePublicPortfolioFiles(project.proofFiles || [])
+      proofFiles: await resolvePublicPortfolioFiles(project.proofFiles || [], String(publicProfile.userId))
     }))),
     Promise.all(proofMappings.map(async (mapping: any) => ({
       ...mapping,
-      proofFiles: await resolvePublicPortfolioFiles(mapping.proofFiles || [])
+      proofFiles: await resolvePublicPortfolioFiles(mapping.proofFiles || [], String(publicProfile.userId))
     })))
   ]);
 

@@ -52,6 +52,11 @@ export async function evaluateJobMatchWithAI(
   `;
 
   try {
+    const apiKey = process.env.OPENAI_API_KEY?.trim() || "";
+    if (!apiKey || /^(dummy|placeholder|your[-_ ]?api[-_ ]?key|change[-_ ]?me)/i.test(apiKey)) {
+      throw new Error("AI provider is not configured");
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
@@ -71,7 +76,10 @@ export async function evaluateJobMatchWithAI(
     const validatedResult = JobMatchSchema.parse(parsedJson);
     return validatedResult;
   } catch (error) {
-    console.error("AI Matching Error or Zod Validation Failed:", error);
+    const status = typeof error === "object" && error !== null && "status" in error && Number.isInteger((error as any).status)
+      ? (error as any).status
+      : undefined;
+    console.warn("AI matching provider failed; using safe fallback.", status ? { status } : { reason: "provider_unavailable_or_invalid_response" });
     // Fallback default safe response so pipeline doesn't crash
     return {
       match_score: 0,

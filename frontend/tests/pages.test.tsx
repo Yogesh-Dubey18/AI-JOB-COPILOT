@@ -90,6 +90,30 @@ describe("frontend pages", () => {
     expect(screen.getByTestId("login-password-note")).toBeInTheDocument();
   });
 
+  it("exchanges and removes a one-time Google sign-in code instead of accepting a URL token", async () => {
+    const handoffCode = "a".repeat(43);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, headers: new Headers(), json: async () => ({ success: true, data: {} }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, headers: new Headers(), json: async () => ({ success: true, data: { google: { configured: true } } }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, headers: new Headers(), json: async () => ({
+        success: true,
+        data: { accessToken: "one-time-exchanged-access-token", refreshToken: "refresh", user: { id: "user-1", email: "oauth@example.com" } }
+      }) });
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.replaceState(window.history.state, "", `/login#oauth_code=${handoffCode}`);
+
+    renderWithProviders(<LoginPage />);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith("/api/auth/google/exchange", expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ code: handoffCode })
+      }));
+      expect(window.location.hash).toBe("");
+      expect(window.sessionStorage.getItem("ajc_access_token")).toBe("one-time-exchanged-access-token");
+    });
+  });
+
   it("register page renders", () => {
     renderWithProviders(<RegisterPage />);
     expect(screen.getByText(/Create your account/i)).toBeInTheDocument();
@@ -188,6 +212,14 @@ describe("frontend pages", () => {
   it("dashboard renders", () => {
     renderWithProviders(<DashboardPage />);
     expect(screen.getByText(/Career operating system/i)).toBeInTheDocument();
+  });
+
+  it("dashboard shows an honest resume state when no analysis exists", async () => {
+    mockApiResponse({ success: true, data: { averageAtsScore: null, jobSearchHealth: { bestNextActions: [] } } });
+    renderWithProviders(<DashboardPage />);
+    await waitFor(() => expect(screen.getByText("No resume analysis yet")).toBeInTheDocument());
+    expect(screen.queryByText("82%")).not.toBeInTheDocument();
+    expect(screen.getByText("Analyze your resume to get a personalized improvement suggestion.")).toBeInTheDocument();
   });
 
   it("resume upload page renders with upload guide", () => {
@@ -367,6 +399,20 @@ describe("frontend pages", () => {
   it("analytics page renders", () => {
     renderWithProviders(<AnalyticsPage />);
     expect(screen.getByText(/Analytics dashboard/i)).toBeInTheDocument();
+  });
+
+  it("analytics charts show empty states instead of sample data", async () => {
+    mockApiResponse({ success: true, data: {
+      averageAtsScore: null,
+      weeklyApplicationChart: Array.from({ length: 7 }, (_, index) => ({ date: `2026-10-${String(index + 7).padStart(2, "0")}`, name: `Oct ${index + 7}`, applications: 0 })),
+      resumeScoreTrend: [],
+      applicationStatusChart: []
+    } });
+    renderWithProviders(<AnalyticsPage />);
+    await waitFor(() => expect(screen.getByText("No applications yet")).toBeInTheDocument());
+    expect(screen.getByText("No resume scores yet")).toBeInTheDocument();
+    expect(screen.getByText("Your pipeline is empty")).toBeInTheDocument();
+    expect(screen.queryByText("Tailored")).not.toBeInTheDocument();
   });
 
   it("notifications page renders", () => {

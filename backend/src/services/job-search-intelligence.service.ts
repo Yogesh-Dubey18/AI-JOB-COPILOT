@@ -1,7 +1,8 @@
 import { findOneRecord, findRecords } from "../utils/repository.js";
 
-const activeStatuses = ["Saved", "Applied", "Interview Scheduled", "Technical Round", "HR Round", "Offer"];
-const interviewStatuses = ["Interview Scheduled", "Technical Round", "HR Round", "Offer"];
+const activeStatuses = ["Saved", "Applied", "Interview Scheduled", "HR Call", "Assignment", "Technical Round", "Technical Round 1", "Technical Round 2", "Managerial Round", "HR Round", "Offer"];
+const interviewStatuses = ["Interview Scheduled", "HR Call", "Technical Round", "Technical Round 1", "Technical Round 2", "Managerial Round", "HR Round", "Offer", "Selected"];
+const noResponseStatuses = new Set(["Saved", "Applied", "Withdrawn"]);
 
 function toDate(value: any) {
   const date = value ? new Date(value) : null;
@@ -46,7 +47,7 @@ export async function getJobSearchIntelligence(userId: string) {
   const now = new Date();
   const last7 = daysAgo(7);
   const last30 = daysAgo(30);
-  const applied = applications.filter((app: any) => app.status !== "Saved");
+  const applied = applications.filter((app: any) => app.status !== "Saved" && app.status !== "Withdrawn");
   const active = applications.filter((app: any) => activeStatuses.includes(app.status));
   const interviewCount = applications.filter((app: any) => interviewStatuses.includes(app.status)).length + interviews.length;
   const offers = applications.filter((app: any) => ["Offer", "Selected"].includes(app.status)).length;
@@ -63,7 +64,8 @@ export async function getJobSearchIntelligence(userId: string) {
   });
   const latestAts = analyses[0]?.atsScore || 0;
   const profileScore = profile?.profileCompletenessScore || 0;
-  const responseRate = applied.length ? Math.round((interviewCount / applied.length) * 100) : 0;
+  const respondedCount = applied.filter((app: any) => !noResponseStatuses.has(app.status)).length;
+  const responseRate = applied.length ? Math.round((respondedCount / applied.length) * 100) : 0;
   const offerRate = interviewCount ? Math.round((offers / interviewCount) * 100) : 0;
   const rejectionRate = applied.length ? Math.round((rejected / applied.length) * 100) : 0;
   const topMissingSkills = aggregateTerms([...matches, ...analyses], ["missingSkills", "missingKeywords"]);

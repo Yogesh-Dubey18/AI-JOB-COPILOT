@@ -56,6 +56,7 @@ export const env = {
   STORAGE_ENDPOINT: process.env.STORAGE_ENDPOINT || "",
   STORAGE_ACCESS_KEY_ID: process.env.STORAGE_ACCESS_KEY_ID || "",
   STORAGE_SECRET_ACCESS_KEY: process.env.STORAGE_SECRET_ACCESS_KEY || "",
+  STORAGE_SIGNING_SECRET: process.env.STORAGE_SIGNING_SECRET || "",
   STORAGE_SIGNED_URL_TTL_SECONDS: Number(process.env.STORAGE_SIGNED_URL_TTL_SECONDS || 900),
   FILE_SCANNING_PROVIDER: process.env.FILE_SCANNING_PROVIDER || "",
   FILE_SCANNING_API_KEY: process.env.FILE_SCANNING_API_KEY || "",
@@ -66,6 +67,29 @@ export const env = {
 export const isProduction = env.NODE_ENV === "production";
 export const isTest = env.NODE_ENV === "test";
 
+export function getStorageConfigurationFailures(storage: Pick<typeof env,
+  "STORAGE_PROVIDER" | "STORAGE_BUCKET_NAME" | "STORAGE_ACCESS_KEY_ID" | "STORAGE_SECRET_ACCESS_KEY" | "STORAGE_ENDPOINT" |
+  "CLOUDINARY_URL" | "CLOUDINARY_CLOUD_NAME" | "CLOUDINARY_API_KEY" | "CLOUDINARY_API_SECRET"
+> = env) {
+  const failures: string[] = [];
+  if (!["local", "s3", "r2", "cloudinary"].includes(storage.STORAGE_PROVIDER)) {
+    failures.push("STORAGE_PROVIDER must be local, s3, r2, or cloudinary.");
+  }
+  if ((storage.STORAGE_PROVIDER === "s3" || storage.STORAGE_PROVIDER === "r2") && (!storage.STORAGE_BUCKET_NAME || !storage.STORAGE_ACCESS_KEY_ID || !storage.STORAGE_SECRET_ACCESS_KEY)) {
+    failures.push("S3/R2 storage requires STORAGE_BUCKET_NAME, STORAGE_ACCESS_KEY_ID, and STORAGE_SECRET_ACCESS_KEY.");
+  }
+  if (storage.STORAGE_PROVIDER === "r2" && !storage.STORAGE_ENDPOINT) failures.push("STORAGE_ENDPOINT is required for R2.");
+  if (storage.STORAGE_PROVIDER === "cloudinary" && !storage.CLOUDINARY_URL && !(storage.CLOUDINARY_CLOUD_NAME && storage.CLOUDINARY_API_KEY && storage.CLOUDINARY_API_SECRET)) {
+    failures.push("Cloudinary storage requires CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.");
+  }
+  const hasPartialCloudinaryConfig = !storage.CLOUDINARY_URL && [storage.CLOUDINARY_CLOUD_NAME, storage.CLOUDINARY_API_KEY, storage.CLOUDINARY_API_SECRET].some(Boolean) &&
+    !(storage.CLOUDINARY_CLOUD_NAME && storage.CLOUDINARY_API_KEY && storage.CLOUDINARY_API_SECRET);
+  if (hasPartialCloudinaryConfig && storage.STORAGE_PROVIDER !== "s3" && storage.STORAGE_PROVIDER !== "r2" && storage.STORAGE_PROVIDER !== "cloudinary") {
+    failures.push("Partial Cloudinary credentials are configured; complete them or remove them to avoid silently using local storage.");
+  }
+  return failures;
+}
+
 export function validateRuntimeEnv() {
   const warnings: string[] = [];
   const failures: string[] = [];
@@ -73,7 +97,12 @@ export function validateRuntimeEnv() {
     if (!env.MONGO_URI) failures.push("MONGO_URI is required in production.");
     if (env.JWT_ACCESS_SECRET.length < 32 || env.JWT_ACCESS_SECRET.includes("change-me")) failures.push("JWT_ACCESS_SECRET must be a strong production secret.");
     if (env.JWT_REFRESH_SECRET.length < 32 || env.JWT_REFRESH_SECRET.includes("change-me")) failures.push("JWT_REFRESH_SECRET must be a strong production secret.");
+    if (env.STORAGE_SIGNING_SECRET.length < 32 || env.STORAGE_SIGNING_SECRET.toLowerCase().includes("change-me")) failures.push("STORAGE_SIGNING_SECRET must be a unique secret of at least 32 characters in production.");
     if (!env.CLIENT_URL.startsWith("https://")) warnings.push("CLIENT_URL should use HTTPS in production.");
+    failures.push(...getStorageConfigurationFailures());
+    if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && !env.GOOGLE_REDIRECT_URI) {
+      failures.push("GOOGLE_REDIRECT_URI is required when Google OAuth is configured in production.");
+    }
     if (!env.CLOUDINARY_URL && !(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) && !env.STORAGE_BUCKET_NAME) {
       warnings.push("Durable storage (Cloudinary / S3) is not configured in production. Uploaded files risk data loss on server restart.");
     }

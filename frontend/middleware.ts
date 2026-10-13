@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const protectedRoutes = [
+export const protectedRoutes = [
   "/dashboard",
   "/onboarding",
   "/profile",
@@ -26,8 +26,14 @@ const protectedRoutes = [
   "/contacts",
   "/linkedin-optimizer",
   "/github-analyzer",
-  "/notifications"
-];
+  "/notifications",
+  "/compare",
+  "/compare-job"
+] as const;
+
+function matchesProtectedRoute(pathname: string) {
+  return protectedRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
 
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
@@ -37,7 +43,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const isProtected = protectedRoutes.some((route) => pathname.startsWith(route));
+  const isProtected = matchesProtectedRoute(pathname);
   const hasBackendCookie = req.cookies.has("accessToken");
   const hasFrontendSessionMarker = req.cookies.has("ajc_session");
   if (isProtected && !hasBackendCookie && !hasFrontendSessionMarker) {

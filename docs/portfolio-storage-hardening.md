@@ -10,7 +10,7 @@ This phase hardens the portfolio file boundary for resume PDFs, portfolio PDFs, 
 |---|---|---|
 | Private portfolio file metadata | Implemented | Owner-scoped metadata is stored separately from public portfolio projection. |
 | Storage key sanitization | Implemented | Absolute local paths, bucket URLs, empty path segments, and traversal keys are rejected. |
-| Signed download/view URL readiness | Implemented | S3/R2 uses presigned URLs when configured; local fallback returns safe app upload routes. |
+| Signed download/view URL readiness | Implemented | All configured providers use owner-bound, expiring backend download routes with per-request record/permission checks. |
 | Default signed URL TTL | Implemented | Defaults to `900` seconds through `STORAGE_SIGNED_URL_TTL_SECONDS`. |
 | User-initiated proof file upload UX | Implemented | Owners can upload PNG, JPG, WEBP, and PDF proof files up to 5MB. |
 | Proof file scan boundary | Implemented | Local validation is recorded honestly; provider malware scanning is provider-ready until real credentials and scan verification exist. |
@@ -28,7 +28,7 @@ Portfolio-related file metadata uses the following safe fields:
 - `projectId`
 - `proofMappingId`
 - `fileType`: `resumePdf`, `portfolioPdf`, `screenshot`, `proofFile`, or `other`
-- `storageProvider`: `local`, `s3`, or `r2`
+- `storageProvider`: `local`, `s3`, `r2`, or `cloudinary`
 - `storageKey`
 - `originalFilename`
 - `mimeType`
@@ -88,7 +88,7 @@ Public behavior:
 ## Signed URL Rules
 
 - `STORAGE_SIGNED_URL_TTL_SECONDS=900` is the default.
-- S3/R2 signed URLs are provider-ready and short-lived.
+- S3/R2 configuration is provider-ready but has not been live-verified. Object downloads are proxied through the backend rather than exposing provider URLs.
 - Local fallback returns `/uploads/...` routes only for existing app-supported local files.
 - Local fallback is not durable production storage and should not be described as private cloud hosting.
 

@@ -104,7 +104,7 @@ function presentExportRequest(record: any, options: { downloadUrl?: string } = {
     })) : [],
     includedFileCount: Number(record.includedFileCount || 0),
     excludedFileCount: Number(record.excludedFileCount || 0),
-    archiveProvider: record.archiveProvider === "s3" || record.archiveProvider === "r2" ? record.archiveProvider : "local",
+    archiveProvider: ["s3", "r2", "cloudinary"].includes(record.archiveProvider) ? record.archiveProvider : "local",
     archiveFilename: String(record.archiveFilename || ""),
     expiresAt: record.expiresAt || "",
     createdAt: record.createdAt || "",
@@ -549,7 +549,7 @@ export async function getPortfolioProofArchiveSignedUrl(userId: string, portfoli
   if (normalizeStatus(request.status) !== "ready" || !request.archiveStorageKey) {
     throw new ApiError(400, "Proof file archive is not ready for download.");
   }
-  const downloadUrl = await getSignedUrl(request.archiveStorageKey);
+  const downloadUrl = await getSignedUrl(request.archiveStorageKey, String(request.ownerId));
   await recordPortfolioFileAuditEvent({
     ownerId: userId,
     portfolioId,

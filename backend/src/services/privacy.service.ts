@@ -104,6 +104,8 @@ export async function deleteAccount(userId: string, confirmation: string) {
     const result = await deleteRecords(collection, { userId });
     deletedCollections[collection] = result.deletedCount;
   }
+  const handoffResult = await deleteRecords("oauthHandoffs", { userId });
+  deletedCollections.oauthHandoffs = handoffResult.deletedCount;
   const auditResult = await deleteRecords("auditLogs", { actorUserId: userId });
   deletedCollections.auditLogs = auditResult.deletedCount;
   const userDeleteResult = await deleteRecord("users", userId);

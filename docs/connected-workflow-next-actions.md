@@ -148,7 +148,7 @@ Tasks:
 
 - Wire forgot/reset password.
 - Add email verification.
-- Fix Google OAuth token-in-query callback.
+- Configure Google OAuth credentials and staging-test the implemented state-cookie and single-use handoff flow; JWTs are no longer placed in redirect URLs.
 - Add session/device management foundation.
 - Make integrations page complete: S3/R2, Google Calendar, GitHub, Sentry, Better Stack, course APIs.
 

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { PDFParse } from "pdf-parse";
 import { JobMatchSchema, evaluateJobMatchWithAI } from "../src/services/ai.service.js";
 import { generateAtsCompliantPdfResume, type TailoredResumeData } from "../src/services/pdf-export.service.js";
@@ -15,6 +15,11 @@ async function extractPdfText(buffer: Buffer) {
 }
 
 describe("Step 1: Bulletproof AI Matching Pipeline (Zod Schema + Output)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
   it("validates well-formed AI matching output with JobMatchSchema", () => {
     const validData = {
       match_score: 88,
@@ -54,7 +59,8 @@ describe("Step 1: Bulletproof AI Matching Pipeline (Zod Schema + Output)", () =>
   });
 
   it("handles AI errors gracefully and returns safe fallback object without crashing", async () => {
-    // Calling evaluateJobMatchWithAI with no live key or invalid API key triggers the safe fallback
+    vi.stubEnv("OPENAI_API_KEY", "");
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await evaluateJobMatchWithAI(
       "Candidate with React & Flutter experience",
       "Job requiring 3 years React Native & Flutter"
@@ -68,6 +74,7 @@ describe("Step 1: Bulletproof AI Matching Pipeline (Zod Schema + Output)", () =>
     expect(["APPLY", "SKIP"]).toContain(result.verdict);
     expect(result.verdict).toBe("SKIP");
     expect(result.dealbreakers).toContain("AI Parsing Error or Invalid Output Format");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 

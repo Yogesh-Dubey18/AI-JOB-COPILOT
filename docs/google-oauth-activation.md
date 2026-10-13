@@ -64,7 +64,7 @@ NEXT_PUBLIC_API_URL=https://ai-job-copilot-backend-l6ut.onrender.com/api
 - [ ] **Dynamic Live state:** Set mock credentials in local env. Verify that the login form automatically enables the `"Continue with Google"` button.
 - [ ] **Consent Redirect:** Click the enabled button and verify redirection to the Google OAuth consent page.
 - [ ] **Callback Handshake:** Sign in through the Google popup. Verify that Google redirects to the backend callback endpoint `/api/auth/google/callback?code=...`.
-- [ ] **JWT Handshake & Rehydration:** Verify that the backend redirects back to the frontend with the `googleToken` parameter (`/login?googleToken=...`), which the client-side form parses and stores in `sessionStorage` before navigating to the `/dashboard`.
+- [ ] **OAuth Handoff & Rehydration:** Verify that the backend redirects to `/login#oauth_code=...` with a short-lived, single-use opaque code (never a JWT), that the frontend removes the fragment before exchanging it, and that successful exchange navigates to `/dashboard`.
 - [ ] **Auth persistence check:** Ensure navigating to `/jobs` or refreshing does not trigger a login popup after Google authentication.
 
 ---
@@ -93,6 +93,6 @@ If Google OAuth login breaks (e.g. invalid client secret or consent screen valid
 > [!WARNING]
 > **P0 Follow-up Action Required: HttpOnly Cookie Session Handoff**
 >
-> * **Current Risk:** The client redirects from the Google callback URL back to `/login?googleToken=...`. Exposing JWTs in URL parameters is vulnerable to local storage caching, proxy logs, and `Referer` headers.
+> * **Current status:** The callback now uses a hashed, single-use 90-second handoff and validates OAuth state using an HttpOnly cookie. The access and refresh tokens are returned only by the backend exchange endpoint after code consumption. Live provider behavior still needs staging verification.
 > * **Mitigation in Phase C:** The JWT is short-lived (expires in 15 minutes) to minimize token lifetime exposure.
 > * **Recommended Architecture:** Transition session rehydration to a secure, HttpOnly, SameSite cookie handshake. Since the backend `/api/auth/google/callback` already issues secure cookies, the client should query `/api/auth/me` on redirect to verify/initialize the session, eliminating the need to expose any tokens in the URL.

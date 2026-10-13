@@ -21,7 +21,7 @@ import {
 import { listRecentPortfolioFileActivity, recordPortfolioFileAuditEvent } from "./portfolio-file-audit.service.js";
 
 const fileTypes = new Set(["resumePdf", "portfolioPdf", "screenshot", "proofFile", "other"]);
-const storageProviders = new Set(["local", "s3", "r2"]);
+const storageProviders = new Set(["local", "s3", "r2", "cloudinary"]);
 const retentionStatuses = new Set(["active", "scheduled_for_delete", "deleted", "retained_for_audit"]);
 const reviewStatuses = new Set(["not_reviewed", "reviewed", "needs_attention"]);
 
@@ -49,9 +49,9 @@ function safeOwnerText(value: any, maxLength = 500) {
     .slice(0, maxLength);
 }
 
-function normalizeProvider(value: any): "local" | "s3" | "r2" {
+function normalizeProvider(value: any): "local" | "s3" | "r2" | "cloudinary" {
   const provider = storageProviders.has(value) ? value : getProvider();
-  return provider === "s3" || provider === "r2" ? provider : "local";
+  return storageProviders.has(provider) ? provider : "local";
 }
 
 function normalizeScanProvider(value: any) {
@@ -147,7 +147,7 @@ export function sanitizePortfolioFileReference(raw: any) {
   };
 }
 
-export async function presentPortfolioFile(file: any, options: { includeSignedUrl?: boolean; allowPrivate?: boolean } = {}) {
+export async function presentPortfolioFile(file: any, options: { includeSignedUrl?: boolean; allowPrivate?: boolean; ownerId?: string } = {}) {
   const safeFile = sanitizePortfolioFileReference(file);
   if (!safeFile) return null;
   const status = getStorageStatus();
@@ -187,18 +187,20 @@ export async function presentPortfolioFile(file: any, options: { includeSignedUr
 
   const canIssueUrl = options.includeSignedUrl && (options.allowPrivate || safeFile.visibility === "publicApproved");
   if (canIssueUrl) {
-    result.downloadUrl = await getSignedUrl(safeFile.storageKey);
+    const ownerId = options.ownerId || String(file.ownerId || "");
+    if (!ownerId) throw new ApiError(500, "File owner could not be verified");
+    result.downloadUrl = await getSignedUrl(safeFile.storageKey, ownerId);
   }
 
   return result;
 }
 
-export async function resolvePublicPortfolioFiles(files: any[] = []) {
+export async function resolvePublicPortfolioFiles(files: any[] = [], portfolioOwnerId = "") {
   const publicFiles = files
-    .map(sanitizePortfolioFileReference)
-    .filter((file): file is NonNullable<ReturnType<typeof sanitizePortfolioFileReference>> => Boolean(file && file.visibility === "publicApproved" && file.isPublicEligible && isRetentionPublicEligible(file)));
+    .map((raw) => ({ safe: sanitizePortfolioFileReference(raw), ownerId: String(raw?.ownerId || portfolioOwnerId) }))
+    .filter((entry): entry is { safe: NonNullable<ReturnType<typeof sanitizePortfolioFileReference>>; ownerId: string } => Boolean(entry.safe && entry.ownerId && entry.safe.visibility === "publicApproved" && entry.safe.isPublicEligible && isRetentionPublicEligible(entry.safe)));
 
-  const resolved = await Promise.all(publicFiles.map((file) => presentPortfolioFile(file, { includeSignedUrl: true })));
+  const resolved = await Promise.all(publicFiles.map(({ safe, ownerId }) => presentPortfolioFile(safe, { includeSignedUrl: true, ownerId })));
   return resolved.filter(Boolean).map((file: any) => {
     const {
       storageKey,

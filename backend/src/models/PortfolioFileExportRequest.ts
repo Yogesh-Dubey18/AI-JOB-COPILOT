@@ -26,7 +26,7 @@ const PortfolioFileExportRequestSchema = new Schema(
     archiveStorageKey: { type: String, default: "" },
     archiveProvider: {
       type: String,
-      enum: ["local", "s3", "r2"],
+      enum: ["local", "s3", "r2", "cloudinary"],
       default: "local"
     },
     archiveFilename: { type: String, default: "" },

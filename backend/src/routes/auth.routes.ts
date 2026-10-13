@@ -1,9 +1,10 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import { randomBytes } from "node:crypto";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { validateBody } from "../middlewares/validate.js";
-import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from "../validators/auth.validator.js";
-import { forgotPassword, getMe, loginUser, logoutUser, refreshSession, registerUser, resetPassword, upsertGoogleUser, disconnectGoogle, verifyEmailToken } from "../services/auth.service.js";
+import { forgotPasswordSchema, loginSchema, oauthHandoffSchema, registerSchema, resetPasswordSchema } from "../validators/auth.validator.js";
+import { createOAuthHandoff, exchangeOAuthHandoff, forgotPassword, getMe, loginUser, logoutUser, refreshSession, registerUser, resetPassword, upsertGoogleUser, disconnectGoogle, verifyEmailToken, verifyOAuthState } from "../services/auth.service.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { env, isProduction, isTest } from "../config/env.js";
 
@@ -55,6 +56,19 @@ function setAuthCookies(req: any, res: any, accessToken: string, refreshToken: s
   res.cookie("refreshToken", refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 });
 }
 
+function frontendOrigin() {
+  return env.CLIENT_URL.split(",")[0]?.trim() || "http://localhost:3000";
+}
+
+function googleRedirectUri(req: any) {
+  return env.GOOGLE_REDIRECT_URI || `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+}
+
+function noStoreAuthRedirect(res: any) {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
+}
+
 router.post("/register", authLimiter, validateBody(registerSchema), asyncHandler(async (req, res) => {
   const result = await registerUser(req.body);
   setAuthCookies(req, res, result.accessToken, result.refreshToken);
@@ -78,6 +92,14 @@ router.post("/logout", requireAuth, asyncHandler(async (req, res) => {
 router.post("/refresh", asyncHandler(async (req, res) => {
   const result = await refreshSession(req.cookies?.refreshToken || req.body.refreshToken);
   setAuthCookies(req, res, result.accessToken, result.refreshToken);
+  res.json({ success: true, data: result });
+}));
+
+router.post("/google/exchange", authLimiter, validateBody(oauthHandoffSchema), asyncHandler(async (req, res) => {
+  const result = await exchangeOAuthHandoff(req.body.code);
+  setAuthCookies(req, res, result.accessToken, result.refreshToken);
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
   res.json({ success: true, data: result });
 }));
 
@@ -146,26 +168,53 @@ router.get("/providers/status", asyncHandler(async (_req, res) => {
 router.get("/google", asyncHandler(async (req, res) => {
   const configured = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   if (!configured) {
-    return res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?error=Google OAuth credentials not configured`);
+    noStoreAuthRedirect(res);
+    return res.redirect(`${frontendOrigin()}/login?error=Google%20OAuth%20credentials%20not%20configured`);
   }
-  const clientUrl = env.CLIENT_URL || "http://localhost:3000";
-  const redirectUri = env.GOOGLE_REDIRECT_URI || `${clientUrl}/api/auth/google/callback`;
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email%20profile`;
-  res.redirect(authUrl);
+  const state = randomBytes(32).toString("hex");
+  res.cookie("googleOAuthState", state, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 5 * 60 * 1000,
+    path: "/api/auth/google/callback"
+  });
+  noStoreAuthRedirect(res);
+  const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  authUrl.search = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID,
+    redirect_uri: googleRedirectUri(req),
+    response_type: "code",
+    scope: "email profile",
+    state
+  }).toString();
+  res.redirect(authUrl.toString());
 }));
 
 router.get("/google/callback", asyncHandler(async (req, res) => {
+  noStoreAuthRedirect(res);
   const configured = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   if (!configured) {
-    return res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?error=Google OAuth credentials not configured`);
+    return res.redirect(`${frontendOrigin()}/login?error=Google%20OAuth%20credentials%20not%20configured`);
   }
+  const state = typeof req.query.state === "string" ? req.query.state : "";
+  const stateCookie = typeof req.cookies?.googleOAuthState === "string" ? req.cookies.googleOAuthState : "";
+  res.clearCookie("googleOAuthState", {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/api/auth/google/callback"
+  });
+  if (!verifyOAuthState(state, stateCookie)) {
+    return res.redirect(`${frontendOrigin()}/login?error=google_oauth_failed`);
+  }
+
   const code = req.query.code;
-  if (!code) {
-    return res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?error=Google authentication failed`);
+  if (typeof code !== "string" || !code || req.query.error) {
+    return res.redirect(`${frontendOrigin()}/login?error=google_oauth_failed`);
   }
   try {
-    const clientUrl = env.CLIENT_URL || "http://localhost:3000";
-    const redirectUri = env.GOOGLE_REDIRECT_URI || `${clientUrl}/api/auth/google/callback`;
+    const redirectUri = googleRedirectUri(req);
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -193,10 +242,10 @@ router.get("/google/callback", asyncHandler(async (req, res) => {
       avatarUrl: googleProfile.picture
     });
 
-    setAuthCookies(req, res, result.accessToken, result.refreshToken);
-    res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?googleToken=${result.accessToken}`);
-  } catch (error) {
-    return res.redirect(`${env.CLIENT_URL || "http://localhost:3000"}/login?error=Google authentication failed`);
+    const handoff = await createOAuthHandoff(result.user.id);
+    res.redirect(`${frontendOrigin()}/login#oauth_code=${encodeURIComponent(handoff)}`);
+  } catch {
+    return res.redirect(`${frontendOrigin()}/login?error=google_oauth_failed`);
   }
 }));
 

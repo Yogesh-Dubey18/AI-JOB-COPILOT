@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import { env, isTest } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
-import { createRecord, deleteRecord, deleteRecords, findOneRecord, findRecordById, updateRecord } from "../utils/repository.js";
+import { consumeOAuthHandoff, createRecord, deleteRecord, deleteRecords, findOneRecord, findRecordById, updateRecord } from "../utils/repository.js";
 import { computeProfileCompleteness } from "./profile.service.js";
 import { sendEmail } from "./email.service.js";
 
@@ -249,7 +249,7 @@ export async function resetPassword(token: string, password: string) {
 export async function upsertGoogleUser(profile: { email: string; fullName: string; id: string; avatarUrl?: string }) {
   let user = await findOneRecord("users", { email: profile.email.toLowerCase() });
   if (!user) {
-    const dummyPassword = Math.random().toString(36) + "A1!";
+    const dummyPassword = crypto.randomBytes(32).toString("hex") + "A1!";
     const passwordHash = await bcrypt.hash(dummyPassword, passwordHashRounds);
     user = await createRecord("users", {
       fullName: profile.fullName,
@@ -282,9 +282,43 @@ export async function upsertGoogleUser(profile: { email: string; fullName: strin
       isEmailVerified: true
     });
   }
+  await updateRecord("users", String(user._id), { lastLoginAt: new Date() });
+  return { user: sanitize({ ...user, lastLoginAt: new Date() }) };
+}
+
+export async function createOAuthHandoff(userId: string) {
+  const code = crypto.randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 90_000);
+  await deleteRecords("oauthHandoffs", { userId });
+  await createRecord("oauthHandoffs", {
+    userId,
+    tokenHash: crypto.createHash("sha256").update(code).digest("hex"),
+    expiresAt
+  });
+  return code;
+}
+
+export async function exchangeOAuthHandoff(code: string) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(code)) throw new ApiError(400, "Invalid or expired Google sign-in handoff");
+  const tokenHash = crypto.createHash("sha256").update(code).digest("hex");
+  const handoff = await consumeOAuthHandoff(tokenHash);
+  if (!handoff) throw new ApiError(400, "Invalid or expired Google sign-in handoff");
+
+  const user = await findRecordById("users", String(handoff.userId));
+  if (!user) throw new ApiError(401, "Google sign-in account is no longer available");
   const tokens = signTokens(user);
-  await updateRecord("users", String(user._id), { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, passwordHashRounds), lastLoginAt: new Date() });
+  await updateRecord("users", String(user._id), {
+    refreshTokenHash: await bcrypt.hash(tokens.refreshToken, passwordHashRounds),
+    lastLoginAt: new Date()
+  });
   return { user: sanitize({ ...user, lastLoginAt: new Date() }), ...tokens };
+}
+
+export function verifyOAuthState(state: string, cookieState: string) {
+  if (!/^[a-f0-9]{64}$/i.test(state) || !/^[a-f0-9]{64}$/i.test(cookieState)) return false;
+  const stateBytes = Buffer.from(state);
+  const cookieBytes = Buffer.from(cookieState);
+  return stateBytes.length === cookieBytes.length && crypto.timingSafeEqual(stateBytes, cookieBytes);
 }
 
 export async function disconnectGoogle(userId: string) {

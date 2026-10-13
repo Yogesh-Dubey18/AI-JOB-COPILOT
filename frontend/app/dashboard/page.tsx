@@ -55,8 +55,11 @@ export default function DashboardPage() {
         <Card>
           <CardHeader><CardTitle>AI mentor suggestions</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div><p className="text-sm font-semibold">Resume health</p><Progress value={data.averageAtsScore || 82} /></div>
-            <p className="text-sm text-muted-foreground">{health.bestNextActions?.[0] || "Tailor your resume for the top two roles before applying. Practice project explanation for technical screens."}</p>
+            <div>
+              <p className="text-sm font-semibold">Resume health</p>
+              {typeof data.averageAtsScore === "number" ? <Progress value={data.averageAtsScore} /> : <p className="mt-1 text-sm text-muted-foreground">No resume analysis yet</p>}
+            </div>
+            <p className="text-sm text-muted-foreground">{health.bestNextActions?.[0] || "Analyze your resume to get a personalized improvement suggestion."}</p>
             <div className="flex flex-wrap gap-2">
               <Link href="/skill-roadmap"><Button variant="outline"><Wrench className="h-4 w-4" /> Skill gaps</Button></Link>
               <Link href="/career-mentor-chat"><Button variant="outline"><Sparkles className="h-4 w-4" /> Ask mentor</Button></Link>

@@ -51,12 +51,12 @@ The following table documents all public, protected, and admin routes. Live stat
 ### 1. Authentication & Security
 * **Access Tokens**: Access tokens are stored in `sessionStorage` to coordinate cross-origin calls (frontend Vercel to backend Render). This leaves them vulnerable to potential script-based reads (XSS).
 * **Refresh Tokens**: Saved in HttpOnly, Secure, SameSite cookies with automated DB validation and session rotation.
-* **Google OAuth**: Redirect flow uses a query parameter redirect: `/login?googleToken=...`. This exposes the access token in browser history logs.
+* **Google OAuth (updated 2026-10-13)**: The callback now uses a short-lived single-use opaque fragment handoff, validates state against an HttpOnly cookie, and exchanges the code server-side. Live Google credentials and staging behavior remain unverified.
 * **Middleware Integrity**: The Next.js Edge middleware successfully intercepts unauthorized visits on all 30 protected route families.
 
 ### 2. Resume Workflow
 * **Uploads**: File size limits (5MB) and hex signature (magic number) checking are enforced on the backend.
-* **Storage**: Uploaded resume files are currently saved locally (`uploads/`) on Render's ephemeral disk storage. If the Render container restarts or redeploys, files are deleted.
+* **Storage**: When no object-storage provider is configured, files use local ephemeral disk. The public `/uploads` static mount has been removed; local download links are short-lived HMAC-signed bearer URLs. A Render restart can still remove local files.
 * **Anonymization**: Scrubbing scripts successfully redact phone numbers, emails, names, and links before submitting text to AI models.
 * **ATS Analysis**: Scoring uses a heuristic algorithm based on matching resume keywords with the user's target job description.
 
@@ -83,7 +83,7 @@ The following table documents all public, protected, and admin routes. Live stat
 * **Upload**: Resume PDF/DOCX uploaded. Backend parses the binary structure using `pdf-parse`.
 * **ATS Review**: Resume is scanned. Checklist items (e.g., missing skills, format warnings) are generated.
 * **Tailoring Draft**: AI tailoring generates suggestions. User applies edits and reviews the new preview draft.
-* **PDF Download**: PDF export creates a formatted document, writing it to `uploads/exports` and rendering a direct download link.
+* **PDF Download**: PDF export creates a formatted document. Local fallback downloads use expiring signed links; durable S3/R2 storage remains a deployment setup task.
 * **Job Discovery**: Matching jobs are suggested based on extracted resume skills.
 * **Track Application**: User saves a job to their tracker. An application record is created under "Saved".
 * **Apply Assistant**: User generates cover letters and outreach messages tailored to the job description.
@@ -94,8 +94,8 @@ The following table documents all public, protected, and admin routes. Live stat
 
 ## 🔒 Security & Privacy Audit
 
-* **File Storage Vulnerability**: Locally saved resumes are stored in public folders: `/uploads/resumes/`. This makes user files downloadable if their random filenames are guessed. Storage must be migrated to private S3/R2 with presigned URL tokens (15-minute TTL).
-* **Token Transport Exposure**: Deployed Google OAuth callback transports access tokens in the URL. A transition to secure HttpOnly callback handoffs must be planned.
+* **File Storage Status (updated 2026-10-13)**: Local files are no longer exposed by a static `/uploads` path. Local downloads require an expiring HMAC URL and are not cached. Local disk is still ephemeral, S3/R2 is not confirmed configured, and Cloudinary/legacy-object access modes still require review and migration.
+* **Token Transport Exposure (resolved in code; live verification pending)**: Access and refresh JWTs are no longer transported in OAuth redirect URLs. The one-time handoff code is removed from the browser URL before exchange. Configure and test Google OAuth on staging before enabling it in production.
 * **CORS / CSRF Controls**: CORS policies strictly whitelist only registered frontend domains. CSRF protection relies on `SameSite=Lax` cookies; cookie handoffs for production must use `SameSite=None` if deployed on separate top-level domains.
 * **Sensitive Logs Redaction**: Backend Winston loggers automatically scrub emails, passwords, and API authorization headers before writing to disk.
 

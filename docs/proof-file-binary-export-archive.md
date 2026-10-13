@@ -31,7 +31,7 @@ Export request records include:
 - `includedFileCount`
 - `excludedFileCount`
 - `archiveStorageKey` for internal storage only
-- `archiveProvider`: `local`, `s3`, or `r2`
+- `archiveProvider`: `local`, `s3`, `r2`, or `cloudinary`
 - `archiveFilename`
 - `expiresAt`
 - `createdAt`

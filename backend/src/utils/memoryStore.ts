@@ -38,6 +38,7 @@ export type CollectionName =
   | "careerVault"
   | "contacts"
   | "emailVerificationTokens"
+  | "oauthHandoffs"
   | "passwordResetTokens";
 
 export type StoredRecord = Record<string, any> & {
@@ -84,6 +85,7 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   careerVault: [],
   contacts: [],
   emailVerificationTokens: [],
+  oauthHandoffs: [],
   passwordResetTokens: []
 };
 

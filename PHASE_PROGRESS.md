@@ -2792,3 +2792,70 @@ Blockers:
 
 Next phase to start:
 - None. Phase-based expansion stops here. Future work must be managed as focused issues and pull requests.
+
+## Post-archive issue-based implementation — 2026-10-13
+
+This work continues the existing roadmap as focused issues after Phase 50; it does not restart or add numbered phases.
+
+### Completed: Private storage authorization and configuration hardening
+
+Completed work:
+- Audited resume, generated document, portfolio proof, and archive file paths across upload, storage, download, deletion, and authorization.
+- All provider downloads use backend streaming; owner-bound HMAC signatures and current owning-record/visibility checks are validated on each request.
+- Production requires a dedicated `STORAGE_SIGNING_SECRET`; incomplete S3/R2 configuration fails closed. Local storage keys reject traversal and remote URL/path forms.
+- New Cloudinary raw uploads request authenticated delivery; existing files and production permissions were not changed. Upload cleanup and deletion failure handling preserve records/objects safely.
+- Added regression cases for signatures, tampering, expiration, absent secrets, owner mismatch, missing record/object, file size/type, and provider config failure.
+
+Files changed:
+- Backend storage, resume, export, portfolio-file, model, and app authorization implementation/tests; storage readiness/security/deployment docs and env examples.
+
+Commands run:
+- `npm test --prefix backend -- --reporter=dot --run tests/storage.test.ts tests/storage-access.test.ts tests/storage-config.test.ts tests/analytics.service.test.ts tests/oauth-handoff.test.ts tests/api.test.ts`
+- `npm run build`
+- `npm test`
+- `npm run check:git-safety`
+- `npm run check:security`
+- `npm run check:docs`
+- `git diff --check`
+
+Build/test result:
+- `npm run build`: passed (shared, backend TypeScript, Next.js production build; 75 pages generated).
+- Focused backend storage/analytics/OAuth tests: passed, 101 tests across 6 files before the final additional config regression; final focused AI/config tests passed separately (9 tests across 2 files).
+- Full backend suite: passed, 121 tests across 10 files.
+- Full frontend suite: passed, 90 tests across 2 files.
+- Git safety, security safety, and documentation checks passed.
+- Note: The legacy AI fallback now rejects placeholder keys before making a request and logs only safe status metadata; its test asserts no network call. The Vite CJS deprecation warning is non-fatal.
+
+Git safety result:
+- Passed. No commit, push, deployment, storage migration, or provider permission changes were made.
+
+Blockers:
+- S3/R2 credentials, bucket privacy/encryption verification, Cloudinary console review, legacy object access review, and reversible migration approval are unavailable.
+
+### Completed: Analytics and protected route verification
+
+Completed work:
+- Rechecked user-scoped database aggregation, UTC seven-day windows, empty data, status funnel definitions, and missing ATS values; added regression coverage for distinct response/interview/shortlist/offer stages.
+- Confirmed analytics API routes apply server-side authentication, with regression checks for unauthenticated requests. Frontend middleware remains supplementary navigation protection.
+- Verified existing company research, answer vault, career vault, contacts, and GitHub analyzer backend endpoints are mounted and tested; marked stale roadmap findings as implemented.
+
+Verification:
+- Full backend suite: 121 tests/10 files passed.
+- Full frontend suite: 90 tests/2 files passed, including route matrix and protected auth flows.
+- Root build, git safety, security safety, and docs links passed.
+
+### Completed: Google OAuth redirect token hardening
+
+Completed work:
+- Added HttpOnly short-lived state cookie with timing-safe comparison.
+- Replaced access JWT-in-query with a SHA-256-hashed, 90-second one-time handoff code in the URL fragment. The client removes the fragment before exchange; replayed/expired codes fail.
+- Added no-store exchange endpoint, required production `GOOGLE_REDIRECT_URI` when OAuth credentials are configured, and tests for service replay/expiry/state, API exchange and frontend session flow.
+
+Verification:
+- Covered by full backend suite (121 tests/10 files), frontend suite (90 tests/2 files), and root build.
+
+Blockers:
+- Google client credentials and a staging OAuth callback are not available; live provider sign-in remains unverified.
+
+Next roadmap item:
+- Continue the connected resume/job/application workflow UX using existing user-scoped APIs. Do not duplicate already implemented vault/contact/GitHub endpoints.

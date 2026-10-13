@@ -40,10 +40,13 @@ The live deployment is reachable:
 | Login/register | Mostly working | Email/password flow, rate limiting, password validation, cookie/token refresh foundation, Google provider status toggle. |
 | Forgot/reset password | Weak | Pages exist, but UI is not wired to backend mutation flow or email-token persistence. |
 | Session persistence | Partially working | Refresh-token cookie and client refresh interceptor exist. Access token is stored in `sessionStorage`, so new-tab behavior still depends on refresh and frontend marker cookie. |
-| Resume upload | Working local foundation | PDF/DOCX/TXT allowed. Backend magic-number checks exist. Files still use local public `/uploads` storage. DOCX parsing is fallback quality. |
+| Resume upload | Working local foundation | PDF/DOCX/TXT allowed. Backend magic-number checks exist. Local fallback is ephemeral but downloads now use expiring HMAC URLs; S3/R2 durability and Cloudinary legacy privacy are not verified. DOCX parsing is fallback quality. |
 | Resume ATS analyzer | Working | ATS score, breakdown, job description coverage, anonymize option, suggestions checklist, tailored draft preview, links to PDF/jobs/workflow. |
 | Resume builder/versions | Present | Pages and backend version model exist, but workflow integration and high-quality DOCX/PDF export are still basic. |
-| PDF/DOCX export | Partially working | Native basic PDF renderer and export history exist. DOCX option appears in UI but backend route only creates PDFs. Route is not protected by middleware. |
+| Dashboard and analytics metrics | Corrected and tested | Empty resume/application history no longer produces sample metrics; weekly application buckets come from the signed-in user's records. |
+| Resume comparison access | Protected | `/compare` and `/compare-job` now require the existing authenticated session middleware check. |
+| Local file download access | Hardened | Public static `/uploads` serving is removed; local fallback files require a short-lived HMAC URL and responses are private/no-store. Local disk remains ephemeral. |
+| PDF/DOCX export | Partially working | Native basic PDF renderer and export history exist. Local fallback downloads use expiring HMAC URLs. DOCX option appears in UI but backend route only creates PDFs. |
 | Jobs | Working curated feed | Filters, trust score, salary, source readiness, details, save, match, tailor endpoints exist. Live job-board providers are not configured. Seed jobs use `example.com` apply links. |
 | Job details | Working | Public backend route exists, frontend protected route exists. Needs deeper selected-job workflow and real apply URL preservation in tracker. |
 | Application kit | Partially working | Generates and persists application kit through `/ai/generate-application-kit`. `/application-kit/[jobId]` is only an alias to `/apply-assistant`. No direct "save kit to tracker" action. |
@@ -85,13 +88,15 @@ Live route status was checked with unauthenticated HEAD requests against the dep
 | `/recruiters` | Yes | Public | 200 | Loads | Recruiter portal roadmap with disabled interest form and privacy commitments. | Interest form is not wired, which is honest; add waitlist only after privacy/legal review. | P3 |
 | `/contact` | Yes | Public | 200 | Loads | Support/security/feedback contact cards. | Uses a personal email address; SaaS launch needs support domain and privacy/security intake process. | P2 |
 | `/about` | Yes | Public | 200 | Loads | Product story, timeline, disclaimers. | Some phase-based wording is historical; future work should be issue/sprint based. | P3 |
-| `/dashboard` | Yes | Protected | 307 to `/login` | Redirect OK | Career dashboard with metrics, daily jobs, next actions. | Backend analytics defaults average ATS score to 82 and weekly chart to 1..7 when no data; this can look like fake real metrics. | P0 |
+| `/dashboard` | Yes | Protected | 307 to `/login` | Redirect OK | Career dashboard with metrics, daily jobs, next actions. | Analytics empty states were corrected and regression-tested on 2026-10-13; see implementation update below. | Addressed |
 | `/onboarding` | Yes | Protected | Not sampled | Code protected | Multi-step profile setup. | Needs stronger first-run completion gating and resume/job preference handoff. | P2 |
-| `/resume/upload` | Yes | Protected | 307 to `/login` | Redirect OK | File upload, guide, anonymized preview, parsed edits. | Local public storage remains; DOCX parser is fallback quality; S3/R2 not wired. | P0 |
+| `/resume/upload` | Yes | Protected | 307 to `/login` | Redirect OK | File upload, guide, anonymized preview, parsed edits. | Local fallback is non-durable; S3/R2 is not configured; DOCX parser is fallback quality. | P0 |
 | `/resume/analyzer` | Yes | Protected | 307 to `/login` | Redirect OK | ATS analysis, breakdown, suggestions, draft preview, workflow links. | Applying checked suggestions does not pass selected suggestion IDs; improve call applies generic tailoring. | P1 |
 | `/resume/builder` | Yes | Protected via `/resume` prefix | Not sampled | Code protected | Resume builder route exists. | Needs deeper version comparison and export quality verification. | P2 |
 | `/resume/versions` | Yes | Protected via `/resume` prefix | Not sampled | Code protected | Resume versions route exists. | Needs compare original vs improved and version history UX. | P2 |
-| `/pdf-export` | Yes | Should be protected | 200 public | Loads publicly, then client API requires auth | Export PDFs for resume, tailored resume, application kit, portfolio, interview prep. | Middleware misses `/pdf-export`; UI shows DOCX option but backend generates PDFs only; generated files served from public local `/uploads/exports`. | P0 |
+| `/compare` | Yes | Protected | Current middleware code; live not retested | Route family regression-tested | Compares the signed-in user's resume versions. | No auth-free comparison data should be exposed. | P0 |
+| `/compare-job` | Yes | Protected | Current middleware code; live not retested | Route family regression-tested | Compares user resume versions against a job description. | No auth-free comparison data should be exposed. | P0 |
+| `/pdf-export` | Yes | Protected in current middleware | Historical live check was public; current live behavior not retested | Route family regression-tested | Export PDFs for resume, tailored resume, application kit, portfolio, interview prep. | UI shows DOCX option but backend generates PDFs only; local fallback is ephemeral and uses expiring signed downloads. | P0 |
 | `/jobs` | Yes | Protected | 307 to `/login` | Redirect OK | Search, filters, trust scores, source notice, cards. | Backend list/details are public; sample jobs use `example.com`; source badge can imply live for provider names if sourceType is external. | P1 |
 | `/jobs/[jobId]` | Yes | Protected via `/jobs` | Not sampled | Code protected | Job detail route. | Needs complete selected-job workflow and apply URL preservation. | P1 |
 | `/jobs/[jobId]/tailor-resume` | Yes | Protected via `/jobs` | Not sampled | Code protected | Tailor resume for job route. | Needs direct resume version selection and export. | P2 |
@@ -139,17 +144,17 @@ What works:
 Weak or missing:
 
 - Access tokens are also stored in `sessionStorage` to support cross-domain auth from Vercel to Render. This avoids `localStorage`, but it is still script-readable and should be treated as XSS-sensitive.
-- Google OAuth callback redirects to `/login?googleToken=...`, which exposes a live access token in a URL if Google is configured. Prefer a backend-set httpOnly cookie plus short one-time code exchange or same-site frontend/backend domain strategy.
+- Google OAuth callback now validates a short-lived state cookie and redirects with a single-use opaque code in the URL fragment; the frontend removes the fragment before exchanging it. Access/refresh JWTs are not put in redirect URLs. Live Google credentials and callback behavior still require staging verification.
 - Forgot/reset password pages are not wired to working email-token persistence.
 - No email verification/account verification after signup.
 - No session management UI, device list, revoke-all-sessions, MFA, or login history UI.
 - Demo mode sets a mock token client-side; protected pages can load but backend calls will fail. It should be clearly isolated from real authenticated mode or backed by a real demo account.
-- Several app pages are missing from the middleware protected route list: `/pdf-export`, `/guided-workflow`, `/company-research`, `/answer-vault`, `/career-vault`, `/contacts`, `/linkedin-optimizer`, `/github-analyzer`, `/learning-roadmap`, `/notifications`, and `/application-kit`.
+- Route omissions listed in the original audit snapshot have since been added to the middleware registry; `/compare` and `/compare-job` were added during the 2026-10-13 implementation. `/learning-roadmap` is explicitly redirected to protected `/skill-roadmap`. Regression tests require the audited private workflows to remain registered and verify the alias behavior.
 
 Priority auth fixes:
 
 - P0: Expand middleware protection to all account/data/AI routes and add route regression tests.
-- P0: Remove token-in-query Google callback pattern before enabling real Google OAuth.
+- OAuth redirect token transport is fixed in code; configure credentials and verify the state-cookie/code-exchange flow on staging before enabling Google sign-in.
 - P1: Wire forgot/reset password to signed reset tokens and email provider.
 - P1: Add email verification and onboarding after signup.
 - P2: Add sessions/devices/security settings UI and MFA provider-ready design.
@@ -170,8 +175,8 @@ Working:
 
 Missing or weak:
 
-- S3/R2 private object storage is not implemented in runtime code; files are still written to local disk and exposed by `app.use("/uploads", express.static(...))`.
-- `fileUrl` is public `/uploads/<filename>`, not a signed private URL.
+- S3/R2 object storage is implemented but not configured or remotely verified. Local fallback files remain ephemeral. All downloads use an owner-bound short-lived backend URL and current record/permission check; no public static `/uploads` mount exists.
+- Download URLs are bearer capabilities during their short TTL. Production requires a 32+ character `STORAGE_SIGNING_SECRET`; the signature binds owner, key, and expiry and is not logged. New Cloudinary uploads request authenticated delivery, but existing assets may still be public and need a reviewed reversible migration.
 - Raw extracted resume text is stored in MongoDB; this is useful for features but needs explicit retention, export/delete, and AI privacy controls.
 - DOCX parsing uses a binary fallback, not real OOXML text extraction.
 - UI guide says PDF/DOCX officially supported while client also allows TXT; docs should be consistent.
@@ -302,10 +307,10 @@ Provider status is based on deployed `/ready` and `/status`, source code, env ex
 |---|---|---|---|---|---|---|---|---|
 | MongoDB Atlas | Live | `MONGO_URI` | Render backend | Users, resumes, jobs, applications, interviews, settings | Backend `/ready` reports `database.connected: true`, `mode: mongodb` | Docs sometimes say `MONGODB_URI`, causing setup mismatch | Standardize docs/env name or support both aliases | `/ready` and CRUD smoke test |
 | OpenAI/Gemini | Mock/Fallback | `OPENAI_API_KEY`, `GEMINI_API_KEY`, `AI_PROVIDER`, `AI_MODEL` | Render backend | ATS AI, kits, interviews, mentor, skill gaps, portfolio, LinkedIn | Backend reports `provider: mock`, fallback enabled | Users may think AI is live if UI copy is loose | Configure one provider with budget limits and redaction review | `/api/ai/status` after login shows provider configured; sample AI call logs non-mock status |
-| S3/R2 storage | Provider-ready, not configured | `STORAGE_PROVIDER`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Render backend | Resume/PDF private storage | Docs mention provider-ready; runtime still local `/uploads` | Public resume/PDF URLs and ephemeral Render storage | Add storage service, private bucket, signed URLs | Upload resume, confirm private object and signed download |
+| S3/R2 storage | Backend integration implemented; provider unconfigured/unverified | `STORAGE_PROVIDER`, `STORAGE_BUCKET_NAME`, `STORAGE_REGION`, `STORAGE_ENDPOINT` (R2), `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_SIGNING_SECRET` | Backend host | Durable private resume/PDF storage | Backend streams through owner-bound expiring links and checks current records/permissions | Local storage is ephemeral; bucket privacy/encryption and legacy Cloudinary exposure require external review | Configure a private bucket and reversible migration plan; verify provider, ownership, expiry, deletion | Upload, confirm bucket privacy/encryption, cross-user denial, expiry/revocation, deletion |
 | Email/SendGrid/SMTP | Mock/Fallback | `EMAIL_PROVIDER`, `SENDGRID_API_KEY`, `SMTP_*`, `EMAIL_FROM` | Render backend | Password reset, follow-ups, notifications | Backend reports email mock | Reset/reminder messages do not send | Choose SendGrid/Resend/SMTP and wire real send path | Forgot password email received in test inbox |
 | Gmail OAuth | Not configured | Gmail/Google OAuth scopes not currently modeled separately | Render backend and Google Cloud | User email workflows | Not surfaced as live | Sending mail via Gmail without consent would be risky | Design OAuth consent and user-reviewed sending | OAuth connection test and explicit draft send confirmation |
-| Google OAuth | Provider-ready | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `CLIENT_URL` | Render backend, Google Cloud | One-click sign in | Dynamic disabled/enabled UI | Token-in-query callback pattern is unsafe before live activation | Replace callback token transport, configure credentials | Login with Google on live domain and inspect no token in URL |
+| Google OAuth | Security flow implemented; provider unverified | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `CLIENT_URL` | Render backend, Google Cloud | One-click sign in | Dynamic disabled/enabled UI | Credentials and redirect-domain behavior need staging validation | Configure approved credentials and exact callback URI | Complete Google sign-in on staging; verify state, one-time exchange, cookies, and no JWT in URL |
 | Google Calendar | Mock/Fallback | `CALENDAR_PROVIDER`, `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET` | Render backend, Google Cloud | Interview reminders | Notification page says provider-ready | Toggles can imply active calendar sends | Add OAuth consent and event creation behind user action | Create test interview reminder event |
 | Stripe | Mock/Fallback | `BILLING_PROVIDER`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PREMIUM` | Render backend, Stripe, Vercel frontend public key if needed | Billing, checkout, subscriptions, usage limits | Pricing disabled; settings has mock checkout/demo activation | Mock activation can be mistaken for paid state | Add Stripe SDK, hosted checkout, webhook verification, legal terms | Test mode checkout -> webhook -> subscription state |
 | LinkedIn | Provider-ready | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI` | Render backend, LinkedIn developer portal | OAuth/profile import, future jobs | Marked provider-ready, no scraping | Approval required; TOS risk | Apply for approved scopes/API | Provider status shows configured and manual OAuth import works |
@@ -351,12 +356,12 @@ Strengths:
 
 Risks:
 
-- Local uploads and exports are served publicly from `/uploads`; resume files and generated PDFs should be private.
+- Local fallback files are served through expiring signed download URLs, not a static path; the disk remains ephemeral and provider-backed access modes need deployment review.
 - Access token is stored in `sessionStorage`, increasing XSS blast radius.
-- Google OAuth token-in-query pattern must be fixed before live activation.
+- Google OAuth flow needs staging verification with configured credentials before live activation.
 - Missing route protection exposes account/AI tool pages publicly, even though APIs still require auth.
 - No CSRF protection beyond SameSite cookie strategy; cross-site deployment with `SameSite=None` in production should be reviewed.
-- No object storage delete flow for uploaded files because storage is local.
+- Resume and export deletion uses the storage abstraction; retention/migration behavior for externally stored legacy objects still needs provider-backed verification.
 - No dependency security gate beyond advisory report; `npm audit` continues on error in security workflow.
 - Extension requests `host_permissions` for all HTTP/HTTPS pages and content script runs on all pages; this should be tightened or explained for privacy.
 - Public contact page uses a personal email for support/security.
@@ -417,12 +422,12 @@ Still not production SaaS:
 
 ## Top Critical Issues
 
-1. P0: Remove fake-looking default metrics from authenticated analytics/dashboard (`averageAtsScore: 82`, weekly chart 1..7).
-2. P0: Protect all app routes that call private/protected APIs.
+1. P0: Protect private routes and keep route coverage regression-tested (compare flows added 2026-10-13; see implementation update below).
+2. P0: Remove fake-looking default metrics from authenticated analytics/dashboard (addressed 2026-10-13; see implementation update below).
 3. P0: Fix frontend pages wired to missing backend routes: company research, answer vault, career vault, contacts.
 4. P0: Fix GitHub analyzer backend route mismatch (`/ai/github-analyzer` missing).
-5. P0: Move resume/PDF storage from public local `/uploads` to private S3/R2 with signed URLs.
-6. P0: Fix Google OAuth token-in-query callback before enabling credentials.
+5. P0: Configure durable private S3/R2 and migrate legacy/Cloudinary objects (local public static access was removed on 2026-10-13).
+6. P0: Configure and stage-test Google OAuth's state and one-time code exchange before enabling credentials.
 7. P1: Replace raw-ID workflows with selected job/resume/application pickers.
 8. P1: Preserve official apply URL and job snapshot when saving to tracker.
 9. P1: Wire forgot/reset password to email provider and token persistence.
@@ -437,3 +442,25 @@ Treat the next implementation work as a stabilization sprint, not another broad 
 3. Make resume/PDF storage private.
 4. Connect company/answer/career/contact workflows to real backend models.
 5. Add active E2E tests around the complete resume -> jobs -> kit -> tracker journey.
+
+## Implementation Verification Update — 2026-10-13
+
+The earlier audit is a point-in-time repository/deployment snapshot. This update records only findings rechecked and changes verified in source during the current implementation work; it does not revalidate unrelated audit rows or live deployment behavior.
+
+| Area | Current verified result | Evidence |
+|---|---|---|
+| Dashboard resume score | No ATS score is reported until the user has an analysis; the dashboard displays an unscored state. | `backend/src/services/analytics.service.ts`, `frontend/app/dashboard/page.tsx` |
+| Application activity chart | Seven UTC calendar-day buckets count only the signed-in user's non-saved records using `appliedDate` or `createdAt`; sample counts are removed. | `backend/src/services/analytics.service.ts` |
+| Analytics charts | Missing resume history and pipeline records render explicit empty states instead of sample series. | `frontend/components/analytics/charts.tsx` |
+| Resume comparison routes | `/compare` and `/compare-job` are now included in middleware protection because they read the current user's resume data. | `frontend/middleware.ts` |
+| Middleware route behavior | Tests cover the known private route families, auth cookies/session marker, public routes, path-boundary behavior, and the `/learning-roadmap` alias. | `frontend/tests/middleware.test.ts` |
+| Local file downloads | Static `/uploads` is no longer mounted; HMAC signatures are time-limited and compared in constant time. | `backend/src/services/storage.service.ts`, `backend/src/app.ts` |
+
+Verification on 2026-10-13: full monorepo production build passed; full root test command passed (backend: 108 tests across 8 files; frontend: 89 tests across 2 files); repository security, git-safety, and documentation-link checks passed. Provider-backed private storage and Cloudinary legacy migration were not live-verified.
+
+### Focused security and analytics follow-up — 2026-10-13
+
+* Private file downloads verify owner-bound HMAC signatures, current database ownership/visibility, expiry, and storage-key normalization before server-side streaming. Production requires a dedicated 32+ character `STORAGE_SIGNING_SECRET`; S3/R2 selection fails closed when configuration is incomplete. New Cloudinary raw uploads request authenticated delivery; existing Cloudinary assets are unchanged and may still be public.
+* OAuth no longer redirects access JWTs in the URL. The state cookie and hashed, 90-second single-use handoff are implemented, as is the one-time exchange. Google credentials/callback behavior are not live-verified.
+* Analytics remain based on user-owned database records and UTC buckets, with no fabricated averages or chart series. Analytics API endpoints are server-authenticated; middleware is only navigation protection.
+* Verification: `npm run build` passed; `npm test` passed (backend 121 tests across 10 files; frontend 90 tests across 2 files); `npm run check:git-safety`, `npm run check:security`, and `npm run check:docs` passed. Vitest emits an existing Vite CJS deprecation warning. The AI fallback test was hardened to reject placeholder keys locally, assert no network request, and log no provider headers. No live storage or Google provider credentials were available.

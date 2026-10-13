@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl as s3GetSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v2 as cloudinary } from "cloudinary";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -20,7 +20,8 @@ const isS3Configured = Boolean(
   (provider === "s3" || provider === "r2") &&
   bucketName &&
   accessKeyId &&
-  secretAccessKey
+  secretAccessKey &&
+  (provider !== "r2" || endpoint)
 );
 
 const isCloudinaryConfigured = Boolean(
@@ -62,13 +63,65 @@ if (isS3Configured) {
 }
 
 const localUploadDir = path.join(process.cwd(), "uploads");
+function storageSigningSecret(override?: string) {
+  const secret = override !== undefined
+    ? override
+    : (env.STORAGE_SIGNING_SECRET || (env.NODE_ENV === "production" ? "" : env.JWT_ACCESS_SECRET));
+  if (!secret || (env.NODE_ENV === "production" && (secret.length < 32 || !env.STORAGE_SIGNING_SECRET))) {
+    throw new Error("Private storage signing is not configured");
+  }
+  return secret;
+}
+
+export function createStorageDownloadSignature(fileKey: string, expiresAt: number, ownerId: string, secret?: string) {
+  if (!ownerId || ownerId.length > 128) throw new Error("Invalid storage owner");
+  return createHmac("sha256", storageSigningSecret(secret)).update(`${ownerId}\n${fileKey}\n${expiresAt}`).digest("hex");
+}
+
+export function verifyStorageDownloadSignature(fileKey: string, ownerId: unknown, expiresAt: unknown, signature: unknown, now = Date.now()) {
+  const expires = Number(expiresAt);
+  if (!Number.isSafeInteger(expires) || expires <= Math.floor(now / 1000) || expires > Math.floor(now / 1000) + ttl + 5 || typeof ownerId !== "string" || ownerId.length < 1 || ownerId.length > 128 || typeof signature !== "string" || !/^[a-f0-9]{64}$/i.test(signature)) {
+    return false;
+  }
+
+  let safeKey: string;
+  try {
+    safeKey = normalizeStorageKey(fileKey);
+  } catch {
+    return false;
+  }
+
+  let expectedSignature: string;
+  try {
+    expectedSignature = createStorageDownloadSignature(safeKey, expires, ownerId);
+  } catch {
+    return false;
+  }
+  const expected = Buffer.from(expectedSignature, "hex");
+  const provided = Buffer.from(signature, "hex");
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
+}
 
 export function isConfigured(): boolean {
-  return isS3Configured || isCloudinaryConfigured;
+  const active = getProvider();
+  if (active === "s3" || active === "r2") return isS3Configured;
+  if (active === "cloudinary") return isCloudinaryConfigured;
+  return false;
 }
 
 export function getProvider(): string {
-  return isCloudinaryConfigured ? "cloudinary" : (isS3Configured ? provider : "local");
+  if (provider === "s3" || provider === "r2") return provider;
+  if (provider === "cloudinary") return "cloudinary";
+  // Preserve deployments that previously selected Cloudinary only by providing its credentials.
+  return isCloudinaryConfigured ? "cloudinary" : "local";
+}
+
+export function assertStorageProviderReady(active: string, configured: boolean) {
+  if (active !== "local" && !configured) throw new Error(`${active.toUpperCase()} storage is selected but its configuration is incomplete`);
+}
+
+function assertProviderReady(active = getProvider()) {
+  assertStorageProviderReady(active, active === "cloudinary" ? isCloudinaryConfigured : active === "local" ? true : isS3Configured);
 }
 
 export function getSignedUrlTtlSeconds(): number {
@@ -116,12 +169,14 @@ export function getStorageStatus() {
 export async function uploadFile(fileKey: string, buffer: Buffer, mimetype: string): Promise<string> {
   const safeKey = normalizeStorageKey(fileKey);
   const active = getProvider();
+  assertProviderReady(active);
   if (active === "cloudinary") {
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           public_id: safeKey,
-          resource_type: "raw"
+          resource_type: "raw",
+          type: "authenticated"
         },
         (err, result) => {
           if (err || !result) return reject(err ?? new Error("Upload failed"));
@@ -148,11 +203,27 @@ export async function uploadFile(fileKey: string, buffer: Buffer, mimetype: stri
   }
 }
 
+async function getCloudinaryResource(key: string) {
+  let lastError: unknown;
+  for (const type of ["authenticated", "private", "upload"]) {
+    try {
+      return await cloudinary.api.resource(key, { resource_type: "raw", type });
+    } catch (error: any) {
+      lastError = error;
+      const statusCode = error?.http_code || error?.error?.http_code;
+      if (statusCode !== 404) throw error;
+    }
+  }
+  throw lastError || new Error("Cloudinary file is unavailable");
+}
+
 export async function deleteFile(fileKey: string): Promise<void> {
   const safeKey = normalizeStorageKey(fileKey);
   const active = getProvider();
+  assertProviderReady(active);
   if (active === "cloudinary") {
-    await cloudinary.uploader.destroy(safeKey, { resource_type: "raw" });
+    const resource = await getCloudinaryResource(safeKey);
+    await cloudinary.uploader.destroy(safeKey, { resource_type: "raw", type: resource.type });
   } else if (active !== "local" && s3Client) {
     const command = new DeleteObjectCommand({
       Bucket: bucketName,
@@ -183,10 +254,21 @@ async function bodyToBuffer(body: any): Promise<Buffer> {
 export async function downloadFile(fileKey: string): Promise<Buffer> {
   const safeKey = normalizeStorageKey(fileKey);
   const active = getProvider();
+  assertProviderReady(active);
   if (active === "cloudinary") {
-    const url = await getSignedUrl(safeKey);
+    const resource = await getCloudinaryResource(safeKey);
+    const cloudName = env.CLOUDINARY_CLOUD_NAME || cloudinary.config().cloud_name;
+    if (resource.type === "upload" && !cloudName) throw new Error("Cloudinary is not configured");
+    const url = resource.type === "upload"
+      ? `https://res.cloudinary.com/${cloudName}/raw/upload/${safeKey}`
+      : cloudinary.utils.private_download_url(resource.public_id, resource.format || "", {
+        resource_type: "raw",
+        type: resource.type,
+        expires_at: Math.floor(Date.now() / 1000) + ttl,
+        attachment: true
+      });
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`Failed to download file from Cloudinary: ${response.statusText}`);
+    if (!response.ok) throw new Error("Cloudinary file is unavailable");
     return Buffer.from(await response.arrayBuffer());
   } else if (active !== "local" && s3Client) {
     const command = new GetObjectCommand({
@@ -201,22 +283,10 @@ export async function downloadFile(fileKey: string): Promise<Buffer> {
   return fs.readFile(localPath);
 }
 
-export async function getSignedUrl(fileKey: string): Promise<string> {
+export async function getSignedUrl(fileKey: string, ownerId: string): Promise<string> {
   const safeKey = normalizeStorageKey(fileKey);
-  const active = getProvider();
-  if (active === "cloudinary") {
-    if (safeKey.startsWith("http")) return safeKey;
-    const cloudName = env.CLOUDINARY_CLOUD_NAME;
-    return `https://res.cloudinary.com/${cloudName}/raw/upload/${safeKey}`;
-  } else if (active !== "local" && s3Client) {
-    const command = new GetObjectCommand({
-      Bucket: bucketName,
-      Key: safeKey
-    });
-    return s3GetSignedUrl(s3Client, command, { expiresIn: ttl });
-  } else {
-    // Local fallback mode
-    // We return a public url path served by the express server (e.g. /uploads/key)
-    return `/uploads/${safeKey}`;
-  }
+  const expiresAt = Math.floor(Date.now() / 1000) + ttl;
+  const signature = createStorageDownloadSignature(safeKey, expiresAt, ownerId);
+  const query = new URLSearchParams({ key: safeKey, ownerId, expiresAt: String(expiresAt), signature });
+  return `/api/storage/download?${query.toString()}`;
 }

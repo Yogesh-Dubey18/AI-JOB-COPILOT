@@ -1109,7 +1109,7 @@ export async function resolvePdfExportUrl(exportDoc: any) {
   if (key.startsWith("/uploads/")) {
     key = key.replace("/uploads/", "");
   }
-  doc.fileUrl = await getSignedUrl(key);
+  doc.fileUrl = await getSignedUrl(key, String(doc.userId));
   return doc;
 }
 

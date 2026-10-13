@@ -33,6 +33,14 @@ async function parsePdfText(buffer: Buffer) {
   }
 }
 
+function expectLocalSignedDownloadUrl(url: string, keyPattern: RegExp) {
+  const parsed = new URL(url, "https://backend.example");
+  expect(parsed.pathname).toBe("/api/storage/download");
+  expect(parsed.searchParams.get("key")).toMatch(keyPattern);
+  expect(parsed.searchParams.get("signature")).toMatch(/^[a-f0-9]{64}$/);
+  expect(Number(parsed.searchParams.get("expiresAt"))).toBeGreaterThan(Math.floor(Date.now() / 1000));
+}
+
 describe("AI Job Copilot API", () => {
   beforeEach(async () => {
     resetMemoryStore();
@@ -358,6 +366,50 @@ describe("AI Job Copilot API", () => {
     expect(intelligence.body.data.followUpsDue.length).toBeGreaterThan(0);
   });
 
+  it("returns empty analytics without fabricated resume scores or application activity", async () => {
+    const agent = await authAgent();
+    const response = await agent.get("/api/analytics/overview").expect(200);
+    const analytics = response.body.data;
+
+    expect(analytics.averageAtsScore).toBeNull();
+    expect(analytics.resumeScoreTrend).toEqual([]);
+    expect(analytics.applicationStatusChart).toEqual([]);
+    expect(analytics.weeklyApplicationChart).toHaveLength(7);
+    expect(analytics.weeklyApplicationChart.every((day: any) => day.applications === 0)).toBe(true);
+  });
+
+  it("requires backend authentication for every user-specific analytics endpoint", async () => {
+    for (const endpoint of ["overview", "applications", "resume-score", "skills", "job-search-intelligence"]) {
+      await request(app).get(`/api/analytics/${endpoint}`).expect(401);
+    }
+  });
+
+  it("counts only the user's non-saved applications in their actual last-seven-day buckets", async () => {
+    const agent = await authAgent();
+    const user = await agent.get("/api/auth/me").expect(200);
+    const userId = user.body.data.id;
+    const today = new Date();
+    const appliedDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const yesterday = new Date(appliedDate);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const outsideWindow = new Date(appliedDate);
+    outsideWindow.setUTCDate(outsideWindow.getUTCDate() - 8);
+
+    await createRecord("applications", { userId, company: "Applied Today", role: "Engineer", status: "Applied", appliedDate });
+    await createRecord("applications", { userId, company: "Interview Yesterday", role: "Engineer", status: "Interview Scheduled", appliedDate: yesterday });
+    await createRecord("applications", { userId, company: "Saved Today", role: "Engineer", status: "Saved", appliedDate });
+    await createRecord("applications", { userId, company: "Older Application", role: "Engineer", status: "Applied", appliedDate: outsideWindow });
+    await createRecord("applications", { userId: "another-user", company: "Other User", role: "Engineer", status: "Applied", appliedDate });
+
+    const response = await agent.get("/api/analytics/overview").expect(200);
+    const buckets = response.body.data.weeklyApplicationChart;
+    expect(buckets).toHaveLength(7);
+    expect(buckets.reduce((sum: number, day: any) => sum + day.applications, 0)).toBe(2);
+    expect(buckets.at(-1).applications).toBe(1);
+    expect(buckets.at(-2).applications).toBe(1);
+    expect(response.body.data.averageAtsScore).toBeNull();
+  });
+
   it("creates notification reminders and updates preferences", async () => {
     const agent = await authAgent();
     await agent.patch("/api/notifications/preferences").send({ email: true, applicationReminders: true }).expect(200);
@@ -479,7 +531,9 @@ describe("AI Job Copilot API", () => {
     const agent = await authAgent();
     const upload = await agent.post("/api/resumes/upload").attach("resume", Buffer.from("Test User\nSkills React Node.js MongoDB\nProjects AI Job Copilot"), "resume.txt").expect(201);
     const resumeExport = await agent.post("/api/exports/resume/" + upload.body.data._id).send({}).expect(201);
-    expect(resumeExport.body.data.fileUrl).toMatch(/\.pdf$/);
+    const exportUrl = new URL(resumeExport.body.data.fileUrl, "https://backend.example");
+    expect(exportUrl.pathname).toBe("/api/storage/download");
+    expect(exportUrl.searchParams.get("key")).toMatch(/\.pdf$/);
     await agent.get(resumeExport.body.data.fileUrl).expect(200);
 
     const jobs = await agent.get("/api/jobs").expect(200);
@@ -1608,7 +1662,9 @@ describe("AI Job Copilot API", () => {
     expect(metadata.body.data.visibility).toBe("private");
     expect(metadata.body.data.retentionStatus).toBe("active");
     expect(metadata.body.data.reviewStatus).toBe("not_reviewed");
-    expect(metadata.body.data.downloadUrl).toBe("/uploads/proof/architecture.pdf");
+    const privateDownloadUrl = new URL(metadata.body.data.downloadUrl, "https://backend.example");
+    expect(privateDownloadUrl.pathname).toBe("/api/storage/download");
+    expect(privateDownloadUrl.searchParams.get("key")).toBe("proof/architecture.pdf");
     expect(JSON.stringify(metadata.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
 
     const files = await agent.get(`/api/portfolios/${portfolioId}/files`).expect(200);
@@ -1635,10 +1691,10 @@ describe("AI Job Copilot API", () => {
     const publicJson = JSON.stringify(publicProfile.body.data);
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(1);
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].fileId).toBe("public-case-file");
-    expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].downloadUrl).toBe("/uploads/proof/public-case.pdf");
+    expect(new URL(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].downloadUrl, "https://backend.example").searchParams.get("key")).toBe("proof/public-case.pdf");
     expect(publicProfile.body.data.proofMappings[0].proofFiles).toHaveLength(1);
     expect(publicProfile.body.data.proofMappings[0].proofFiles[0].fileId).toBe("public-mapping-file");
-    expect(publicProfile.body.data.proofMappings[0].proofFiles[0].downloadUrl).toBe("/uploads/proof/public-mapping.pdf");
+    expect(new URL(publicProfile.body.data.proofMappings[0].proofFiles[0].downloadUrl, "https://backend.example").searchParams.get("key")).toBe("proof/public-mapping.pdf");
     expect(publicJson).not.toMatch(/private-case|private-mapping|blocked-case|failed-mapping|retained-case|retained_for_audit|private-bucket|storageKey|C:\\|absolutePath|localPath/);
   });
 
@@ -1696,7 +1752,7 @@ describe("AI Job Copilot API", () => {
     expect(uploaded.body.data.scanStatus).not.toBe("clean");
     expect(uploaded.body.data.retentionStatus).toBe("active");
     expect(uploaded.body.data.reviewStatus).toBe("not_reviewed");
-    expect(uploaded.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+    expectLocalSignedDownloadUrl(uploaded.body.data.downloadUrl, /^portfolio-proof\//);
     expect(JSON.stringify(uploaded.body.data)).not.toMatch(/C:\\|private-bucket|localPath|absolutePath/);
     const uploadActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity`).expect(200);
     expect(uploadActivity.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining(["uploaded", "local_validated", "attached_to_project"]));
@@ -1714,7 +1770,7 @@ describe("AI Job Copilot API", () => {
     await otherAgent.get(`/api/portfolios/${portfolioId}/files/export-summary`).expect(404);
 
     const signed = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(200);
-    expect(signed.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+    expectLocalSignedDownloadUrl(signed.body.data.downloadUrl, /^portfolio-proof\//);
     const signedActivity = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/activity?eventType=signed_url_generated`).expect(200);
     expect(signedActivity.body.data).toHaveLength(1);
     expect(signedActivity.body.data[0].summary).toMatch(/token/i);
@@ -1728,7 +1784,7 @@ describe("AI Job Copilot API", () => {
     const publicProfile = await request(app).get("/api/portfolios/public/upload-proof-portfolio").expect(200);
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles).toHaveLength(1);
     expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].fileId).toBe(uploaded.body.data.fileId);
-    expect(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+    expectLocalSignedDownloadUrl(publicProfile.body.data.projectCaseStudies[0].proofFiles[0].downloadUrl, /^portfolio-proof\//);
     expect(JSON.stringify(publicProfile.body.data)).not.toMatch(/storageKey|C:\\|localPath|absolutePath|private-bucket|audit|eventId|signed_url_generated/i);
 
     const exportSummary = await agent.get(`/api/portfolios/${portfolioId}/files/export-summary`).expect(200);
@@ -1803,9 +1859,10 @@ describe("AI Job Copilot API", () => {
     expect(JSON.stringify(archive.body.data)).not.toMatch(/archiveStorageKey|portfolio-proof-exports|storageKey|C:\\|private-bucket|\?token=|signature=/i);
     await otherAgent.get(`/api/portfolios/${portfolioId}/files/export-archive/${archive.body.data.exportId}/signed-url`).expect(404);
     const archiveSigned = await agent.get(`/api/portfolios/${portfolioId}/files/export-archive/${archive.body.data.exportId}/signed-url`).expect(200);
-    expect(archiveSigned.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof-exports\/.*\.zip/);
+    expectLocalSignedDownloadUrl(archiveSigned.body.data.downloadUrl, /^portfolio-proof-exports\/.*\.zip$/);
     expect(archiveSigned.body.data.signedUrlExpiresInSeconds).toBe(900);
-    expect(JSON.stringify(archiveSigned.body.data)).not.toMatch(/archiveStorageKey|storageKey|C:\\|private-bucket|\?token=|signature=/i);
+    expect(JSON.stringify(archiveSigned.body.data)).not.toMatch(/archiveStorageKey|storageKey|C:\\|private-bucket|\?token=/i);
+    expect(archiveSigned.body.data.downloadUrl).toContain("signature=");
     const archiveEvents = await agent.get(`/api/portfolios/${portfolioId}/files/activity`).expect(200);
     expect(archiveEvents.body.data.map((event: any) => event.eventType)).toEqual(expect.arrayContaining([
       "binary_export_requested",
@@ -1939,7 +1996,7 @@ describe("AI Job Copilot API", () => {
     expect(failedRecord.failureReason).not.toMatch(/C:\\|portfolio-proof-exports|private-bucket|\?token=|signature=/i);
 
     const sourceStillAvailable = await agent.get(`/api/portfolios/${portfolioId}/files/${uploaded.body.data.fileId}/signed-url`).expect(200);
-    expect(sourceStillAvailable.body.data.downloadUrl).toMatch(/\/uploads\/portfolio-proof\//);
+    expectLocalSignedDownloadUrl(sourceStillAvailable.body.data.downloadUrl, /^portfolio-proof\//);
     const files = await agent.get(`/api/portfolios/${portfolioId}/files`).expect(200);
     expect(files.body.data.map((file: any) => file.fileId)).toContain(uploaded.body.data.fileId);
 

@@ -22,6 +22,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [noticeKind, setNoticeKind] = useState<NoticeKind>("");
   const [retryCountdown, setRetryCountdown] = useState(0);
   const [googleLive, setGoogleLive] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -52,19 +53,25 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       .catch(() => {});
   }, []);
 
-  // Hydrate Google OAuth redirect session
+  // Exchange the one-time redirect code after removing it from browser history.
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const googleToken = params.get("googleToken");
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const oauthCode = hashParams.get("oauth_code");
       const err = params.get("error");
-      if (googleToken) {
-        const sessionReady = persistAuthSession({ accessToken: googleToken });
-        if (sessionReady) {
-          router.push("/dashboard");
-        }
+      if (oauthCode) {
+        window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}`);
+        setGoogleLoading(true);
+        api.post<any>("/auth/google/exchange", { code: oauthCode })
+          .then((session) => {
+            if (!persistAuthSession(session)) throw new Error("Google sign-in session was not returned");
+            router.replace("/dashboard");
+          })
+          .catch(() => setError("Google sign-in could not be completed. Please try again."))
+          .finally(() => setGoogleLoading(false));
       } else if (err) {
-        setError(err);
+        setError(err === "google_oauth_failed" ? "Google sign-in could not be completed. Please try again." : err);
       }
     }
   }, [router]);
@@ -286,8 +293,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                 {googleLive ? (
                   <button
                     type="button"
+                    disabled={googleLoading}
                     onClick={() => {
-                      window.location.href = "/api/auth/google";
+                      const backendApi = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+                      window.location.href = `${backendApi.replace(/\/$/, "")}/auth/google`;
                     }}
                     className="flex w-full items-center justify-center gap-3 rounded-md border border-border bg-background hover:bg-muted/70 px-4 py-2.5 text-sm font-medium transition duration-200 shadow-sm"
                     aria-label="Continue with Google"
@@ -298,7 +307,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
-                    Continue with Google
+                    {googleLoading ? "Signing in with Google..." : "Continue with Google"}
                   </button>
                 ) : (
                   <div className="group relative w-full">

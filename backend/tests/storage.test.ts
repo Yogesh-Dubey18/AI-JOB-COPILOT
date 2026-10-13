@@ -26,7 +26,7 @@ describe("Storage Abstraction Service", () => {
     });
   });
 
-  it("uploads files, resolves local path url, and deletes them correctly in local mode", async () => {
+  it("uploads files, resolves a time-limited local download URL, and deletes them correctly in local mode", async () => {
     const fileKey = "test/resume-" + Date.now() + ".pdf";
     const buffer = Buffer.from("%PDF-1.4\n%test");
     
@@ -39,9 +39,14 @@ describe("Storage Abstraction Service", () => {
     const content = await fs.readFile(expectedPath);
     expect(content.toString()).toBe(buffer.toString());
     
-    // Test signed url (should return standard local path)
-    const signedUrl = await getSignedUrl(fileKey);
-    expect(signedUrl).toBe("/uploads/" + fileKey.replace(/\\/g, "/"));
+    // Local download URLs carry an expiring signature instead of exposing a static path.
+    const signedUrl = await getSignedUrl(fileKey, "test-owner");
+    const parsedUrl = new URL(signedUrl, "https://backend.example");
+    expect(parsedUrl.pathname).toBe("/api/storage/download");
+    expect(parsedUrl.searchParams.get("key")).toBe(fileKey);
+    expect(parsedUrl.searchParams.get("ownerId")).toBe("test-owner");
+    expect(parsedUrl.searchParams.get("signature")).toMatch(/^[a-f0-9]{64}$/);
+    expect(Number(parsedUrl.searchParams.get("expiresAt"))).toBeGreaterThan(Math.floor(Date.now() / 1000));
     
     // Test delete
     await deleteFile(fileKey);
@@ -53,6 +58,6 @@ describe("Storage Abstraction Service", () => {
     expect(() => normalizeStorageKey("C:\\private\\resume.pdf")).toThrow(/Invalid storage key/i);
     expect(() => normalizeStorageKey("../private/resume.pdf")).toThrow(/Invalid storage key/i);
     expect(() => normalizeStorageKey("https://private-bucket.example/resume.pdf")).toThrow(/Invalid storage key/i);
-    await expect(getSignedUrl("C:\\private\\resume.pdf")).rejects.toThrow(/Invalid storage key/i);
+    await expect(getSignedUrl("C:\\private\\resume.pdf", "test-owner")).rejects.toThrow(/Invalid storage key/i);
   });
 });

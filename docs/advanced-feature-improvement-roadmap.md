@@ -9,12 +9,12 @@ This roadmap is issue/sprint based. It does not create a new numbered project ph
 
 | Order | Priority | Improvement | Effort | Risk | Dependency/provider |
 |---:|---|---|---|---|---|
-| 1 | P0 | Remove fake-looking dashboard/analytics defaults | Small | Low | None |
-| 2 | P0 | Complete protected route coverage | Small | Medium | Middleware tests |
-| 3 | P0 | Add backend for company research, answer vault, career vault, contacts | Large | Medium | MongoDB |
-| 4 | P0 | Fix GitHub analyzer API mismatch | Medium | Medium | AI provider optional, GitHub API later |
-| 5 | P0 | Private resume/PDF storage with S3/R2 signed URLs | Large | High | S3/R2 credentials |
-| 6 | P0 | Harden Google OAuth callback token handling | Medium | High | Google OAuth credentials |
+| 1 | P0 | Remove fake-looking dashboard/analytics defaults | Small | Low | None; implemented and verified 2026-10-13 |
+| 2 | P0 | Protect compare flows and add middleware route regression matrix | Small | Medium | None; implemented and verified 2026-10-13 |
+| 3 | P0 | Add backend for company research, answer vault, career vault, contacts | Large | Medium | Implemented in current working tree; API routes/services/models and ownership tests present |
+| 4 | P0 | Fix GitHub analyzer API mismatch | Medium | Medium | Implemented in current working tree; API route and fallback service present |
+| 5 | P0 | Private resume/PDF storage with durable S3/R2 | Large | High | Owner-bound backend streaming and configuration validation implemented; provider credentials, live permissions, and legacy migration remain external |
+| 6 | P0 | Harden Google OAuth callback token handling | Medium | High | State cookie and one-time code exchange implemented; Google credentials and staging verification remain external |
 | 7 | P1 | Connect resume -> jobs -> kit -> tracker workflow with entity pickers | Large | Medium | MongoDB, existing APIs |
 | 8 | P1 | Preserve job snapshots and official apply URLs in tracker | Medium | Medium | Job model/application model migration |
 | 9 | P1 | Activate real Playwright E2E coverage | Medium | Medium | Playwright dependency/browsers |
@@ -35,7 +35,7 @@ This roadmap is issue/sprint based. It does not create a new numbered project ph
 ### 1. Remove Fake-Looking Dashboard And Analytics Defaults
 
 * Feature name: Truthful analytics empty states
-* Current status: Backend returns `averageAtsScore: 82` when no resume analyses exist, and `weeklyApplicationChart` returns 1..7 applications by weekday.
+* Current status: Completed 2026-10-13. Empty analytics use no invented score or application events; all chart inputs are user-scoped records.
 * Problem: Authenticated dashboards can show sample metrics as if they came from the user.
 * Why it matters: The project explicitly must not fake metrics, users, success stories, interviews, or outcomes.
 * Advanced realistic version: Return `null`, `0`, or `status: insufficient_data`; frontend displays "No data yet" and an action to run an analysis or add applications.
@@ -53,7 +53,7 @@ This roadmap is issue/sprint based. It does not create a new numbered project ph
 ### 2. Complete Protected Route Coverage
 
 * Feature name: Protected route consistency
-* Current status: Core routes like `/dashboard`, `/resume`, `/jobs`, `/applications`, `/settings`, and `/admin` are protected; several private app routes load publicly.
+* Current status: Completed 2026-10-13. Private route registry and regression matrix cover the audited private route families and path boundaries. Server-side APIs retain their own auth checks.
 * Problem: `/pdf-export`, `/guided-workflow`, `/company-research`, `/answer-vault`, `/career-vault`, `/contacts`, `/linkedin-optimizer`, `/github-analyzer`, `/learning-roadmap`, `/notifications`, and `/application-kit` are not covered by middleware.
 * Why it matters: Publicly loaded private tools produce confusing 401 errors and increase privacy risk.
 * Advanced realistic version: A single route registry declares public, protected, admin, and alias routes; middleware and tests use the same registry.
@@ -68,16 +68,60 @@ This roadmap is issue/sprint based. It does not create a new numbered project ph
 * Estimated effort: Small
 * Suggested implementation phase: Audit Sprint A
 
+## Implementation Results
+
+### Completed 2026-10-13: Truthful analytics empty states
+
+* `averageAtsScore` is now `null` until the user has a saved analysis; the backend no longer reports a default score of 82.
+* The seven-day application chart is built from that user's non-saved applications and their actual `appliedDate` (falling back to record creation date). Empty days remain zero; saved jobs and dates outside the window are not counted.
+* Resume-score and application-status charts now show empty states instead of sample series. The dashboard presents an unscored state and a resume-analysis action.
+* Verification: full workspace build passed; full root test command passed (backend: 108 tests across 8 files; frontend: 89 tests across 2 files). Focused analytics, storage, and middleware regressions are included in those suites.
+
+### Completed 2026-10-13: Compare route protection
+
+* Added `/compare` and `/compare-job` to the private route registry because both pages load the signed-in user's resumes.
+* Route matching now checks path boundaries, avoiding accidental matches such as `/dashboard-preview`.
+* Added middleware regression coverage for the known private route families, auth-cookie/session access, public routes, path-prefix boundaries, and the `/learning-roadmap` alias (5 tests passed).
+
+### Completed 2026-10-13: Local storage download hardening
+
+* Removed Express's public static `/uploads` mount.
+* Local storage URLs now include a short-lived HMAC-SHA256 signature, validated with constant-time comparison and normalized storage keys. Downloads are marked private/no-store and served as attachments.
+* Added tests for valid downloads, invalid signatures, expiry, and the removed public static path; existing export/proof URL assertions now verify signed URL shape.
+* Verification: backend TypeScript build passed; focused storage tests passed (5 tests). S3/R2 credentials and Cloudinary legacy access-mode review remain external/manual dependencies, so durable/private provider deployment is not claimed complete.
+
+### Completed 2026-10-13: Owner-bound storage download authorization
+
+* Local, S3/R2, and Cloudinary downloads use a short-lived backend URL; provider URLs and credentials are not returned to clients.
+* HMAC signatures bind normalized object key, owner ID, and expiry. Production requires `STORAGE_SIGNING_SECRET` (at least 32 characters); expiry cannot exceed configured TTL.
+* Each download rechecks resume, resume-version, PDF-export, proof-file, or archive ownership and current visibility/retention permissions. Deleted records revoke links.
+* New Cloudinary raw uploads request authenticated delivery. Existing Cloudinary files are untouched and may remain directly public until an approved reversible migration is completed.
+* Resume upload cleans temporary files on every exit path and removes newly stored objects if record creation fails. Incomplete S3/R2 configuration fails closed.
+* Verification: root build passed. Final full backend tests passed (121 tests across 10 files); focused storage/analytics/OAuth tests passed (101 tests across 6 files before an added provider-config regression, then final focused AI/config tests passed 9 tests across 2 files). Git-safety, security-safety, and docs checks passed. No live S3/R2 credentials or Cloudinary console access were available; live provider permissions and existing asset exposure remain unverified.
+
+### Completed 2026-10-13: Analytics integrity and authorization regression pass
+
+* Aggregations use the authenticated user's actual records and UTC day buckets; empty days remain zero and missing ATS data is not imputed. Response, interview, shortlist, and offer statuses are counted distinctly, with no sample chart values.
+* Analytics endpoints are server-authenticated; frontend route middleware remains a navigation layer, not the API authorization boundary.
+* Verification: full monorepo build passed; final root tests passed (backend 121 tests/10 files, frontend 90 tests/2 files); git-safety, security-safety, and docs-link checks passed.
+
+### Completed 2026-10-13: Google OAuth redirect token hardening
+
+* Callback validates a 256-bit random state value against an HttpOnly, short-lived cookie using constant-time comparison.
+* The callback stores only a SHA-256 hash of a random, 90-second one-time code and redirects with that code in the URL fragment. The frontend removes the fragment immediately and exchanges once; the backend returns tokens only from a no-store exchange response and sets auth cookies.
+* Production requires `GOOGLE_REDIRECT_URI` when Google credentials are configured. No provider credentials were available, so live Google authentication remains unverified.
+* Verification: OAuth service/API and frontend regressions passed; full backend/frontend suites and production build passed.
+
 ### 3. Implement Missing Backend Routes For Frontend Vault Pages
 
 * Feature name: Company, answer, career, and contacts backend completion
-* Current status: Frontend pages exist for `/company-research`, `/answer-vault`, `/career-vault`, and `/contacts`; backend routes/models are missing.
+* Current status: Completed in the current working tree. Backend route modules, models, user-scoped services, and API CRUD/ownership coverage exist; app mounts were verified.
 * Problem: Pages load but fail at API calls.
 * Why it matters: These are visible core workflow surfaces and make the product feel broken.
 * Advanced realistic version: Each has a Mongoose model, service, route module, ownership checks, validation, audit logs, and integration links.
 * User benefit: Users can save company notes, interview answers, career source-of-truth entries, and recruiter contacts reliably.
-* Engineering work needed: Add models, validators, services, routes, app mounting, tests, and frontend error/success polish.
-* Backend changes: New route modules under `/api/company-research`, `/api/answer-vault`, `/api/career-vault`, `/api/contacts`; models and service ownership checks.
+* Engineering work needed: Retain the ownership tests and validate these workflows with live MongoDB-backed staging.
+* Backend changes: Routes under `/api/company-research`, `/api/answer-vault`, `/api/career-vault`, `/api/contacts`; models and service ownership checks are present.
 * Frontend changes: Replace broken calls with typed API helpers and add entity cross-links.
 * Provider/API dependency: MongoDB live; no external provider required.
 * Security/privacy risk: Medium because these records contain personal career and recruiter data.
@@ -89,13 +133,13 @@ This roadmap is issue/sprint based. It does not create a new numbered project ph
 ### 4. Fix GitHub Analyzer API Mismatch
 
 * Feature name: Working GitHub analyzer
-* Current status: Frontend calls `/ai/github-analyzer`; backend does not define that endpoint.
+* Current status: Completed in the current working tree. The frontend route `/api/ai/github-analyzer` exists and delegates to a safe fallback-capable proof-analysis service.
 * Problem: The tool appears available but fails on generate.
 * Why it matters: It is a public feature card and important portfolio feature.
 * Advanced realistic version: Manual analyzer works with AI fallback; optional GitHub API metadata is marked provider-ready until `GITHUB_TOKEN` or OAuth is configured.
 * User benefit: Users get actionable README, case study, resume bullet, and interview feedback based on their real input.
-* Engineering work needed: Add backend route, prompt/schema if needed, env key, and provider status.
-* Backend changes: Add `/api/ai/github-analyzer`, AI service method, optional GitHub metadata service later.
+* Engineering work needed: Optional GitHub API metadata can be considered later; the current manual analysis path is implemented.
+* Backend changes: `/api/ai/github-analyzer` route and service are present.
 * Frontend changes: Protect route, display fallback/provider status, remove broken-provider confusion.
 * Provider/API dependency: AI provider optional; GitHub API provider-ready.
 * Security/privacy risk: Low for public repos, Medium for private repo OAuth later.
@@ -106,18 +150,18 @@ This roadmap is issue/sprint based. It does not create a new numbered project ph
 
 ### 5. Private Resume And Export Storage
 
-* Feature name: S3/R2 private storage with signed URLs
-* Current status: Uploads and generated PDFs are written to local disk and served from `/uploads`.
-* Problem: Resume/PDF files can be public by URL and can disappear after Render restarts.
+* Feature name: S3/R2 private storage with backend-authorized downloads
+* Current status: All providers use expiring owner-bound backend download URLs with record checks. Local storage remains ephemeral. S3/R2 durability is not configured, and Cloudinary legacy privacy is not verified.
+* Problem: Local files can disappear after Render restarts; production storage needs a private durable object store and a legacy-object migration plan.
 * Why it matters: Resume data is sensitive personal data and must be private for SaaS production.
 * Advanced realistic version: Private object bucket, random object keys, server-side validation before upload, signed GET URLs, delete/export retention workflows.
 * User benefit: Resumes and generated documents remain private, durable, and user-owned.
-* Engineering work needed: Storage abstraction, S3/R2 client, migration plan, file ownership checks, signed download endpoints.
-* Backend changes: Add storage service, use it in resume upload and PDF export, remove public static file serving for private data.
-* Frontend changes: Download links call authenticated signed URL endpoint.
+* Engineering work needed: Configure private S3/R2, migrate existing objects, verify provider access modes, and preserve ownership/deletion checks.
+* Backend changes: Existing storage abstraction now signs local fallback URLs and no longer exposes a static `/uploads` directory. Provider configuration and migration remain.
+* Frontend changes: Existing download links use short-lived backend URLs. They are bearer capabilities; server authorization checks the owner-bound current record and its permissions on every request.
 * Provider/API dependency: AWS S3 or Cloudflare R2 credentials.
 * Security/privacy risk: High if delayed.
-* Testing needed: Upload validation, signed URL auth, object deletion, no public URL regression.
+* Testing needed: Owner mismatch, expiry/tampering, absent object/record, no public static route, plus configured S3/R2 integration and legacy migration verification.
 * Priority: P0
 * Estimated effort: Large
 * Suggested implementation phase: Audit Sprint B
@@ -125,17 +169,17 @@ This roadmap is issue/sprint based. It does not create a new numbered project ph
 ### 6. Harden Google OAuth Before Live Activation
 
 * Feature name: Safe Google OAuth activation
-* Current status: Provider-ready routes exist; callback redirects to `/login?googleToken=...`.
-* Problem: Access token in query string can leak through browser history, logs, screenshots, and referrers.
+* Current status: Callback uses a one-time opaque handoff in the URL fragment, an HttpOnly OAuth state cookie, and a backend exchange endpoint. Access and refresh JWTs are not placed in redirect URLs.
+* Problem: Live Google credentials and callback configuration are not present in this local environment, so provider behavior on the deployed domain remains unverified.
 * Why it matters: OAuth launch should not introduce credential exposure.
-* Advanced realistic version: Backend sets httpOnly cookies and redirects without token, or frontend exchanges a one-time code for session via secure endpoint.
+* Advanced realistic version: Short-lived, single-use random handoff code stored as a hash, exchanged once by the frontend; state validated in constant time; exchange response is no-store.
 * User benefit: Google sign-in works without exposing tokens.
-* Engineering work needed: Replace token transport, add state/nonce, error handling, disconnect, and tests.
-* Backend changes: OAuth state cookie, callback session handling, no token query.
-* Frontend changes: Consume success/error status without token in URL.
+* Engineering work needed: Configure production Google OAuth credentials and verify the callback/logout/logout-cookie behavior against Google on staging.
+* Backend changes: Implemented state cookie, handoff persistence and atomic consume, exchange endpoint, error handling, and no-store/referrer controls.
+* Frontend changes: Implemented fragment handoff consumption, immediate fragment removal, session persistence, and dashboard redirect.
 * Provider/API dependency: Google Cloud OAuth credentials.
 * Security/privacy risk: High if enabled as-is.
-* Testing needed: OAuth provider status tests, callback tests, no-token-in-URL assertion.
+* Testing needed: Unit/API and frontend exchange regressions added; live Google callback test remains manual.
 * Priority: P0
 * Estimated effort: Medium
 * Suggested implementation phase: Audit Sprint B
