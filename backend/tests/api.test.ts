@@ -1456,12 +1456,26 @@ describe("AI Job Copilot API", () => {
     await agent.post("/api/portfolios/github/check").send({ repoUrl: "https://example.com/test/repo" }).expect(400);
 
     const checked = await agent.post("/api/portfolios/github/check").send({
-      repoUrl: "https://github.com/example/manual-proof",
+      repoUrl: "https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT",
       projectName: "React Portfolio",
       skillName: "React"
     }).expect(200);
-    expect(checked.body.data.repoUrl).toBe("https://github.com/example/manual-proof");
-    expect(checked.body.data.confidence).toBe("medium");
+    expect(checked.body.data.repoUrl).toBe("https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT");
+
+    if (process.env.GITHUB_TOKEN) {
+      expect(checked.body.data.metadata).not.toBeNull();
+      expect(checked.body.data.metadata.publicUrl).toBe(
+        "https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT"
+      );
+      expect(checked.body.data.metadata.repoName).toBe("AI-JOB-COPILOT");
+      expect(checked.body.data.providerStatus.status).toBe("live");
+      expect(checked.body.data.providerStatus.tested).toBe(true);
+    } else {
+      expect(checked.body.data.metadata).toBeNull();
+      expect(checked.body.data.confidence).toBe("medium");
+      expect(checked.body.data.evidenceStatus).toBe("manual_repo_link");
+    }
+
     expect(JSON.stringify(checked.body.data)).not.toMatch(/stars|forks|commits|verifiedByGitHub/i);
 
     await agent.post("/api/portfolios/generate").send({
@@ -1480,9 +1494,9 @@ describe("AI Job Copilot API", () => {
         {
           projectName: "Public GitHub Proof",
           problemSolved: "Mapped repository proof to recruiter-facing case studies.",
-          githubUrl: "https://github.com/example/manual-proof",
+          githubUrl: "https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT",
           githubProof: {
-            repoUrl: "https://github.com/example/manual-proof",
+            repoUrl: "https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT",
             evidenceStatus: "manual_repo_link",
             confidence: "medium",
             privateNotes: "Private GitHub reviewer note",
@@ -1512,9 +1526,9 @@ describe("AI Job Copilot API", () => {
         {
           skillName: "Node.js",
           projectName: "Public GitHub Proof",
-          githubUrl: "https://github.com/example/manual-proof",
+          githubUrl: "https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT",
           githubProof: {
-            repoUrl: "https://github.com/example/manual-proof",
+            repoUrl: "https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT",
             evidenceStatus: "manual_repo_link",
             confidence: "medium",
             isPublic: true
@@ -1528,11 +1542,11 @@ describe("AI Job Copilot API", () => {
 
     const publicProfile = await request(app).get("/api/portfolios/public/github-proof-portfolio").expect(200);
     const publicJson = JSON.stringify(publicProfile.body.data);
-    expect(publicProfile.body.data.projectCaseStudies[0].githubUrl).toBe("https://github.com/example/manual-proof");
+    expect(publicProfile.body.data.projectCaseStudies[0].githubUrl).toBe("https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT");
     expect(publicProfile.body.data.projectCaseStudies[0].githubProof.privateNotes).toBeUndefined();
     expect(publicProfile.body.data.projectCaseStudies[0].proofBadge).toBe("GitHub-linked");
     expect(publicProfile.body.data.proofMappings.find((mapping: any) => mapping.skillName === "React").githubUrl).toBe("");
-    expect(publicProfile.body.data.proofMappings.find((mapping: any) => mapping.skillName === "Node.js").githubUrl).toBe("https://github.com/example/manual-proof");
+    expect(publicProfile.body.data.proofMappings.find((mapping: any) => mapping.skillName === "Node.js").githubUrl).toBe("https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT");
     expect(publicJson).not.toMatch(/Private GitHub reviewer|Hidden mapping note|private-proof|stars|forks|commits|verifiedByGitHub/i);
   });
 
