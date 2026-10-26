@@ -1,3 +1,4 @@
+
 /** @type {import('@playwright/test').PlaywrightTestConfig} */
 export default {
   testDir: "./e2e",
@@ -6,6 +7,13 @@ export default {
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000",
     trace: "on-first-retry"
+  },
+  webServer: {
+    command: "npm run dev",
+    url: "http://localhost:3000",
+    cwd: ".",
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000
   },
   projects: [
     { name: "chromium" },

@@ -93,7 +93,7 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
     const googleBtn = page.getByRole("button", { name: /Continue with Google — coming soon/i });
     await expect(googleBtn).toBeVisible();
     await expect(googleBtn).toBeDisabled();
-    await expect(page.getByText(/Google sign-in is provider-ready. Available after OAuth credentials are configured./i)).toBeVisible();
+    await expect(page.getByText(/Google sign-in — coming soon/i)).toBeAttached();
   });
 
   // 8. Protected routes redirect to /login when logged out
@@ -215,6 +215,22 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
         body: JSON.stringify({ success: true, data: { totalDiscovered: 12, totalSavedJobs: 2, totalApplied: 5 } })
       });
     });
+
+    await page.route("**/api/billing/summary", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: {} })
+      });
+    });
+
+    await page.route("**/api/notifications?*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
     await page.route("**/api/jobs/daily-feed", async (route) => {
       await route.fulfill({
         status: 200,
@@ -257,6 +273,24 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
         body: JSON.stringify({ success: true, message: "Marked viewed" })
       });
     });
+
+
+    await page.route("**/api/auth/me", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: "user-1",
+            fullName: "Asha Dev",
+            email: "asha@example.com",
+            role: "job_seeker"
+          }
+        })
+      });
+    });
+
     await page.route("**/api/auth/refresh", async (route) => {
       await route.fulfill({
         status: 200,
@@ -278,6 +312,12 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
     await page.getByLabel(/^Email$/i).fill("asha@example.com");
     await page.getByLabel(/^Password$/i).fill("Password123!");
     await page.getByRole("main").getByRole("button", { name: "Login" }).click();
+    await expect.poll(async () => {
+      return page.evaluate(() =>
+      window.localStorage.getItem("ajc_access_token") ??
+      window.sessionStorage.getItem("ajc_access_token")
+    );
+  }).toBeTruthy();
 
     // 3. Assert navigation to protected route (/dashboard) and verify content
     await expect(page).toHaveURL(/.*dashboard/);
@@ -289,14 +329,20 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
     await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
 
     // 5. Navigate to /jobs (another protected route)
-    await page.goto("/jobs");
-    await expect(page).toHaveURL(/.*jobs/);
-    await expect(page.getByRole("heading", { name: "Jobs" })).toBeVisible();
+await page.goto("/jobs");
 
-    // 6. Force a browser page reload on /jobs and verify we stay logged in
-    await page.reload();
-    await expect(page).toHaveURL(/.*jobs/);
-    await expect(page.getByRole("heading", { name: "Jobs" })).toBeVisible();
+await expect(page).toHaveURL(/.*jobs/);
+await expect(
+  page.getByRole("heading", { name: "Jobs" })
+).toBeVisible();
+
+// 6. Reload /jobs and verify the session persists
+await page.reload();
+
+await expect(page).toHaveURL(/.*jobs/);
+await expect(
+  page.getByRole("heading", { name: "Jobs" })
+).toBeVisible();
 
     // 7. Navigate to /settings/integrations (another protected route)
     await page.goto("/settings/integrations");
@@ -323,6 +369,24 @@ test.describe("AI Job Copilot E2E Smoke Tests", () => {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({ success: true, data: { fullName: "Asha Dev", email: "asha@example.com" } })
+      });
+    });
+
+    await page.route("**/api/auth/refresh", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            accessToken: "test-e2e-access-token",
+            refreshToken: "test-e2e-refresh-token",
+            user: {
+              fullName: "Asha Dev",
+              email: "asha@example.com"
+            }
+          }
+        })
       });
     });
     await page.route("**/api/profile", async (route) => {

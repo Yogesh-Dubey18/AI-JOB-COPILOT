@@ -10,4 +10,6 @@ try {
   process.exit(0);
 }
 
-execFileSync("npx", ["playwright", "test"], { shell: true, stdio: "inherit" });
+execFileSync("npx", ["playwright", "test", ...process.argv.slice(2)], {
+  stdio: "inherit"
+});

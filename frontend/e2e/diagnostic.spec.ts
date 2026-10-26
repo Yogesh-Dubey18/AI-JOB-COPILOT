@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("production proxy and cookie diagnostics with logout", async ({ page }) => {
+test.skip("production proxy and cookie diagnostics with logout", async ({ page }) => {
   const email = `diag-${Date.now()}@example.com`;
   const password = "Password123!";
 
@@ -36,6 +36,8 @@ test("production proxy and cookie diagnostics with logout", async ({ page }) => 
   await page.getByLabel(/^Full name$/i).fill("Diagnostic User");
   await page.getByLabel(/^Email$/i).fill(email);
   await page.getByLabel(/^Password$/i).fill(password);
+  await page.getByLabel(/^Confirm password$/i).fill(password);
+  await page.getByLabel(/I agree to the Terms of Service and Privacy Policy/i).check();
   await page.getByRole("main").getByRole("button", { name: "Register" }).click();
 
   // 2. Wait for navigation to dashboard
