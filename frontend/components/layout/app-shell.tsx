@@ -14,6 +14,7 @@ import { clearAuthSession } from "@/lib/auth-session";
 import { api } from "@/lib/api";
 import type { AuthUser } from "@/lib/auth";
 import { Progress } from "@/components/ui/progress";
+import { AiModeNotice } from "@/components/shared/ai-mode-notice";
 
 type NavigationItem = { href: string; label: string; icon: typeof Home };
 type BillingSummary = {
@@ -151,7 +152,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {mobileMenuOpen ? <X aria-hidden="true" className="h-5 w-5" /> : <Menu aria-hidden="true" className="h-5 w-5" />}
             </button>
-            <Link href="/dashboard" className="min-w-0 truncate font-semibold" aria-label="AI Job Copilot dashboard">Career operating system</Link>
+            <Link href="/dashboard" className="min-w-0 truncate font-semibold" aria-label="AI Job Copilot dashboard"><span className="sm:hidden">AI Job Copilot</span><span className="hidden sm:inline">Career operating system</span></Link>
           </div>
           <div className="ml-3 flex shrink-0 items-center gap-1 text-sm text-muted-foreground sm:gap-2">
             <Link href="/notifications" aria-label={hasUnreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"} className="relative flex h-10 items-center gap-2 rounded-md px-2 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -178,7 +179,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </> : null}
 
-        <main className="mx-auto max-w-7xl px-4 py-5 sm:py-6 lg:px-8">{children}</main>
+        <main className="mx-auto max-w-7xl px-4 py-5 sm:py-6 lg:px-8"><AiModeNotice />{children}</main>
         <footer className="border-t px-4 py-3 text-center text-xs text-muted-foreground lg:px-8">
           Built by <a href="https://github.com/Yogesh-Dubey18" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">Yogesh Dubey</a>
           {" · "}<a href="https://github.com/Yogesh-Dubey18/AI-JOB-COPILOT" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">GitHub</a>
@@ -188,7 +189,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur lg:hidden">
         {mobileNav.map(({ href, icon: Icon, label }) => {
           const active = isActivePath(pathname, href);
-          return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-w-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+          return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-w-0 flex-col items-center gap-1 rounded-md px-0.5 py-1.5 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? "text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
             <Icon aria-hidden="true" className="h-4 w-4" />
             <span className="max-w-full truncate">{label}</span>
           </Link>;

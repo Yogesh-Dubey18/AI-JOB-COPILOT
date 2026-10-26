@@ -95,8 +95,8 @@ function resolveRuntime(): AiRuntime {
   const model =
     env.AI_MODEL ||
     (provider === "openai" ? "gpt-4o-mini" 
-    : provider === "gemini" ? "gemini-1.5-flash"
-    : provider === "groq" ? "llama3-8b-8192"
+    : provider === "gemini" ? "gemini-3.8-flash"
+    : provider === "groq" ? "openai/gpt-oss-20b"
     : "mock-career-copilot");
 
   return {
@@ -180,10 +180,11 @@ async function callOpenAi(prompt: string, runtime: AiRuntime) {
 
 async function callGemini(prompt: string, runtime: AiRuntime) {
   const data = await fetchJsonWithTimeout(
-    `https://generativelanguage.googleapis.com/v1beta/models/${runtime.model}:generateContent?key=${env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(runtime.model)}:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // Key in a header, not the URL, so it never lands in proxy/access logs or error messages.
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
       body: JSON.stringify({
         generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
         contents: [{ parts: [{ text: `${prompt}\nReturn only strict JSON.` }] }]

@@ -28,8 +28,8 @@ export const jobMatchOutputSchema = z.object({
 });
 
 export const tailoredResumeOutputSchema = z.object({
-  beforeAtsScore: z.number().default(68),
-  afterAtsScore: z.number().default(91),
+  beforeAtsScore: z.number().default(0),
+  afterAtsScore: z.number().default(0),
   addedKeywords: z.array(z.string()).default([]),
   genuineGaps: z.array(z.string()).default([]),
   keywordStuffingWarnings: z.array(z.string()).default([]),
@@ -54,7 +54,7 @@ const worldClassSkillSchema = z.object({
 
 export const worldClassResumeOutputSchema = z.object({
   name: z.string().default(""),
-  title: z.string().default("Full Stack Developer | MERN Stack"),
+  title: z.string().default(""),
   contact: z.object({
     email: z.string().default(""),
     phone: z.string().default(""),
@@ -100,7 +100,7 @@ export const worldClassResumeOutputSchema = z.object({
   softSkills: z.array(z.string()).default([]),
   languages: z.array(z.string()).default([]),
   formattingNotes: z.array(z.string()).default([]),
-  atsScore: z.number().default(92),
+  atsScore: z.number().default(0),
   atsKeywords: z.array(z.string()).default([])
 });
 
@@ -169,7 +169,10 @@ export const scamDetectorOutputSchema = z.object({
   trustScore: z.number(),
   riskLevel: z.string(),
   redFlags: z.array(z.string()),
-  recommendation: z.string()
+  recommendation: z.string(),
+  // The UI renders these; previously they were stripped by validation.
+  positiveSignals: z.array(z.string()).default([]),
+  verificationSteps: z.array(z.string()).default([])
 });
 
 export const rejectionAnalysisOutputSchema = z.object({

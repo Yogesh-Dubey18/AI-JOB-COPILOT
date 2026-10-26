@@ -1,3 +1,4 @@
+import { isProduction } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
 import { countRecords, createRecord, findOneRecord, findRecordById, findRecords, deleteRecord, updateRecord } from "../utils/repository.js";
 import { createApplication } from "./application.service.js";
@@ -72,7 +73,13 @@ export const sampleJobs = [
   ["Junior Software Engineer", "DevHarbor", "Noida", "Hybrid", "Full-time", "0-1 years", ["JavaScript", "DSA", "React", "SQL"]]
 ];
 
+/**
+ * Seeds fictional demo listings into an empty database. These companies and
+ * apply links are not real, so this never runs in production unless
+ * SEED_SAMPLE_JOBS=true is set explicitly (e.g. for a demo deployment).
+ */
 export async function ensureSampleJobs() {
+  if (isProduction && process.env.SEED_SAMPLE_JOBS !== "true") return;
   if ((await countRecords("jobs")) > 0) return;
   const now = Date.now();
   for (const [index, item] of sampleJobs.entries()) {
@@ -87,12 +94,12 @@ export async function ensureSampleJobs() {
       salaryMin: 300000 + index * 50000,
       salaryMax: 700000 + index * 75000,
       currency: "INR",
-      description: title + " role for job seekers with practical projects and strong fundamentals.",
+      description: "Sample listing for demo purposes - not a real vacancy. " + title + " role for job seekers with practical projects and strong fundamentals.",
       responsibilities: ["Build user-facing features", "Work with APIs", "Document decisions", "Collaborate with product and engineering"],
       requirements: ["Portfolio projects", "Good communication", "Core programming fundamentals"],
       skillsRequired,
       applyUrl: "https://example.com/apply/" + index,
-      source: index % 2 ? "Company careers" : "Curated job board",
+      source: "Sample data (demo)",
       trustScore: 82 - index,
       scamRiskScore: 8 + index,
       postedAt: new Date(now - index * 86400000),

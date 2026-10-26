@@ -276,45 +276,46 @@ function JobsContent() {
         </div>
       )}
 
-      <div className="mb-5 grid gap-3 rounded-md border bg-card p-3 lg:grid-cols-[1fr_130px_130px_130px_130px_130px_130px]">
-        <div className="flex items-center gap-2 rounded-md border bg-background px-3">
+      <div className="mb-5 grid grid-cols-2 gap-3 rounded-md border bg-card p-3 sm:grid-cols-3 xl:grid-cols-6">
+        {/* Search gets its own row so every filter has room for its full label. */}
+        <div className="col-span-full flex items-center gap-2 rounded-md border bg-background px-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input aria-label="Search jobs" className="border-0 focus:ring-0" placeholder="Search role, company, skill, location" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <select aria-label="Workplace filter" className="h-10 rounded-md border bg-background px-3 text-sm" value={remoteType} onChange={(event) => setRemoteType(event.target.value)}>
+        <select aria-label="Workplace filter" className="h-10 min-w-0 rounded-md border bg-background pl-3 pr-2 text-sm" value={remoteType} onChange={(event) => setRemoteType(event.target.value)}>
           <option value="">Any workplace</option>
           <option value="Remote">Remote</option>
           <option value="Hybrid">Hybrid</option>
           <option value="Onsite">Onsite</option>
         </select>
-        <select aria-label="Job type filter" className="h-10 rounded-md border bg-background px-3 text-sm" value={jobType} onChange={(event) => setJobType(event.target.value)}>
+        <select aria-label="Job type filter" className="h-10 min-w-0 rounded-md border bg-background pl-3 pr-2 text-sm" value={jobType} onChange={(event) => setJobType(event.target.value)}>
           <option value="">Any type</option>
           <option value="Full-time">Full-time</option>
           <option value="Internship">Internship</option>
           <option value="Contract">Contract</option>
           <option value="Part-time">Part-time</option>
         </select>
-        <select aria-label="Experience level filter" className="h-10 rounded-md border bg-background px-3 text-sm" value={experience} onChange={(event) => setExperience(event.target.value)}>
+        <select aria-label="Experience level filter" className="h-10 min-w-0 rounded-md border bg-background pl-3 pr-2 text-sm" value={experience} onChange={(event) => setExperience(event.target.value)}>
           <option value="">Any experience</option>
           <option value="fresher">Fresher / 0-1 yr</option>
           <option value="junior">Junior / 1-3 yrs</option>
           <option value="mid">Mid / 3-5 yrs</option>
           <option value="senior">Senior / 5+ yrs</option>
         </select>
-        <select aria-label="Minimum trust score filter" className="h-10 rounded-md border bg-background px-3 text-sm" value={trustMin} onChange={(event) => setTrustMin(event.target.value)}>
+        <select aria-label="Minimum trust score filter" className="h-10 min-w-0 rounded-md border bg-background pl-3 pr-2 text-sm" value={trustMin} onChange={(event) => setTrustMin(event.target.value)}>
           <option value="">Any trust</option>
           <option value="70">70+ trust</option>
           <option value="80">80+ trust</option>
           <option value="90">90+ trust</option>
         </select>
-        <select aria-label="Minimum salary filter" className="h-10 rounded-md border bg-background px-3 text-sm" value={salaryMin} onChange={(event) => setSalaryMin(event.target.value)}>
+        <select aria-label="Minimum salary filter" className="h-10 min-w-0 rounded-md border bg-background pl-3 pr-2 text-sm" value={salaryMin} onChange={(event) => setSalaryMin(event.target.value)}>
           <option value="">Any salary</option>
           <option value="300000">3 LPA+</option>
           <option value="600000">6 LPA+</option>
           <option value="900000">9 LPA+</option>
           <option value="1500000">15 LPA+</option>
         </select>
-        <select aria-label="Sort jobs" className="h-10 rounded-md border bg-background px-3 text-sm" value={sort} onChange={(event) => setSort(event.target.value)}>
+        <select aria-label="Sort jobs" className="h-10 min-w-0 rounded-md border bg-background pl-3 pr-2 text-sm" value={sort} onChange={(event) => setSort(event.target.value)}>
           <option value="match">AI match score</option>
           <option value="postedAt">Newest</option>
           <option value="trust">Trust score</option>
@@ -325,7 +326,20 @@ function JobsContent() {
 
       {sources.data ? (
         <div className="mb-5 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Provider-ready sources: {(sources.data.externalProviders || []).map((source: any) => source.name).join(", ")}. Live board search requires approved API or partner-feed credentials; protected scraping and auto-apply are disabled.
+          {(() => {
+            // Only job-listing providers belong here (not auth, billing or email integrations).
+            const jobProviderIds = new Set(["adzuna", "remotive", "arbeitnow", "linkedin", "indeed", "ziprecruiter", "dice", "naukri"]);
+            const providers = (sources.data.externalProviders || []).filter((source: any) => jobProviderIds.has(source.id));
+            const live = providers.filter((source: any) => source.status === "live" || source.isLive).map((source: any) => source.name);
+            const pending = providers.filter((source: any) => !(source.status === "live" || source.isLive)).map((source: any) => source.name);
+            return (
+              <>
+                {live.length ? <>Live job sources: <span className="font-medium text-foreground">{live.join(", ")}</span>. </> : <>No live job feeds are connected yet; listings come from manual imports. </>}
+                {pending.length ? <>Not connected: {pending.join(", ")} (requires approved API or partner-feed credentials). </> : null}
+                Automated scraping and auto-apply are disabled.
+              </>
+            );
+          })()}
         </div>
       ) : null}
 

@@ -9,6 +9,7 @@ import { tailorResumeForJob } from "../services/resume-tailor.service.js";
 import { matchJob } from "../services/job-match.service.js";
 import { analyzeResume } from "../services/resume-analysis.service.js";
 import { generateSkillGap, listLearningPlans, updateLearningPlan } from "../services/skill-gap.service.js";
+import { listAgents } from "../agents/registry.js";
 import { checkJobScam } from "../services/scam-detector.service.js";
 import { chatWithMentor } from "../services/career-chat.service.js";
 import { generatePortfolio } from "../services/portfolio.service.js";
@@ -19,6 +20,11 @@ import { aiContextSchema } from "../validators/ai.validator.js";
 const router = Router();
 router.use(requireAuth);
 router.get("/status", asyncHandler(async (_req, res) => res.json({ success: true, data: aiService.status() })));
+// Transparency: which agents exist, what data each may read, and whether they currently run on a live model.
+router.get("/agents", asyncHandler(async (_req, res) => {
+  const status = aiService.status();
+  res.json({ success: true, data: { providerConfigured: Boolean(status.providerConfigured), agents: listAgents() } });
+}));
 router.get("/usage", asyncHandler(async (req, res) => res.json({ success: true, data: await aiService.usage(req.user!.id) })));
 router.post("/analyze-resume", enforceAiCreditLimit("resume-analysis"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await analyzeResume(req.user!.id, req.body.resumeId, req.body.targetRole) })));
 router.post("/match-job", enforceAiCreditLimit("job-match"), validateBody(aiContextSchema), asyncHandler(async (req, res) => res.json({ success: true, data: await matchJob(req.user!.id, req.body.jobId, req.body.resumeId) })));

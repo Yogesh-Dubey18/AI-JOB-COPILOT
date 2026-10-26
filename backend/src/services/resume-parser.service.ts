@@ -462,7 +462,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
 
   let location = "";
   for (const line of nonDbLines) {
-    const locMatch = line.match(/\b([A-Z][a-zA-B\s]+,\s*(?:India|USA|UK|Karnataka|Maharashtra|Telangana|Delhi|UP|Uttar\s+Pradesh))\b/i);
+    const locMatch = line.match(/(?<![.\w])([A-Z][a-zA-Z\s]+,\s*(?:India|USA|UK|Karnataka|Maharashtra|Telangana|Delhi|UP|Uttar\s+Pradesh))\b/i);
     if (locMatch) {
       location = locMatch[1].trim();
       break;
@@ -647,6 +647,24 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     }
   }
 
+  // Explicitly listed skills that are not in the keyword lists above (e.g. Excel,
+  // Tableau, SQL, Figma, Accounting) are kept under "other" instead of being dropped.
+  const knownLower = new Set([...frontendKeywords, ...backendKeywords, ...databaseKeywords, ...cloudKeywords, ...toolsKeywords, ...languagesKeywords].map((k) => k.toLowerCase()));
+  const otherSkills: string[] = [];
+  for (const rawLine of sections.skills) {
+    const line = rawLine.replace(bulletMarkerRegex, "").trim();
+    if (!line || isPaginationArtifact(line) || isAtsKeywordFooter(line)) continue;
+    if (/^(frontend|backend|database|db|cloud|devops|tools|ui|ui\/ux|ai[-\/\s]*apis?):/i.test(line)) continue; // handled above
+    const body = line.replace(/^[A-Za-z][A-Za-z /&-]{1,30}:\s*/, "");
+    const items = body.split(/[,|·•;]/).map((item) => item.trim().replace(/\.$/, "")).filter(Boolean);
+    if (items.length < 2 && body.split(/\s+/).length > 4) continue; // a sentence, not a list
+    for (const item of items) {
+      if (item.length < 1 || item.length > 40 || item.split(/\s+/).length > 4) continue;
+      if (!knownLower.has(item.toLowerCase())) otherSkills.push(item);
+    }
+  }
+  (categorizedSkills as any).other = Array.from(new Set(otherSkills));
+
   // Deduplicate categorized skills
   categorizedSkills.frontend = Array.from(new Set(categorizedSkills.frontend));
   categorizedSkills.backend = Array.from(new Set(categorizedSkills.backend));
@@ -662,7 +680,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     ...categorizedSkills.database,
     ...categorizedSkills.cloud,
     ...categorizedSkills.tools,
-    ...categorizedSkills.languages
+    ...categorizedSkills.languages,
+    ...((categorizedSkills as any).other || [])
   ])) as any;
 
   skills.frontend = categorizedSkills.frontend;
@@ -775,6 +794,25 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
         companyPart = parts[1]?.trim() || "";
         durationPart = parts[2]?.trim() || "";
         locPart = parts[3]?.trim() || "";
+      } else if (line.includes(",")) {
+        const parts = line.split(",").map((part) => part.trim()).filter(Boolean);
+        const dateIndex = parts.findIndex((part) => /\b(19|20)\d{2}\b|present/i.test(part));
+        const head = dateIndex >= 0 ? parts.slice(0, dateIndex) : parts;
+        titlePart = head[0] || line;
+        companyPart = head[1] || "";
+        durationPart = dateIndex >= 0 ? parts.slice(dateIndex).join(", ") : "";
+        locPart = head[2] || "";
+      } else {
+        const dateMatch = line.match(/((?:19|20)\d{2}\s*[-–—to\s]+\s*(?:(?:19|20)\d{2}|present)|(?:19|20)\d{2})\s*$/i);
+        if (dateMatch) {
+          durationPart = dateMatch[1];
+          titlePart = line.slice(0, dateMatch.index).replace(/[\s,\-–—|]+$/, "");
+        }
+        const atMatch = titlePart.match(/^(.+?)\s+(?:at|@|[-–—])\s+(.+)$/i);
+        if (atMatch) {
+          titlePart = atMatch[1];
+          companyPart = atMatch[2];
+        }
       }
 
       currentExp = {
@@ -788,9 +826,9 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
       currentExp.bullets.push(bulletText);
     } else if (!currentExp && bulletText) {
       currentExp = {
-        role: "Software Development / Academic Experience",
-        company: "Self-Directed Projects & Academic Training",
-        duration: "2022 – Present",
+        role: "",
+        company: "",
+        duration: "",
         location: "",
         bullets: [bulletText]
       };
@@ -800,15 +838,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     experience.push(currentExp);
   }
 
-  const finalExperience = experience.map(exp => {
-    if (!exp.company || exp.company.length < 2) {
-      exp.company = "Self-Directed / Fresher Projects";
-    }
-    if (!exp.duration || exp.duration.length < 2) {
-      exp.duration = "2022 – Present";
-    }
-    return exp;
-  }).filter(exp => (exp.role && exp.role.length > 2) || exp.bullets.length > 0);
+  // Missing company/duration stay empty (the user can fill them in); we never invent them.
+  const finalExperience = experience.filter(exp => (exp.role && exp.role.length > 2) || exp.bullets.length > 0);
 
   // 8. Education Processing
   const education: any[] = [];
@@ -819,7 +850,8 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     const isEduLine = lower.includes("bca") || lower.includes("b.c.a") || lower.includes("b.tech") || 
                      lower.includes("bachelor") || lower.includes("master") || lower.includes("mca") ||
                      lower.includes("class xii") || lower.includes("xii") || lower.includes("12th") || 
-                     lower.includes("class x") || lower.includes("10th") || lower.includes("school") || lower.includes("college") ||
+                     lower.includes("class x") || lower.includes("10th") || lower.includes("school") || lower.includes("college") || lower.includes("university") || lower.includes("institute") ||
+                     /\b(b\.?\s?com|m\.?\s?com|b\.?\s?sc|m\.?\s?sc|b\.?e\.?|bba|bbm|llb|b\.?arch|b\.?pharm|m\.?b\.?b\.?s|degree|graduat\w*)\b/i.test(line) ||
                      /\b(b\.?s\.?|b\.?a\.?|m\.?s\.?|m\.?tech|mba|diploma|phd|b\.s|b\.a|m\.s)\b/i.test(line);
 
     if (isEduLine) {
@@ -948,9 +980,6 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     if (!clean || isPaginationArtifact(clean) || isAtsKeywordFooter(clean)) return false;
     return true;
   })));
-  if (softSkills.length === 0) {
-    softSkills.push("Problem Solving", "Team Collaboration", "Quick Learner", "Communication");
-  }
 
   // Languages Field (Spoken + Programming Languages Only)
   const spokenLanguagesList = ["English", "Hindi", "Spanish", "French", "German", "Japanese", "Mandarin", "Russian", "Arabic", "Tamil", "Telugu", "Bengali", "Punjabi", "Gujarati", "Marathi"];
@@ -981,10 +1010,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
     extractedLanguages.add(prog);
   }
 
-  let languages = Array.from(extractedLanguages);
-  if (languages.length === 0) {
-    languages = ["English (Professional)", "Hindi (Native)"];
-  }
+  const languages = Array.from(extractedLanguages);
 
   const detectedSections = Object.keys(sections).filter(sec => sections[sec as SectionName].length > 0);
 
@@ -994,7 +1020,7 @@ export function parseResumeText(text: string, userFullName?: string, userProfile
 
   return {
     name,
-    title: title || "Full Stack Developer | MERN Stack",
+    title: title || "",
     email,
     phone,
     github: githubMatch,
