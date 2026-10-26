@@ -41,6 +41,7 @@ import * as grounded from "../agents/fallbacks.js";
 import { getAgentForFeature } from "../agents/registry.js";
 import { recordAgentRun } from "../agents/trace.js";
 import { confirmPlaceholder } from "../agents/grounding.js";
+import { BRANDING_RULE, scrubProviderAttribution } from "../agents/branding.js";
 
 
 
@@ -721,9 +722,8 @@ async function run<T>(userId: string | undefined, feature: string, prompt: strin
     finalPrompt += `\n\nCRITICAL: You MUST return a valid JSON object matching the following structure:\n${template}\nDo not include any wrapping keys, explanations, markdown formatting (like \`\`\`json), or code blocks. Just return the raw JSON object.`;
   }
   const agent = getAgentForFeature(feature);
-  if (agent.instructions.length) {
-    finalPrompt = [`Agent: ${agent.name}. Responsibility: ${agent.responsibility}`, "Agent rules:", ...agent.instructions.map((rule) => `- ${rule}`), "", finalPrompt].join("\n");
-  }
+  const agentRules = [...agent.instructions, BRANDING_RULE];
+  finalPrompt = [`Agent: ${agent.name}. Responsibility: ${agent.responsibility}`, "Agent rules:", ...agentRules.map((rule) => `- ${rule}`), "", finalPrompt].join("\n");
   const guardedPrompt = buildGuardedPrompt(feature, finalPrompt);
   const result = await callJsonModelWithMeta(guardedPrompt.prompt, fallback, schema);
   recordAgentRun({
@@ -740,19 +740,20 @@ async function run<T>(userId: string | undefined, feature: string, prompt: strin
     status: result.meta.status,
     fallbackUsed: result.meta.fallbackUsed
   });
-  return result.data;
+  // Remove model self-attribution from generated text; anything present in the user's own data is preserved.
+  return scrubProviderAttribution(result.data, guardedPrompt.prompt);
 }
 
 export const aiService = {
+  /** End-user status: brand-neutral, never names the underlying provider or model. */
   status: () => {
     const runtime = getAiRuntime();
+    const configured = runtime.provider !== "mock";
     return {
-      provider: runtime.provider,
-      model: runtime.model,
-      timeoutMs: runtime.timeoutMs,
-      retryAttempts: runtime.retryAttempts,
+      engine: "AI Job Copilot",
+      mode: configured ? "live" : "fallback",
       fallbackEnabled: true,
-      providerConfigured: runtime.provider !== "mock",
+      providerConfigured: configured,
       schemaValidation: "enabled",
       usageTracking: "enabled",
       privacyMode: "no raw prompt or provider secret storage",

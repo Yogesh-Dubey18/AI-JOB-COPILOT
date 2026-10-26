@@ -324,7 +324,7 @@ describe("frontend pages", () => {
       expect(within(preview).getByText("Yogesh Dubey")).toBeInTheDocument();
       expect(within(preview).getByText(/Full stack developer with React/i)).toBeInTheDocument();
       expect(screen.getByRole("link", { name: /Export world-class PDF/i })).toHaveAttribute("href", "/pdf-export?versionId=version-world-class");
-      expect(screen.getByText(/mock\/fallback/i)).toBeInTheDocument();
+      expect(screen.getByText(/AI engine: rule-based fallback/i)).toBeInTheDocument();
     });
   });
 

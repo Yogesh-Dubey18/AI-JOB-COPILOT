@@ -41,12 +41,12 @@ export function FeatureWorkbench({
       {aiStatus.data ? (
         <div className="grid gap-3 md:grid-cols-4">
           <div className="rounded-md border bg-card p-3 text-sm">
-            <p className="font-semibold">Provider</p>
-            <p className="text-muted-foreground">{aiStatus.data.provider} / {aiStatus.data.model}</p>
+            <p className="font-semibold">AI engine</p>
+            <p className="text-muted-foreground">{aiStatus.data.providerConfigured ? "Live" : "Rule-based fallback"}</p>
           </div>
           <div className="rounded-md border bg-card p-3 text-sm">
             <p className="font-semibold">Fallback</p>
-            <p className="text-muted-foreground">{aiStatus.data.fallbackEnabled ? "Mock-safe enabled" : "Provider only"}</p>
+            <p className="text-muted-foreground">{aiStatus.data.fallbackEnabled ? "Rule-based fallback available" : "Live AI only"}</p>
           </div>
           <div className="rounded-md border bg-card p-3 text-sm">
             <p className="font-semibold">Validation</p>
@@ -77,7 +77,7 @@ export function FeatureWorkbench({
         <Card>
           <CardHeader><CardTitle>Results</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {query.isLoading ? <LoadingState title="Loading workspace data" description="Fetching the latest saved output and provider status." /> : null}
+            {query.isLoading ? <LoadingState title="Loading workspace data" description="Fetching the latest saved output and AI engine status." /> : null}
             {query.isError ? <ErrorState description={query.error instanceof Error ? query.error.message : "Could not load workspace data."} action={<RetryButton onClick={() => query.refetch()} />} /> : null}
             {mutation.isError ? <ErrorState description={mutation.error instanceof Error ? mutation.error.message : "AI request failed."} action={<RetryButton onClick={() => mutation.mutate()} label="Try again" />} /> : null}
             {!query.isLoading && !query.isError && !mutation.isError && !result ? (

@@ -123,10 +123,8 @@ export default function CareerMentorChatPage() {
 
       {aiStatus.data && (
         <div className="mb-4 flex flex-wrap gap-2 text-xs text-muted-foreground bg-muted/30 p-2.5 rounded-md border">
-          <span className="font-semibold text-foreground">AI Status:</span>
-          <span>Provider: {aiStatus.data.provider}</span>
-          <span>·</span>
-          <span>Model: {aiStatus.data.model}</span>
+          <span className="font-semibold text-foreground">AI engine:</span>
+          <span>{aiStatus.data.providerConfigured ? "Live" : "Rule-based fallback"}</span>
           <span>·</span>
           <span>Limit checks active</span>
         </div>

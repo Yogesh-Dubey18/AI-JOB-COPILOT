@@ -47,3 +47,22 @@ export function getProviderStatus() {
     fileScanning: getFileScanningProviderStatus()
   };
 }
+
+/**
+ * Brand-neutral AI engine status for public and end-user responses.
+ * The underlying provider and model stay server-side; admins get them via getProviderStatus().
+ */
+export function getPublicAiEngineStatus() {
+  const configured = getAiRuntime().provider !== "mock";
+  return {
+    engine: "AI Job Copilot",
+    mode: configured ? "live" : "fallback",
+    configured,
+    fallbackEnabled: true
+  } as const;
+}
+
+/** getProviderStatus() with the AI section replaced by the brand-neutral engine status. */
+export function getPublicProviderStatus() {
+  return { ...getProviderStatus(), ai: getPublicAiEngineStatus() };
+}

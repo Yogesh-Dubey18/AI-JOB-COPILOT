@@ -445,7 +445,7 @@ export default function ResumeAnalyzerPage() {
                   <p className="font-bold">{worldClassResume.name || "Candidate"}</p>
                   <p className="text-muted-foreground">{worldClassResume.title || targetRole}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    AI/provider status: {worldClass.data?.provider?.providerConfigured ? "configured" : "mock/fallback"}.
+                    AI engine: {worldClass.data?.provider?.providerConfigured ? "live" : "rule-based fallback"}.
                     Uses uploaded resume data only; review before applying.
                   </p>
                 </div>

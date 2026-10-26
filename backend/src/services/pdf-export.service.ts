@@ -7,6 +7,16 @@ import { ApiError } from "../utils/ApiError.js";
 import { createRecord, findRecordById, findRecords, findOneRecord } from "../utils/repository.js";
 import { uploadFile, getSignedUrl, getProvider } from "./storage.service.js";
 
+/** Brand generated PDFs as AI Job Copilot in document metadata (no visible watermark is added). */
+export const PDF_CREATOR = "AI Job Copilot";
+export function brandPdfDocument(doc: PDFKit.PDFDocument, title?: string, author?: string) {
+  doc.info.Creator = PDF_CREATOR;
+  const cleanTitle = String(title || "").trim();
+  const cleanAuthor = String(author || "").trim();
+  if (cleanTitle) doc.info.Title = cleanTitle;
+  if (cleanAuthor) doc.info.Author = cleanAuthor;
+}
+
 export type PdfExportType = "resume" | "tailored-resume" | "application-kit" | "portfolio" | "interview-prep";
 
 type PdfSection = {
@@ -525,6 +535,7 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
         margins: { top: 30, bottom: 30, left: 40, right: 40 },
         bufferPages: true
       });
+      brandPdfDocument(doc, data?.name ? `${data.name} - Resume` : "Resume", data?.name);
 
       const chunks: Buffer[] = [];
       doc.on("data", (chunk) => chunks.push(chunk));
@@ -717,6 +728,7 @@ async function buildLegacyBeautifulResumePdfBuffer(userId: string, content: any)
         margins: { top: 40, bottom: 40, left: 40, right: 40 },
         bufferPages: true
       });
+      brandPdfDocument(doc);
 
       const chunks: Buffer[] = [];
       doc.on("data", (chunk) => chunks.push(chunk));
@@ -966,6 +978,7 @@ export function buildGenericPdfBuffer(title: string, sections: PdfSection[]): Pr
         size: "LETTER",
         margins: { top: 50, bottom: 50, left: 50, right: 50 }
       });
+      brandPdfDocument(doc, title);
       const chunks: Buffer[] = [];
       doc.on("data", (chunk) => chunks.push(chunk));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
@@ -1169,7 +1182,7 @@ async function writeProfessionalResumePdfExport(userId: string, sourceId: string
     privacy: {
       ownerVerified: true,
       redactedFields: [],
-      notes: ["Generated via PDFKit one-page professional resume template."]
+      notes: ["Generated with the AI Job Copilot one-page professional resume template."]
     }
   }).then(resolvePdfExportUrl);
 }
@@ -1315,7 +1328,7 @@ export async function generatePdfFromResumeId(userId: string, targetId: string):
       privacy: {
         ownerVerified: true,
         redactedFields: [],
-        notes: ["Generated via PDFKit professional resume template."]
+        notes: ["Generated with the AI Job Copilot professional resume template."]
       }
     });
   } catch (err) {
@@ -1343,6 +1356,7 @@ export async function generateAtsCompliantPdfResume(
       size: "A4",
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
     });
+    brandPdfDocument(doc, data.fullName ? `${data.fullName} - Resume` : "Resume", data.fullName);
 
     const buffers: Buffer[] = [];
     const stream = new Writable({

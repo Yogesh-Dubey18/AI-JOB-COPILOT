@@ -35,7 +35,7 @@ import careerVaultRoutes from "./routes/career-vault.routes.js";
 import workflowRoutes from "./routes/workflow.routes.js";
 import contactRoutes from "./routes/contact.routes.js";
 import demoRoutes from "./routes/demo.routes.js";
-import { getProviderStatus } from "./services/provider-status.service.js";
+import { getPublicProviderStatus } from "./services/provider-status.service.js";
 import { getSystemHealth } from "./services/system-health.service.js";
 import { asyncHandler } from "./utils/asyncHandler.js";
 import { ApiError } from "./utils/ApiError.js";
@@ -86,11 +86,11 @@ app.get(["/health", "/api/health"], (_req, res) => {
 app.get("/ready", asyncHandler(async (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const health = await getSystemHealth();
-  res.json({ success: true, data: { status: "ready", database: health.database, providers: health.providers, checkedAt: health.checkedAt } });
+  res.json({ success: true, data: { status: "ready", database: health.database, providers: getPublicProviderStatus(), checkedAt: health.checkedAt } });
 }));
 app.get("/status", (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
-  res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API", providers: getProviderStatus(), uptimeSeconds: Math.round(process.uptime()) } });
+  res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API", providers: getPublicProviderStatus(), uptimeSeconds: Math.round(process.uptime()) } });
 });
 
 app.get("/api/storage/download", asyncHandler(async (req, res) => {
