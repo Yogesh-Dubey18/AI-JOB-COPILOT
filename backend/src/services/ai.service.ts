@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { z } from "zod";
+import { scrubProviderAttribution } from "../agents/branding.js";
 
 export { aiService } from "../ai/ai.service.js";
 
@@ -74,7 +75,7 @@ export async function evaluateJobMatchWithAI(
 
     // Runtime validation using Zod
     const validatedResult = JobMatchSchema.parse(parsedJson);
-    return validatedResult;
+    return scrubProviderAttribution(validatedResult, prompt);
   } catch (error) {
     const status = typeof error === "object" && error !== null && "status" in error && Number.isInteger((error as any).status)
       ? (error as any).status

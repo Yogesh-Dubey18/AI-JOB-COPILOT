@@ -53,7 +53,8 @@ describe("AI Job Copilot API", () => {
     expect(health.body.data.status).toBe("ok");
     const ready = await request(app).get("/ready").expect(200);
     expect(ready.body.data.status).toBe("ready");
-    expect(ready.body.data.providers.ai.provider).toBeTruthy();
+    expect(ready.body.data.providers.ai.engine).toBe("AI Job Copilot");
+    expect(ready.body.data.providers.ai.provider).toBeUndefined();
     const status = await request(app).get("/status").set("x-request-id", "test-request-1").expect(200);
     expect(status.headers["x-request-id"]).toBe("test-request-1");
     expect(status.body.data.providers.monitoring.provider).toBe("noop");

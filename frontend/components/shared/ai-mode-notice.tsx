@@ -51,7 +51,7 @@ export function AiModeNotice() {
       <Info className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
       <p className="min-w-0 flex-1 text-foreground">
         <span className="font-semibold">Rule-based estimate.</span>{" "}
-        The AI provider is not configured or did not respond, so {names} used built-in rules computed only from your data. Results are less detailed - review them before acting.
+        The AI engine is not configured or did not respond, so {names} used built-in rules computed only from your data. Results are less detailed - review them before acting.
       </p>
       <button
         type="button"

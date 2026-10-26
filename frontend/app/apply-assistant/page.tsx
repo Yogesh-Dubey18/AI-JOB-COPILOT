@@ -550,7 +550,7 @@ function ApplyAssistantForm() {
                   {generatedKit.isFallback && (
                     <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
                       <ListRestart className="h-4 w-4 text-amber-600" />
-                      <span><strong>Fallback Template Mode:</strong> AI provider not configured. Deterministic base templates loaded.</span>
+                      <span><strong>Fallback Template Mode:</strong> The AI engine is not configured or did not respond. Rule-based templates built from your data were loaded.</span>
                     </div>
                   )}
 

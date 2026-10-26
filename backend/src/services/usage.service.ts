@@ -19,6 +19,22 @@ export async function recordUsageEvent(userId: string | undefined, feature: stri
   });
 }
 
+/**
+ * Strip the underlying AI provider/model from records returned to end users.
+ * Credit totals are computed before this and are unaffected; admins read the raw records.
+ */
+function toUserFacingAiRequest(item: any) {
+  if (!item || typeof item !== "object") return item;
+  const { provider: _provider, model: _model, error: _error, ...rest } = item;
+  return { ...rest, engine: "AI Job Copilot", mode: item.fallbackUsed ? "fallback" : "ai" };
+}
+
+function toUserFacingUsageEvent(item: any) {
+  if (!item || typeof item !== "object" || !item.metadata || typeof item.metadata !== "object") return item;
+  const { provider: _provider, model: _model, ...metadata } = item.metadata;
+  return { ...item, metadata };
+}
+
 export async function getUsageSummary(userId: string, planId: PlanId = DEFAULT_PLAN_ID) {
   const usage = await findRecords("usageEvents", { userId }, { sort: { createdAt: -1 } });
   const aiRequests = await findRecords("aiRequests", { userId }, { sort: { createdAt: -1 } });
@@ -37,7 +53,7 @@ export async function getUsageSummary(userId: string, planId: PlanId = DEFAULT_P
     totalEvents: aiRequests.length,
     usageEventCount: usage.length,
     fallbackEvents,
-    usageEvents: usage.slice(0, 20),
-    events: aiRequests.slice(0, 20)
+    usageEvents: usage.slice(0, 20).map(toUserFacingUsageEvent),
+    events: aiRequests.slice(0, 20).map(toUserFacingAiRequest)
   };
 }

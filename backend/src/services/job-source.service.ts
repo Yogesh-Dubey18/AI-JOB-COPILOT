@@ -1,3 +1,5 @@
+import { getAiRuntime } from "../ai/aiClient.js";
+
 export type JobSourceConfig = {
   id: string;
   name: string;
@@ -113,15 +115,15 @@ export const externalJobProviders: ExternalJobProviderConfig[] = [
     notes: "One-click authentication provider."
   },
   {
-    id: "openai",
-    name: "OpenAI / Gemini AI",
+    id: "ai-engine",
+    name: "AI engine",
     type: "api-provider",
     trustBaseline: 100,
     requiresReview: false,
-    envVars: ["OPENAI_API_KEY"],
+    envVars: [],
     capabilities: { search: false, easyApply: false, statusTracking: false, oauthImport: false },
-    policy: "Use API keys from OpenAI or Google AI Studio.",
-    notes: "AI integration status."
+    policy: "AI keys are configured server-side only (see backend/.env.example) and are never exposed to the browser.",
+    notes: "AI engine status. Without a key, AI features run on labelled rule-based fallbacks."
   },
   {
     id: "mongodb",
@@ -220,13 +222,12 @@ export function listJobSourceReadiness() {
       let isLive = false;
       let status: "live" | "ready" | "not_configured" = "not_configured";
 
-      if (provider.id === "openai") {
-        isLive = Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
-        const openAiExists = typeof process.env.OPENAI_API_KEY !== "undefined";
-        const geminiExists = typeof process.env.GEMINI_API_KEY !== "undefined";
+      if (provider.id === "ai-engine") {
+        isLive = getAiRuntime().provider !== "mock";
+        const keyDeclared = ["OPENAI_API_KEY", "GEMINI_API_KEY", "GROQ_API_KEY"].some((name) => typeof process.env[name] !== "undefined");
         if (isLive) {
           status = "live";
-        } else if (openAiExists || geminiExists) {
+        } else if (keyDeclared) {
           status = "ready";
         } else {
           status = "not_configured";
