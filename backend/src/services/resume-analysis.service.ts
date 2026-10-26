@@ -636,7 +636,7 @@ export async function generateImprovements(userId: string, resumeId: string) {
   if (!resume || String(resume.userId) !== userId) throw new ApiError(404, "Resume not found");
   const result = await aiService.generateResumeImprovements(userId, { resume: resume.parsedData || resume });
   return {
-    overallScore: result.overallScore || 75,
+    overallScore: typeof result.overallScore === "number" ? result.overallScore : 0,
     improvements: (result.improvements || []).map((imp: any, idx: number) => ({
       id: imp.id || `imp_${idx + 1}`,
       section: imp.section || "SUMMARY",
@@ -647,8 +647,8 @@ export async function generateImprovements(userId: string, resumeId: string) {
       reason: imp.reason || "Actionable resume improvement",
       applyImprovement: true
     })),
-    quickWins: result.quickWins || ["Add GitHub link to header", "Quantify DSA achievements with numbers"],
-    missingKeywords: result.missingKeywords || ["REST APIs", "JWT Authentication", "CI/CD"]
+    quickWins: Array.isArray(result.quickWins) ? result.quickWins : [],
+    missingKeywords: Array.isArray(result.missingKeywords) ? result.missingKeywords : []
   };
 }
 
@@ -968,7 +968,7 @@ export async function tailorResumeToJD(userId: string, resumeId: string, jobDesc
     sourceType: "generated",
     template: "standard",
     content,
-    atsScore: result.matchAnalysis?.matchScore || 95,
+    atsScore: typeof result.matchAnalysis?.matchScore === "number" ? result.matchAnalysis.matchScore : 0,
     pdfUrl: "",
     changeSummary
   });

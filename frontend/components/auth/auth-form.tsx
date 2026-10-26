@@ -235,7 +235,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               <div>
                 <h3 className="font-semibold text-sm text-white">Real-time job matching</h3>
                 <p className="text-xs text-teal-200/70 mt-0.5 font-light leading-relaxed">
-                  Scan 1000+ curated postings scoring matches directly on your unique strengths.
+                  Score job postings against the skills actually on your resume.
                 </p>
               </div>
             </div>
@@ -261,7 +261,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               Private Beta
             </span>
           </div>
-          <p className="text-xs text-teal-200/70 font-light">Join 500+ job seekers in private beta.</p>
+          <p className="text-xs text-teal-200/70 font-light">Early access - your feedback shapes the product.</p>
         </div>
       </div>
 

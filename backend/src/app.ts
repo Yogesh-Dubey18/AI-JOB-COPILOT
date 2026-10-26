@@ -9,6 +9,7 @@ import { env, isTest } from "./config/env.js";
 import { auditLogger } from "./middlewares/audit.middleware.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
+import { agentTraceMiddleware } from "./agents/trace.js";
 import { requestLoggingMiddleware } from "./middlewares/request-logging.middleware.js";
 import adminRoutes from "./routes/admin.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
@@ -43,11 +44,16 @@ export const app = express();
 const allowedOrigins = env.CLIENT_URL.split(",").map((origin) => origin.trim()).filter(Boolean);
 
 app.disable("x-powered-by");
-app.set("trust proxy", 1);
+// Number of reverse proxies in front of the API (Render = 1; Vercel rewrite -> Render = 2).
+// Too low makes all users share one rate-limit bucket; too high lets clients spoof their IP.
+const trustProxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || "1", 10);
+app.set("trust proxy", Number.isFinite(trustProxyHops) && trustProxyHops >= 0 ? trustProxyHops : 1);
 app.use(helmet());
 app.use(requestIdMiddleware);
 app.use(cors({
   credentials: true,
+  // Lets cross-origin frontends read whether a result came from a live model or a fallback.
+  exposedHeaders: ["X-AI-Mode", "X-AI-Agents", "X-AI-Fallback-Agents", "X-Request-Id"],
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error("Origin not allowed by CORS"));
@@ -70,9 +76,10 @@ app.use("/api", (req, res, next) => {
   next();
 });
 app.use(requestLoggingMiddleware);
+app.use("/api", agentTraceMiddleware);
 app.use(auditLogger);
 
-app.get("/health", (_req, res) => {
+app.get(["/health", "/api/health"], (_req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json({ success: true, data: { status: "ok", service: "AI Job Copilot API", uptimeSeconds: Math.round(process.uptime()), timestamp: new Date().toISOString() } });
 });

@@ -93,6 +93,11 @@ function selectRoleBank(targetRole: string): RoleBankName {
   return "fullstack";
 }
 
+/** Public, read-only access to the role keyword bank used for ATS scoring. */
+export function getRoleKeywords(targetRole: string): string[] {
+  return [...roleKeywordBanks[selectRoleBank(targetRole || "")]];
+}
+
 function scorePercent(value: number, max: number) {
   return Math.round(Math.min(max, Math.max(0, value)) / max * 100);
 }

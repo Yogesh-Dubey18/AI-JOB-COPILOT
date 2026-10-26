@@ -1,3 +1,4 @@
+import { announceAiMode } from "./ai-mode";
 import { getStoredAccessToken, persistAuthSession, clearAuthSession } from "./auth-session";
 
 const API_URL = typeof window === "undefined"
@@ -85,6 +86,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) throw new ApiClientError(payload.message || "Request failed", response.status, requestId);
+  announceAiMode(response.headers);
   return (payload && typeof payload === "object" && "data" in payload ? payload.data : payload) as T;
 }
 

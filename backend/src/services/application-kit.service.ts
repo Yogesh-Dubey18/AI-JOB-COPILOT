@@ -1,3 +1,4 @@
+import { getAgentTrace } from "../agents/trace.js";
 import { aiService } from "../ai/ai.service.js";
 import { createRecord, findRecordById, findRecords } from "../utils/repository.js";
 import { getJob } from "./job.service.js";
@@ -40,7 +41,6 @@ export async function generateApplicationKit(userId: string, payload: any) {
   })).filter((entry: any) => entry.question && entry.answer);
 
   // 3. Generate kit via aiService (which uses dynamic fallback if mock)
-  const isFallback = !aiService.status().providerConfigured;
   const kit = await aiService.generateApplicationKit(userId, {
     ...payload,
     job,
@@ -48,6 +48,8 @@ export async function generateApplicationKit(userId: string, payload: any) {
     savedAnswers,
     tone: payload.tone || "Professional"
   });
+  // Truthful flag: true when no provider is configured OR the provider call failed and a template was used.
+  const isFallback = !aiService.status().providerConfigured || getAgentTrace().some((entry) => entry.agent === "application-drafting" && entry.mode === "fallback");
 
   const savedKit = await createRecord("applicationKits", {
     userId,
@@ -60,7 +62,7 @@ export async function generateApplicationKit(userId: string, payload: any) {
   return {
     ...savedKit,
     isFallback,
-    matchingSkills: matchingSkills.length > 0 ? matchingSkills : ["React", "Node.js", "MongoDB"],
+    matchingSkills,
     missingInfo,
     usedSavedAnswers: savedAnswers.length > 0,
     savedAnswersCount: savedAnswers.length,

@@ -7,7 +7,7 @@ export async function saveBuiltResume(userId: string, payload: any) {
     title: payload.title || "AI generated resume",
     targetRole: payload.targetRole,
     content: payload.content || {},
-    atsScore: payload.atsScore || 78,
+    atsScore: typeof payload.atsScore === "number" ? payload.atsScore : 0,
     pdfUrl: payload.pdfUrl || ""
   });
 }

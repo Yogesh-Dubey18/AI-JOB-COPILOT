@@ -334,7 +334,11 @@ describe("AI Job Copilot API", () => {
     const upload = await agent.post("/api/resumes/upload").attach("resume", Buffer.from("React Node.js MongoDB"), "resume.txt");
     const jobs = await agent.get("/api/jobs");
     const res = await agent.post("/api/jobs/" + jobs.body.data.items[0]._id + "/tailor-resume").send({ baseResumeId: upload.body.data._id }).expect(201);
-    expect(res.body.data.afterAtsScore).toBeGreaterThan(res.body.data.beforeAtsScore);
+    // Without an AI provider the resume content is not rewritten, so the score must not be inflated.
+    expect(res.body.data.afterAtsScore).toBe(res.body.data.beforeAtsScore);
+    expect(res.body.data.addedKeywords).toEqual([]);
+    expect(Array.isArray(res.body.data.genuineGaps)).toBe(true);
+    expect(res.headers["x-ai-mode"]).toBe("fallback");
   });
 
   it("creates application", async () => {
@@ -1233,7 +1237,9 @@ describe("AI Job Copilot API", () => {
 
     expect(generateRes.body.success).toBe(true);
     expect(generateRes.body.data.targetRole).toBe("Senior React Developer");
-    expect(generateRes.body.data.missingSkills).toContain("Docker");
+    // Gaps are computed from the role's required skills vs. the user's skills - not a canned list.
+    expect(generateRes.body.data.missingSkills).toContain("TypeScript");
+    expect(generateRes.body.data.missingSkills).not.toContain("React");
     expect(generateRes.body.data.sevenDayPlan).toBeInstanceOf(Array);
     expect(generateRes.body.data.thirtyDayPlan).toBeInstanceOf(Array);
     expect(generateRes.body.data.fallbackResources).toBeInstanceOf(Array);

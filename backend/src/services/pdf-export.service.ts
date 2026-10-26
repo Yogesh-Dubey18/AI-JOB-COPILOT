@@ -455,7 +455,7 @@ function normalizeResumeContent(resumeInput: any, overrideUserName?: string): Wo
 
   return {
     name: candidateName,
-    title: cleanPdfString(titleVal || "Full Stack Developer | MERN Stack"),
+    title: cleanPdfString(titleVal || ""),
     contact: {
       email: cleanPdfString(emailVal),
       phone: cleanPdfString(phoneVal),
@@ -540,9 +540,11 @@ export function generateCompletePdf(data: any): Promise<Buffer> {
          .text(headerName, 40, y, { align: 'center', width: pageWidth });
       y = doc.y + 2;
 
-      doc.fontSize(10).font('Helvetica').fillColor(GRAY)
-         .text(cleanPdfString(data.title) || 'Full Stack Developer | MERN Stack', 40, y, { align: 'center', width: pageWidth });
-      y = doc.y + 3;
+      if (cleanPdfString(data.title)) {
+        doc.fontSize(10).font('Helvetica').fillColor(GRAY)
+           .text(cleanPdfString(data.title), 40, y, { align: 'center', width: pageWidth });
+        y = doc.y + 3;
+      }
 
       const contacts = [
         data.contact?.email || data.email,
