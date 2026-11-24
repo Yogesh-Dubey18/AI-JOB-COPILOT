@@ -80,7 +80,7 @@ describe("AI Job Copilot API", () => {
     for (let i = 0; i < 5; i += 1) {
       await request(app).post("/api/auth/login").send({ email: "lock@example.com", password: "WrongPass123!" }).expect(401);
     }
-    await request(app).post("/api/auth/login").send({ email: "lock@example.com", password: "Password123!" }).expect(423);
+    await request(app).post("/api/auth/login").send({ email: "lock@example.com", password: "Password123!" }).expect(401);
   });
 
 

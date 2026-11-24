@@ -1,3 +1,4 @@
+import { sanitizeUpdate } from "../utils/sanitizeUpdate.js";
 import { ApiError } from "../utils/ApiError.js";
 import { createRecord, deleteRecord, findOneRecord, findRecordById, findRecords, updateRecord } from "../utils/repository.js";
 import { buildTimelineEvent, enrichApplicationForStage, summarizeApplications } from "./application-intelligence.service.js";
@@ -91,7 +92,7 @@ export async function getApplication(userId: string, id: string) {
 
 export async function updateApplication(userId: string, id: string, input: any) {
   const app = await getApplication(userId, id);
-  const updated = await updateRecord("applications", id, enrichApplicationForStage(input, app));
+  const updated = await updateRecord("applications", id, enrichApplicationForStage(sanitizeUpdate(input), app));
   return enrichWithContact(userId, updated);
 }
 

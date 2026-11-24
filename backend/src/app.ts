@@ -6,6 +6,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { env, isTest } from "./config/env.js";
+import { csrfOriginCheck } from "./middlewares/csrf.middleware.js";
 import { auditLogger } from "./middlewares/audit.middleware.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
@@ -56,10 +57,11 @@ app.use(cors({
   exposedHeaders: ["X-AI-Mode", "X-AI-Agents", "X-AI-Fallback-Agents", "X-Request-Id"],
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error("Origin not allowed by CORS"));
+    return callback(new ApiError(403, "Origin not allowed by CORS"));
   }
 }));
 app.use(cookieParser());
+if (!isTest) app.use(csrfOriginCheck(allowedOrigins, ["/api/billing/webhook"]));
 app.use(express.json({
   limit: "1mb",
   verify: (req: any, _res, buf) => {

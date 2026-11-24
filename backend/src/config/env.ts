@@ -66,6 +66,8 @@ export const env = {
 
 export const isProduction = env.NODE_ENV === "production";
 export const isTest = env.NODE_ENV === "test";
+/** True for production or any deployment served over HTTPS; dev conveniences must stay off here. */
+export const isDeployedLike = isProduction || env.CLIENT_URL.split(",").some((url) => url.trim().startsWith("https://"));
 
 export function getStorageConfigurationFailures(storage: Pick<typeof env,
   "STORAGE_PROVIDER" | "STORAGE_BUCKET_NAME" | "STORAGE_ACCESS_KEY_ID" | "STORAGE_SECRET_ACCESS_KEY" | "STORAGE_ENDPOINT" |
@@ -106,6 +108,9 @@ export function validateRuntimeEnv() {
     if (!env.CLOUDINARY_URL && !(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) && !env.STORAGE_BUCKET_NAME) {
       warnings.push("Durable storage (Cloudinary / S3) is not configured in production. Uploaded files risk data loss on server restart.");
     }
+  } else if (isDeployedLike && !isTest) {
+    if (env.JWT_ACCESS_SECRET.length < 32 || env.JWT_ACCESS_SECRET.includes("change-me")) failures.push("JWT_ACCESS_SECRET must be a strong secret (NODE_ENV is not production but CLIENT_URL is HTTPS; set NODE_ENV=production).");
+    if (env.JWT_REFRESH_SECRET.length < 32 || env.JWT_REFRESH_SECRET.includes("change-me")) failures.push("JWT_REFRESH_SECRET must be a strong secret (NODE_ENV is not production but CLIENT_URL is HTTPS; set NODE_ENV=production).");
   } else {
     if (env.JWT_ACCESS_SECRET.includes("change-me")) warnings.push("Using development JWT access secret.");
     if (env.JWT_REFRESH_SECRET.includes("change-me")) warnings.push("Using development JWT refresh secret.");

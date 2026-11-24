@@ -1,4 +1,5 @@
 import { DEFAULT_PLAN_ID, PLAN_CATALOG, type PlanId } from "@ai-job-copilot/shared";
+import { ApiError } from "../utils/ApiError.js";
 import { createBillingCheckoutSession, getBillingProviderStatus } from "./billing-provider.service.js";
 import { activateMockSubscription, getOrCreateSubscription, normalizePlanId } from "./subscription.service.js";
 import { getUsageSummary } from "./usage.service.js";
@@ -32,6 +33,8 @@ export async function createMockCheckoutSession(userId: string, planId: PlanId) 
 }
 
 export async function activateMockPlan(userId: string, planId: string) {
+  if (getBillingProviderStatus().provider !== "mock") throw new ApiError(403, "Mock plan activation is disabled when a live billing provider is configured");
+  if (normalizePlanId(planId) === "admin") throw new ApiError(403, "This plan cannot be activated");
   const subscription = await activateMockSubscription(userId, planId);
   const usage = await getUsageSummary(userId, normalizePlanId(subscription.planId));
   return {

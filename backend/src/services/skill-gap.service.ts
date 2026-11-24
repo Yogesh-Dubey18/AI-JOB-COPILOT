@@ -1,3 +1,4 @@
+import { sanitizeUpdate } from "../utils/sanitizeUpdate.js";
 import { aiService } from "../ai/ai.service.js";
 import { createRecord, findRecords, findRecordById, updateRecord } from "../utils/repository.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -136,7 +137,7 @@ export async function updateLearningPlan(userId: string, id: string, data: any) 
   if (!plan || String(plan.userId) !== userId) {
     throw new ApiError(404, "Learning plan not found");
   }
-  const updated = await updateRecord("learningPlans", id, data);
+  const updated = await updateRecord("learningPlans", id, sanitizeUpdate(data));
   return {
     ...updated,
     fallbackResources: CURATED_FALLBACK_RESOURCES

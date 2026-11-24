@@ -1,8 +1,10 @@
+import { ApiError } from "../utils/ApiError.js";
 import { aiService } from "../ai/ai.service.js";
 import { createRecord, findRecordById, updateRecord } from "../utils/repository.js";
 
 export async function chatWithMentor(userId: string, input: any) {
-  let session = input.sessionId ? await findRecordById("chatSessions", input.sessionId) : null;
+  let session = input.sessionId ? await findRecordById("chatSessions", String(input.sessionId)) : null;
+  if (input.sessionId && (!session || String(session.userId) !== String(userId))) throw new ApiError(404, "Chat session not found");
   const userMessage = { role: "user", content: input.message, metadata: input.metadata || {}, createdAt: new Date() };
   const ai = await aiService.chat(userId, { message: input.message, metadata: input.metadata });
   const assistantContent = ai?.answer || ai?.message || ai?.response || (ai ? JSON.stringify(ai) : "") || "I'm here to help. Please try again.";

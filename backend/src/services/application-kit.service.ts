@@ -9,8 +9,8 @@ export async function generateApplicationKit(userId: string, payload: any) {
   // 1. Determine matching skills
   let resumeSkills: string[] = [];
   if (payload.resumeVersionId) {
-    const resumeVer = await findRecordById("resumeVersions", payload.resumeVersionId);
-    if (resumeVer && resumeVer.content && Array.isArray(resumeVer.content.skills)) {
+    const resumeVer = await findRecordById("resumeVersions", String(payload.resumeVersionId));
+    if (resumeVer && String(resumeVer.userId) === String(userId) && resumeVer.content && Array.isArray(resumeVer.content.skills)) {
       resumeSkills = resumeVer.content.skills;
     }
   }

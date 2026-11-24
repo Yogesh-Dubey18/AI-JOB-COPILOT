@@ -272,7 +272,8 @@ export async function listJobs(query: any = {}) {
     let resumeForSkills = null;
     if (query.fromResume) {
       try {
-        resumeForSkills = await findRecordById("resumes", String(query.fromResume));
+        const candidate = await findRecordById("resumes", String(query.fromResume));
+        resumeForSkills = candidate && String(candidate.userId) === String(query.userId) ? candidate : null;
       } catch (err) {
         // ignore
       }

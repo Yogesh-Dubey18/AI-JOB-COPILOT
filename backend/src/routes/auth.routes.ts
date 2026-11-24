@@ -3,13 +3,15 @@ import rateLimit from "express-rate-limit";
 import { randomBytes } from "node:crypto";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { validateBody } from "../middlewares/validate.js";
-import { forgotPasswordSchema, loginSchema, oauthHandoffSchema, registerSchema, resetPasswordSchema } from "../validators/auth.validator.js";
+import { forgotPasswordSchema, loginSchema, oauthHandoffSchema, registerSchema, resetPasswordSchema, verifyEmailSchema } from "../validators/auth.validator.js";
 import { createOAuthHandoff, exchangeOAuthHandoff, forgotPassword, getMe, loginUser, logoutUser, refreshSession, registerUser, resetPassword, upsertGoogleUser, disconnectGoogle, verifyEmailToken, verifyOAuthState } from "../services/auth.service.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { env, isProduction, isTest } from "../config/env.js";
 
 const router = Router();
 const authLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 20, standardHeaders: true, legacyHeaders: false, skip: () => isTest });
+
+const refreshLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 60, standardHeaders: true, legacyHeaders: false, skip: () => isTest });
 
 function getCookieOptions(req: any) {
   const isProd = env.NODE_ENV === "production";
@@ -89,7 +91,7 @@ router.post("/logout", requireAuth, asyncHandler(async (req, res) => {
   res.json({ success: true, data: { ok: true } });
 }));
 
-router.post("/refresh", asyncHandler(async (req, res) => {
+router.post("/refresh", refreshLimiter, asyncHandler(async (req, res) => {
   const result = await refreshSession(req.cookies?.refreshToken || req.body.refreshToken);
   setAuthCookies(req, res, result.accessToken, result.refreshToken);
   res.json({ success: true, data: result });
@@ -115,7 +117,7 @@ router.post("/reset-password", authLimiter, validateBody(resetPasswordSchema), a
   res.json({ success: true, data: await resetPassword(req.body.token, req.body.password) });
 }));
 
-router.post("/verify-email", authLimiter, asyncHandler(async (req, res) => {
+router.post("/verify-email", authLimiter, validateBody(verifyEmailSchema), asyncHandler(async (req, res) => {
   res.json({ success: true, data: await verifyEmailToken(req.body.token) });
 }));
 
@@ -235,6 +237,7 @@ router.get("/google/callback", asyncHandler(async (req, res) => {
     if (!profileRes.ok) throw new Error("Failed to fetch user profile from Google");
     const googleProfile = await profileRes.json();
     
+    if (googleProfile.verified_email !== true || !googleProfile.email || !googleProfile.id) throw new Error("Google account email is not verified");
     const result = await upsertGoogleUser({
       id: googleProfile.id,
       email: googleProfile.email,

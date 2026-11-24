@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
-import { env, isTest } from "../config/env.js";
+import { env, isDeployedLike, isTest } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
 import { consumeOAuthHandoff, createRecord, deleteRecord, deleteRecords, findOneRecord, findRecordById, updateRecord } from "../utils/repository.js";
 import { computeProfileCompleteness } from "./profile.service.js";
@@ -24,6 +24,10 @@ function signTokens(user: any) {
   const accessToken = jwt.sign({ sub: String(user._id), role: user.role, typ: "access" }, env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
   const refreshToken = jwt.sign({ sub: String(user._id), typ: "refresh", tokenVersion: Date.now() }, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
   return { accessToken, refreshToken };
+}
+
+function hashRefreshToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 const passwordHashRounds = isTest ? 4 : 12;
@@ -59,6 +63,11 @@ export async function verifyEmailToken(token: string) {
     throw new ApiError(400, "Invalid or expired email verification token");
   }
   
+  if (doc.createdAt && Date.now() - new Date(doc.createdAt).getTime() > 24 * 60 * 60 * 1000) {
+    await deleteRecord("emailVerificationTokens", String(doc._id));
+    throw new ApiError(400, "Invalid or expired email verification token");
+  }
+
   await updateRecord("users", String(doc.userId), { isEmailVerified: true });
   await deleteRecord("emailVerificationTokens", String(doc._id));
   
@@ -93,20 +102,27 @@ export async function registerUser(input: { fullName: string; email: string; pas
     profileCompletenessScore: computeProfileCompleteness({})
   });
   const tokens = signTokens(user);
-  await updateRecord("users", String(user._id), { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, passwordHashRounds), lastLoginAt: new Date() });
+  await updateRecord("users", String(user._id), { refreshTokenHash: hashRefreshToken(tokens.refreshToken), lastLoginAt: new Date() });
   const verifyUrl = await sendEmailVerification(String(user._id), user.email);
   return {
     user: sanitize({ ...user, lastLoginAt: new Date() }),
     ...tokens,
-    verifyUrl: env.NODE_ENV !== "production" ? verifyUrl : undefined
+    verifyUrl: !isDeployedLike ? verifyUrl : undefined
   };
 }
 
 export async function loginUser(input: { email: string; password: string }) {
   const user = await findOneRecord("users", { email: input.email.toLowerCase() });
   if (!user) throw new ApiError(401, "Invalid email or password");
-  if (user.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now()) {
-    throw new ApiError(423, "Account is temporarily locked after repeated failed logins");
+  if (user.lockedUntil) {
+    if (new Date(user.lockedUntil).getTime() > Date.now()) {
+      // Same response as a wrong password so lock state does not reveal that the account exists.
+      throw new ApiError(401, "Invalid email or password");
+    }
+    // Lock expired: start counting from zero again.
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = undefined;
+    await updateRecord("users", String(user._id), { failedLoginAttempts: 0, lockedUntil: null });
   }
   const ok = await bcrypt.compare(input.password, user.passwordHash);
   if (!ok) {
@@ -118,7 +134,7 @@ export async function loginUser(input: { email: string; password: string }) {
     throw new ApiError(401, "Invalid email or password");
   }
   const tokens = signTokens(user);
-  await updateRecord("users", String(user._id), { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, passwordHashRounds), lastLoginAt: new Date(), failedLoginAttempts: 0, lockedUntil: undefined });
+  await updateRecord("users", String(user._id), { refreshTokenHash: hashRefreshToken(tokens.refreshToken), lastLoginAt: new Date(), failedLoginAttempts: 0, lockedUntil: undefined });
   return { user: sanitize({ ...user, lastLoginAt: new Date() }), ...tokens };
 }
 
@@ -128,10 +144,11 @@ export async function refreshSession(refreshToken: string) {
   if (decoded.typ !== "refresh") throw new ApiError(401, "Invalid refresh token type");
   const user = await findRecordById("users", decoded.sub);
   if (!user?.refreshTokenHash) throw new ApiError(401, "Refresh token revoked");
-  const ok = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-  if (!ok) throw new ApiError(401, "Invalid refresh token");
+  const expected = Buffer.from(hashRefreshToken(refreshToken));
+  const stored = Buffer.from(String(user.refreshTokenHash));
+  if (expected.length !== stored.length || !crypto.timingSafeEqual(expected, stored)) throw new ApiError(401, "Invalid refresh token");
   const tokens = signTokens(user);
-  await updateRecord("users", String(user._id), { refreshTokenHash: await bcrypt.hash(tokens.refreshToken, passwordHashRounds) });
+  await updateRecord("users", String(user._id), { refreshTokenHash: hashRefreshToken(tokens.refreshToken) });
   return { user: sanitize(user), ...tokens };
 }
 
@@ -194,7 +211,7 @@ export async function forgotPassword(email: string) {
   const isProviderConfigured = env.EMAIL_PROVIDER !== "mock" && emailSent;
 
   if (!isProviderConfigured) {
-    if (env.NODE_ENV !== "production") {
+    if (!isDeployedLike) {
       response.message = `If an account exists, password reset instructions will be sent. [Dev Fallback Mode: Email provider not configured. Reset Link: ${resetUrl}]`;
       response.token = token;
     }
@@ -232,6 +249,7 @@ export async function resetPassword(token: string, password: string) {
   await updateRecord("users", String(user._id), {
     passwordHash,
     passwordChangedAt: new Date(),
+    refreshTokenHash: "",
     passwordResetTokenHash: null,
     passwordResetExpires: null,
     failedLoginAttempts: 0,
@@ -308,7 +326,7 @@ export async function exchangeOAuthHandoff(code: string) {
   if (!user) throw new ApiError(401, "Google sign-in account is no longer available");
   const tokens = signTokens(user);
   await updateRecord("users", String(user._id), {
-    refreshTokenHash: await bcrypt.hash(tokens.refreshToken, passwordHashRounds),
+    refreshTokenHash: hashRefreshToken(tokens.refreshToken),
     lastLoginAt: new Date()
   });
   return { user: sanitize({ ...user, lastLoginAt: new Date() }), ...tokens };

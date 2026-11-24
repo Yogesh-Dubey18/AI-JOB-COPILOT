@@ -47,6 +47,7 @@ export async function getOrCreateSubscription(userId: string) {
 
 export async function activateMockSubscription(userId: string, planIdInput: string) {
   const planId = normalizePlanId(planIdInput);
+  if (planId === "admin") throw new Error("Admin plan cannot be activated by checkout");
   const existing = await getOrCreateSubscription(userId);
   const updated = await updateRecord("subscriptions", String(existing._id), {
     planId,
