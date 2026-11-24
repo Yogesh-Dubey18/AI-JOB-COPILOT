@@ -25,6 +25,9 @@ const JobSchema = new Schema(
     normalizedTitle: String,
     normalizedCompany: String,
     duplicateKey: String,
+    // Source-independent identity (title + company + city) used to merge the same vacancy listed on several boards.
+    canonicalKey: { type: String, index: true },
+    alternateSources: [new Schema({ source: String, applyUrl: String, seenAt: Date }, { _id: false })],
     reviewStatus: { type: String, default: "approved" },
     riskFlags: [String],
     tags: [String],

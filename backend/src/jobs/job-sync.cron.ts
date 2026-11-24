@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { runFullAdzunaSync } from "../services/job-providers/adzuna.provider.js";
 import { syncRemotiveJobs } from "../services/job-providers/remotive.provider.js";
 import { syncArbeitnowJobs } from "../services/job-providers/arbeitnow.provider.js";
+import { isSyncFresh, runTrackedSync, type JobSyncTrigger } from "../services/job-sync.service.js";
 
 async function performCleanupsAndBackfill() {
   try {
@@ -14,33 +15,16 @@ async function performCleanupsAndBackfill() {
   }
 }
 
-async function runAllSyncs() {
-  let totalCount = 0;
-  try {
-    console.info("Starting Adzuna sync...");
-    const adzunaRes = await runFullAdzunaSync();
-    totalCount += adzunaRes.totalSynced || 0;
-  } catch (err: any) {
-    console.error("Adzuna sync failed:", err.message);
+async function runAllSyncs(triggeredBy: JobSyncTrigger) {
+  const results = [
+    await runTrackedSync("adzuna", triggeredBy, () => runFullAdzunaSync()),
+    await runTrackedSync("remotive", triggeredBy, () => syncRemotiveJobs(50)),
+    await runTrackedSync("arbeitnow", triggeredBy, () => syncArbeitnowJobs())
+  ];
+  for (const run of results) {
+    if (run.status === "failed") console.error(`${run.source} sync failed: ${run.error}`);
   }
-
-  try {
-    console.info("Starting Remotive sync...");
-    const remotiveRes = await syncRemotiveJobs(50);
-    totalCount += remotiveRes.syncedCount || 0;
-  } catch (err: any) {
-    console.error("Remotive sync failed:", err.message);
-  }
-
-  try {
-    console.info("Starting Arbeitnow sync...");
-    const arbeitnowRes = await syncArbeitnowJobs();
-    totalCount += arbeitnowRes.syncedCount || 0;
-  } catch (err: any) {
-    console.error("Arbeitnow sync failed:", err.message);
-  }
-
-  return { totalSynced: totalCount };
+  return { totalSynced: results.reduce((sum, run) => sum + (run.importedCount || 0), 0) };
 }
 
 export function initJobSyncCron() {
@@ -50,7 +34,7 @@ export function initJobSyncCron() {
   cron.schedule("0 */6 * * *", async () => {
     console.info("Running scheduled job synchronization for all sources...");
     try {
-      await runAllSyncs();
+      await runAllSyncs("cron");
       await performCleanupsAndBackfill();
     } catch (err: any) {
       console.error("Cron job synchronization failed:", err.message);
@@ -59,9 +43,13 @@ export function initJobSyncCron() {
 
   // Trigger a background check/initial sync on startup after a small delay
   setTimeout(async () => {
-    console.info("Running startup background job synchronization for all sources...");
     try {
-      await runAllSyncs();
+      if (await isSyncFresh(5)) {
+        console.info("Skipping startup job sync: every source synced successfully in the last 5 hours.");
+        return;
+      }
+      console.info("Running startup background job synchronization for all sources...");
+      await runAllSyncs("startup");
       await performCleanupsAndBackfill();
     } catch (err: any) {
       console.error("Startup background synchronization failed:", err.message);

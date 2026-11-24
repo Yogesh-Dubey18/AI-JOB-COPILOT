@@ -2,7 +2,7 @@ import { isProduction } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
 import { countRecords, createRecord, findOneRecord, findRecordById, findRecords, deleteRecord, updateRecord } from "../utils/repository.js";
 import { createApplication } from "./application.service.js";
-import { listJobSourceReadiness, normalizeJobSourceJob, parseCsvPreview } from "./job-source.service.js";
+import { canonicalJobKey, listJobSourceReadiness, mergeJobRecords, normalizeJobSourceJob, parseCsvPreview } from "./job-source.service.js";
 import { technicalKeywordBank } from "./ats-scoring.service.js";
 import { aiService } from "../ai/ai.service.js";
 import { createNotification } from "./notification.service.js";
@@ -108,26 +108,85 @@ export async function ensureSampleJobs() {
   }
 }
 
+const JOB_REFERENCE_COLLECTIONS = ["applications", "applicationKits", "jobMatches", "jobScamReports", "mockInterviews", "tailoredResumes"] as const;
+
+function jobCompleteness(job: any) {
+  return (
+    Math.min(String(job.description || "").length, 4000) / 100 +
+    (job.salaryMin ? 5 : 0) +
+    (job.skillsRequired?.length || 0) +
+    (job.experienceRequired && job.experienceRequired !== "Not specified" ? 3 : 0) +
+    (job.applyUrl ? 2 : 0)
+  );
+}
+
+/** Groups jobs that are the same vacancy (same canonical key). Pure, so it can be tested without a database. */
+export function findDuplicateJobGroups(jobs: any[]) {
+  const groups = new Map<string, any[]>();
+  for (const job of jobs) {
+    const key = job.canonicalKey || canonicalJobKey(job.title, job.company, job.location);
+    if (!key) continue;
+    groups.set(key, [...(groups.get(key) || []), job]);
+  }
+  return Array.from(groups.entries()).filter(([, items]) => items.length > 1).map(([key, items]) => ({ key, items }));
+}
+
+/**
+ * Merges duplicate vacancies instead of deleting them blindly: user records (applications, kits, matches...)
+ * are re-pointed to the kept job, the other listing's apply link is kept in alternateSources, and only then
+ * is the duplicate removed. Also backfills canonicalKey on jobs created before it existed.
+ */
 export async function cleanupDuplicates() {
   const jobs = await findRecords("jobs", {}, { sort: { createdAt: -1 } });
-  const seenKeys = new Set<string>();
-  const duplicateIds: string[] = [];
-  
+  let backfilled = 0;
   for (const job of jobs) {
-    const key = job.duplicateKey || `${(job.normalizedTitle || job.title).toLowerCase()}_${(job.normalizedCompany || job.company).toLowerCase()}_${(job.location || "").toLowerCase()}`;
-    if (seenKeys.has(key)) {
-      duplicateIds.push(String(job._id));
-    } else {
-      seenKeys.add(key);
+    if (!job.canonicalKey) {
+      const key = canonicalJobKey(job.title, job.company, job.location);
+      if (key) {
+        job.canonicalKey = key;
+        await updateRecord("jobs", String(job._id), { canonicalKey: key });
+        backfilled += 1;
+      }
     }
   }
-  
-  if (duplicateIds.length > 0) {
-    console.info(`Found ${duplicateIds.length} duplicate jobs during cleanup. Deleting...`);
-    for (const id of duplicateIds) {
-      await deleteRecord("jobs", id);
+
+  let removed = 0;
+  let repointed = 0;
+  for (const { key, items } of findDuplicateJobGroups(jobs)) {
+    const referenceCounts = new Map<string, number>();
+    for (const job of items) {
+      let total = 0;
+      for (const collection of JOB_REFERENCE_COLLECTIONS) total += (await findRecords(collection, { jobId: String(job._id) })).length;
+      referenceCounts.set(String(job._id), total);
+    }
+    // Keep the job users already interact with, then the most complete one, then the newest.
+    const ordered = [...items].sort((a, b) =>
+      (referenceCounts.get(String(b._id)) || 0) - (referenceCounts.get(String(a._id)) || 0) ||
+      jobCompleteness(b) - jobCompleteness(a) ||
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+    let primary = ordered[0];
+    for (const duplicate of ordered.slice(1)) {
+      primary = { ...primary, ...mergeJobRecords(primary, duplicate, { preferIncoming: false }), _id: primary._id, createdAt: primary.createdAt };
+      // Order matters: save the merged primary and move user records first, delete the duplicate last.
+      const { _id: primaryId, createdAt: _createdAt, __v: _version, ...fields } = primary as any;
+      await updateRecord("jobs", String(primaryId), { ...fields, canonicalKey: key });
+      for (const collection of JOB_REFERENCE_COLLECTIONS) {
+        const refs = await findRecords(collection, { jobId: String(duplicate._id) });
+        for (const ref of refs) {
+          await updateRecord(collection, String(ref._id), { jobId: primary._id });
+          repointed += 1;
+        }
+      }
+      await deleteRecord("jobs", String(duplicate._id));
+      removed += 1;
     }
   }
+
+  if (removed > 0 || backfilled > 0) {
+    console.info(`Job dedupe: merged ${removed} duplicate jobs, re-pointed ${repointed} user records, backfilled ${backfilled} keys.`);
+  }
+  return { removed, repointed, backfilled };
 }
 
 async function notifyUsersOfNewJobs(newJobsCount: number) {
@@ -494,7 +553,8 @@ export async function saveJob(userId: string, jobId: string) {
 
 export async function createManualJob(input: any) {
   const normalized = normalizeJobSourceJob({ ...input, source: input.source || "Manual import" });
-  let duplicate = await findOneRecord("jobs", { duplicateKey: normalized.duplicateKey });
+  let duplicate = normalized.canonicalKey ? await findOneRecord("jobs", { canonicalKey: normalized.canonicalKey }) : null;
+  if (!duplicate) duplicate = await findOneRecord("jobs", { duplicateKey: normalized.duplicateKey });
   if (!duplicate) {
     duplicate = await findOneRecord("jobs", {
       normalizedTitle: normalized.normalizedTitle,
@@ -503,13 +563,14 @@ export async function createManualJob(input: any) {
     });
   }
   if (duplicate) {
-    const updatedJob = await updateRecord("jobs", String(duplicate._id), {
-      ...duplicate,
-      ...normalized,
-      lastSeenInSyncAt: new Date(),
-      updatedAt: new Date()
-    });
-    return { job: updatedJob, duplicate: true, duplicateKey: normalized.duplicateKey };
+    const merged = mergeJobRecords(duplicate, normalized, { preferIncoming: true });
+    const updatedJob = await updateRecord("jobs", String(duplicate._id), merged);
+    return {
+      job: updatedJob,
+      duplicate: true,
+      mergedFromOtherSource: duplicate.source !== normalized.source,
+      duplicateKey: normalized.duplicateKey
+    };
   }
   const job = await createRecord("jobs", normalized);
   return { job, duplicate: false, duplicateKey: normalized.duplicateKey };

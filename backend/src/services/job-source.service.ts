@@ -295,6 +295,96 @@ function normalizeKey(value: unknown) {
   return clean(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+const COMPANY_NOISE = new Set(["pvt", "private", "ltd", "limited", "inc", "incorporated", "llc", "llp", "gmbh", "corp", "corporation", "co", "plc", "ag", "technologies", "technology", "the"]);
+const TITLE_NOISE = /\b(m\s*f\s*d|f\s*m\s*d|m\s*w\s*d|all genders|remote|hybrid|urgent|hiring|immediate joiners?)\b/g;
+const TITLE_WORDS: Record<string, string> = { sr: "senior", jr: "junior", dev: "developer", eng: "engineer", mgr: "manager" };
+const CITY_ALIASES: Record<string, string> = {
+  bangalore: "bengaluru", gurgaon: "gurugram", bombay: "mumbai", "new delhi": "delhi", madras: "chennai", calcutta: "kolkata",
+  "navi mumbai": "mumbai", noida: "noida", worldwide: "remote", anywhere: "remote", global: "remote", remote: "remote"
+};
+
+/**
+ * Source-independent identity for a vacancy: the same job listed on Adzuna, Remotive and a careers
+ * page maps to one key ("Sr. Developer @ Acme Pvt Ltd, Bangalore, India" === "Senior Developer @ ACME, Bengaluru").
+ */
+export function canonicalJobKey(titleInput: unknown, companyInput: unknown, locationInput: unknown) {
+  const title = normalizeKey(clean(titleInput).replace(/\([^)]*\)|\[[^\]]*\]/g, " "))
+    .replace(TITLE_NOISE, " ")
+    .split(" ")
+    .map((word) => TITLE_WORDS[word] || word)
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const company = normalizeKey(companyInput).split(" ").filter((word) => word && !COMPANY_NOISE.has(word)).join(" ");
+  const firstPart = clean(locationInput).split(",")[0] || "";
+  const city = normalizeKey(firstPart);
+  const location = CITY_ALIASES[city] || city || "remote";
+  if (!title || !company) return "";
+  return [title, company, location].join("|");
+}
+
+/**
+ * Merge a freshly seen listing into an existing job. Same source: the new data wins (a refresh).
+ * Different source (or preferIncoming=false): the existing record stays primary and only gaps are filled,
+ * while the other listing is remembered in alternateSources so users keep every apply link.
+ */
+export function mergeJobRecords(existing: Record<string, any>, incoming: Record<string, any>, options: { preferIncoming?: boolean } = {}) {
+  const { _id: _a, createdAt: _b, __v: _c, ...base } = existing as any;
+  const { _id: _d, createdAt: _e, __v: _f, alternateSources: incomingAlternates, ...fresh } = incoming as any;
+  const sameSource = existing.source === incoming.source;
+  const alternates: Array<{ source?: string; applyUrl?: string; seenAt?: Date }> = [...(existing.alternateSources || [])];
+  const addAlternate = (entry: { source?: string; applyUrl?: string; seenAt?: Date }) => {
+    if (!entry.source && !entry.applyUrl) return;
+    if (entry.source === existing.source && entry.applyUrl === existing.applyUrl) return;
+    if (alternates.some((item) => item.source === entry.source && item.applyUrl === entry.applyUrl)) return;
+    alternates.push({ source: entry.source, applyUrl: entry.applyUrl, seenAt: entry.seenAt || new Date() });
+  };
+  if (!sameSource) addAlternate({ source: incoming.source, applyUrl: incoming.applyUrl });
+  for (const entry of incomingAlternates || []) addAlternate(entry);
+
+  const longer = <T,>(a: T[] | undefined, b: T[] | undefined) => ((b || []).length > (a || []).length ? b : a) || [];
+  const union = (a: string[] | undefined, b: string[] | undefined) => Array.from(new Set([...(a || []), ...(b || [])]));
+  const known = (value: unknown) => value !== undefined && value !== null && value !== "" && value !== "Not specified";
+
+  const prefer = sameSource && options.preferIncoming !== false;
+  const merged: Record<string, any> = prefer
+    ? { ...base, ...fresh }
+    : {
+        ...base,
+        description: clean(fresh.description).length > clean(base.description).length ? fresh.description : base.description,
+        salaryMin: known(base.salaryMin) ? base.salaryMin : fresh.salaryMin,
+        salaryMax: known(base.salaryMax) ? base.salaryMax : fresh.salaryMax,
+        currency: known(base.salaryMin) || !known(fresh.salaryMin) ? base.currency : fresh.currency,
+        experienceRequired: known(base.experienceRequired) ? base.experienceRequired : fresh.experienceRequired || base.experienceRequired,
+        jobType: base.jobType || fresh.jobType,
+        remoteType: base.remoteType || fresh.remoteType,
+        responsibilities: longer(base.responsibilities, fresh.responsibilities),
+        requirements: longer(base.requirements, fresh.requirements),
+        postedAt: base.postedAt && fresh.postedAt ? (new Date(base.postedAt) < new Date(fresh.postedAt) ? base.postedAt : fresh.postedAt) : base.postedAt || fresh.postedAt,
+        expiresAt: base.expiresAt && fresh.expiresAt ? (new Date(base.expiresAt) > new Date(fresh.expiresAt) ? base.expiresAt : fresh.expiresAt) : base.expiresAt || fresh.expiresAt
+      };
+  if (prefer) {
+    // A refresh of the same listing: its own latest data (including risk signals) is the truth.
+    merged.skillsRequired = fresh.skillsRequired ?? base.skillsRequired;
+    merged.riskFlags = fresh.riskFlags ?? base.riskFlags;
+    merged.scamRiskScore = fresh.scamRiskScore ?? base.scamRiskScore;
+    merged.trustScore = fresh.trustScore ?? base.trustScore;
+  } else {
+    merged.skillsRequired = union(base.skillsRequired, fresh.skillsRequired);
+    merged.riskFlags = union(base.riskFlags, fresh.riskFlags);
+    merged.scamRiskScore = Math.max(Number(base.scamRiskScore ?? 0), Number(fresh.scamRiskScore ?? 0)) || merged.scamRiskScore;
+    merged.trustScore = Math.max(Number(base.trustScore ?? 0), Number(fresh.trustScore ?? 0));
+    // A listing that brings new risk signals must not stay silently "approved".
+    if (merged.riskFlags.length > (base.riskFlags || []).length) merged.reviewStatus = "needs_review";
+  }
+  merged.canonicalKey = fresh.canonicalKey || base.canonicalKey;
+  merged.alternateSources = alternates;
+  merged.lastSeenInSyncAt = new Date();
+  merged.updatedAt = new Date();
+  return merged;
+}
+
 function list(value: unknown) {
   if (Array.isArray(value)) return value.map((item) => clean(item)).filter(Boolean);
   return clean(value).split(/[,;\n]/).map((item) => item.trim()).filter(Boolean);
@@ -358,6 +448,7 @@ export function normalizeJobSourceJob(input: Record<string, any>) {
     scamRiskScore,
     riskFlags,
     duplicateKey,
+    canonicalKey: canonicalJobKey(title, company, location),
     normalizedTitle: normalizeKey(title),
     normalizedCompany: normalizeKey(company),
     reviewStatus: input.reviewStatus || (riskFlags.length ? "needs_review" : "approved"),

@@ -21,6 +21,7 @@ export type CollectionName =
   | "portfolioFileAuditEvents"
   | "portfolioFileExportRequests"
   | "maintenanceRuns"
+  | "jobSyncRuns"
   | "pdfExports"
   | "jobScamReports"
   | "chatSessions"
@@ -68,6 +69,7 @@ export const memory: Record<CollectionName, StoredRecord[]> = {
   portfolioFileAuditEvents: [],
   portfolioFileExportRequests: [],
   maintenanceRuns: [],
+  jobSyncRuns: [],
   pdfExports: [],
   jobScamReports: [],
   chatSessions: [],

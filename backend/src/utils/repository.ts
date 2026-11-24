@@ -20,6 +20,7 @@ import { PortfolioFileModel } from "../models/PortfolioFile.js";
 import { PortfolioFileAuditEventModel } from "../models/PortfolioFileAuditEvent.js";
 import { PortfolioFileExportRequestModel } from "../models/PortfolioFileExportRequest.js";
 import { MaintenanceRunModel } from "../models/MaintenanceRun.js";
+import { JobSyncRunModel } from "../models/JobSyncRun.js";
 import { PdfExportModel } from "../models/PdfExport.js";
 import { JobScamReportModel } from "../models/JobScamReport.js";
 import { ChatSessionModel } from "../models/ChatSession.js";
@@ -62,6 +63,7 @@ const modelMap: Record<CollectionName, Model<any>> = {
   portfolioFileAuditEvents: PortfolioFileAuditEventModel,
   portfolioFileExportRequests: PortfolioFileExportRequestModel,
   maintenanceRuns: MaintenanceRunModel,
+  jobSyncRuns: JobSyncRunModel,
   pdfExports: PdfExportModel,
   jobScamReports: JobScamReportModel,
   chatSessions: ChatSessionModel,
