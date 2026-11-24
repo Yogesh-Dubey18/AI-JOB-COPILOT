@@ -1,18 +1,22 @@
-name: E2E
+name: CI
 
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - "frontend/**"
-      - ".github/workflows/e2e.yml"
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  frontend-e2e:
-    name: Frontend E2E Smoke
+  tests:
+    name: Typecheck and unit/API tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -20,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use Node.js 20
+      - name: Use Node.js from .nvmrc
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -29,32 +33,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browser (chromium only, matches playwright.config.mjs projects)
-        run: npx playwright install --with-deps chromium
-        working-directory: frontend
+      - name: Typecheck (builds shared and backend)
+        run: npm run typecheck
 
-      - name: Build frontend
-        run: npm run build --prefix frontend
+      - name: Backend tests
+        run: npm test --prefix backend
 
-      - name: Start frontend server in background
-        run: npm run start --prefix frontend &
-
-      - name: Wait for frontend server to be ready
-        run: |
-          echo "Waiting for http://localhost:3000 to respond..."
-          for i in $(seq 1 30); do
-            if curl -sSf http://localhost:3000 > /dev/null 2>&1; then
-              echo "Server is up."
-              exit 0
-            fi
-            echo "Not ready yet, retrying ($i/30)..."
-            sleep 2
-          done
-          echo "Server did not become ready in time."
-          exit 1
-
-      - name: Run skip-safe E2E command
-        run: npm run test:e2e --prefix frontend
-        env:
-          CI: true
-          PLAYWRIGHT_BASE_URL: http://localhost:3000
+      - name: Frontend unit tests
+        run: npm test --prefix frontend
